@@ -63,13 +63,12 @@
                     Proyectos
                 </a>
 
-                <a href="#" class="admin-nav-item is-soon" title="Disponible próximamente">
+                <a href="tareas.html" class="admin-nav-item">
                     <svg viewBox="0 0 24 24" fill="none">
                         <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/>
                         <path d="M8 12.3l2.5 2.5L16 9.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     Tareas
-                    <span class="admin-soon-tag">PRONTO</span>
                 </a>
 
                 <a href="#" class="admin-nav-item is-soon" title="Disponible próximamente">
@@ -254,8 +253,17 @@
 
                 <div class="admin-field">
                     <label for="clientEmail">Correo electrónico</label>
-                    <input type="email" id="clientEmail" name="email" placeholder="correo@empresa.com">
-                    <span class="admin-field-hint">El cliente recibirá un correo para definir su contraseña de acceso al Portal.</span>
+                    <input type="email" id="clientEmail" name="email" placeholder="correo@empresa.com" autocomplete="off">
+                    <span class="admin-field-hint">Será el correo con el que el cliente inicia sesión en el Portal NEXA Hub.</span>
+                </div>
+
+                <div class="admin-field" id="clientPasswordField">
+                    <label for="clientPassword">Contraseña temporal</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="password" id="clientPassword" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" style="flex:1;">
+                        <button type="button" class="admin-btn-secondary" id="clientPasswordGenerateBtn">Generar</button>
+                    </div>
+                    <span class="admin-field-hint">El cliente deberá cambiarla obligatoriamente en su primer inicio de sesión. Cópiala después de guardar para enviársela por tu canal habitual (WhatsApp, correo, etc.).</span>
                 </div>
 
                 <div class="admin-field">
@@ -285,8 +293,78 @@
         </div>
     </div>
 
+    <!-- ================= MODAL: REGENERAR CONTRASEÑA TEMPORAL ================= -->
+    <div class="admin-modal-overlay" id="resetPasswordModalOverlay">
+        <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="resetPasswordModalTitle">
+
+            <div class="admin-modal-header">
+                <h3 id="resetPasswordModalTitle">Regenerar contraseña temporal</h3>
+                <button type="button" class="admin-modal-close" id="resetPasswordModalClose" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <form id="resetPasswordForm" class="admin-form" novalidate>
+
+                <p id="resetPasswordClientLabel" style="color:#c9c9c9; font-size:13px; line-height:1.6; margin:-6px 0 4px;"></p>
+
+                <div class="admin-field">
+                    <label for="resetPasswordValue">Nueva contraseña temporal</label>
+                    <div style="display:flex; gap:8px;">
+                        <input type="text" id="resetPasswordValue" placeholder="Mínimo 8 caracteres" autocomplete="new-password" style="flex:1;">
+                        <button type="button" class="admin-btn-secondary" id="resetPasswordGenerateBtn">Generar</button>
+                    </div>
+                    <span class="admin-field-hint">El cliente deberá cambiarla obligatoriamente en su próximo inicio de sesión.</span>
+                </div>
+
+                <span class="admin-form-error" id="resetPasswordFormError"></span>
+
+                <div class="admin-modal-actions">
+                    <button type="button" class="admin-btn-secondary" id="resetPasswordCancel">Cancelar</button>
+                    <button type="submit" class="admin-btn-primary" id="resetPasswordSubmit">Establecer contraseña</button>
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <!-- ================= MODAL: MOSTRAR CONTRASEÑA TEMPORAL (una sola vez) ================= -->
+    <div class="admin-modal-overlay" id="passwordRevealModalOverlay">
+        <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="passwordRevealModalTitle">
+
+            <div class="admin-modal-header">
+                <h3 id="passwordRevealModalTitle">Contraseña temporal</h3>
+                <button type="button" class="admin-modal-close" id="passwordRevealClose" aria-label="Cerrar">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+
+            <p id="passwordRevealMessage" style="color:#dedede; font-size:13.5px; line-height:1.7; margin:0 0 18px;"></p>
+
+            <div class="admin-field" style="margin-bottom:22px;">
+                <label for="passwordRevealValue">Contraseña</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="passwordRevealValue" readonly style="flex:1;">
+                    <button type="button" class="admin-btn-secondary" id="passwordRevealCopyBtn">Copiar</button>
+                </div>
+                <span class="admin-field-hint">Por seguridad, no podrás volver a ver esta contraseña después de cerrar esta ventana.</span>
+            </div>
+
+            <div class="admin-modal-actions">
+                <button type="button" class="admin-btn-primary" id="passwordRevealDoneBtn">Entendido</button>
+            </div>
+
+        </div>
+    </div>
+
     <script src="../js/vendor/supabase-js.min.js"></script>
     <script src="../js/portal.js"></script>
+    <script src="../js/admin.js"></script>
     <script type="module" src="../js/admin/pages/clientsPage.js"></script>
 
 </body>

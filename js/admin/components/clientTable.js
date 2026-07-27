@@ -13,6 +13,7 @@ const STATUS_LABELS = {
 
 const ICON_EYE = '<svg viewBox="0 0 24 24" fill="none"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>';
 const ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.1l-1.9-1.9a1.5 1.5 0 0 0-2.1 0L4 16v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+const ICON_KEY = '<svg viewBox="0 0 24 24" fill="none"><circle cx="8" cy="15" r="3.5" stroke="currentColor" stroke-width="1.6"/><path d="M10.5 12.5 19 4M19 4v3.5M19 4h-3.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 const ICON_TRASH = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2m2 0-.8 12.1a2 2 0 0 1-2 1.9H8.8a2 2 0 0 1-2-1.9L6 7" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
 function formatDate(isoString) {
@@ -61,6 +62,7 @@ export function renderClientTable(tbody, clients, handlers) {
                     '<div class="admin-table-actions">' +
                         '<button type="button" class="admin-action-btn" data-action="view" data-row-index="' + index + '" title="Ver cliente">' + ICON_EYE + '</button>' +
                         '<button type="button" class="admin-action-btn" data-action="edit" data-row-index="' + index + '" title="Editar cliente">' + ICON_EDIT + '</button>' +
+                        '<button type="button" class="admin-action-btn" data-action="reset-password" data-row-index="' + index + '" title="Regenerar contraseña temporal">' + ICON_KEY + '</button>' +
                         '<button type="button" class="admin-action-btn admin-action-btn--danger" data-action="delete" data-row-index="' + index + '" title="Eliminar cliente">' + ICON_TRASH + '</button>' +
                     '</div>' +
                 '</td>' +
@@ -76,6 +78,7 @@ export function renderClientTable(tbody, clients, handlers) {
 
             if (action === 'view' && handlers.onView) handlers.onView(client);
             if (action === 'edit' && handlers.onEdit) handlers.onEdit(client);
+            if (action === 'reset-password' && handlers.onResetPassword) handlers.onResetPassword(client);
             if (action === 'delete' && handlers.onDelete) handlers.onDelete(client);
         });
     });

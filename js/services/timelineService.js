@@ -16,3 +16,19 @@ export async function listTimelineEvents(projectId) {
     if (error) throw error;
     return data;
 }
+
+/**
+ * Actividad reciente de TODOS los proyectos (uso exclusivo del
+ * Dashboard administrativo). RLS (project_timeline_events_admin_all)
+ * ya garantiza que solo un admin puede ver eventos de cualquier
+ * proyecto sin restricción.
+ */
+export async function listRecentActivityForAdmin(limit = 8) {
+    const { data, error } = await supabase
+        .from('project_timeline_events')
+        .select('*, profiles:actor_id ( id, full_name ), projects:project_id ( id, name )')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+    if (error) throw error;
+    return data;
+}

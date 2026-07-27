@@ -61,13 +61,12 @@
                     Proyectos
                 </a>
 
-                <a href="#" class="admin-nav-item is-soon" title="Disponible próximamente">
+                <a href="tareas.html" class="admin-nav-item">
                     <svg viewBox="0 0 24 24" fill="none">
                         <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/>
                         <path d="M8 12.3l2.5 2.5L16 9.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
                     </svg>
                     Tareas
-                    <span class="admin-soon-tag">PRONTO</span>
                 </a>
 
                 <a href="#" class="admin-nav-item is-soon" title="Disponible próximamente">
@@ -169,9 +168,6 @@
                         </div>
                     </div>
                     <div class="pd-header-actions">
-                        <button type="button" class="admin-icon-btn" id="pdFilesBtn" title="Archivos del proyecto">
-                            <svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-                        </button>
                         <button type="button" class="admin-icon-btn" id="pdCommentsBtn" title="Comentarios del proyecto">
                             <svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l2-4a8.5 8.5 0 1 1 15-4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
                         </button>
@@ -270,29 +266,6 @@
 
         </div>
 
-    </div>
-
-    <!-- ================= DRAWER: ARCHIVOS ================= -->
-    <div class="pd-drawer-overlay" id="filesDrawerOverlay">
-        <div class="pd-drawer">
-            <div class="pd-drawer-header">
-                <h3>Archivos del proyecto</h3>
-                <button type="button" class="admin-modal-close" data-close-drawer="filesDrawerOverlay">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </button>
-            </div>
-            <div class="pd-drawer-body">
-                <div id="filesList" style="display:flex; flex-direction:column; gap:10px;"></div>
-                <div class="admin-empty-inline" id="filesEmptyState" style="display:none;">Todavía no se han subido archivos.</div>
-            </div>
-            <div class="pd-drawer-footer">
-                <label class="admin-btn-primary" style="cursor:pointer; width:100%; justify-content:center;">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Subir archivo
-                    <input type="file" id="fileUploadInput" style="display:none;">
-                </label>
-            </div>
-        </div>
     </div>
 
     <!-- ================= DRAWER: COMENTARIOS ================= -->
@@ -543,13 +516,6 @@
                 </div>
             </form>
 
-            <p class="pd-task-modal-section-title">Archivos</p>
-            <div class="pd-task-files-list" id="taskDetailFilesList"></div>
-            <label class="admin-btn-secondary" style="cursor:pointer; margin-top:8px; display:inline-flex;">
-                Subir archivo
-                <input type="file" id="taskDetailFileInput" style="display:none;">
-            </label>
-
             <p class="pd-task-modal-section-title">Comentarios</p>
             <div class="pd-task-comments-list" id="taskDetailCommentsList"></div>
             <form id="taskDetailCommentForm" class="admin-comment-form" style="margin-top:8px;">
@@ -559,28 +525,63 @@
         </div>
     </div>
 
-    <!-- ================= MODAL: NUEVO ENTREGABLE ================= -->
+    <!-- ================= MODAL: NUEVO / EDITAR ENTREGABLE ================= -->
+    <!-- Entregable = registro de texto + datos estructurados. NEXA Hub no
+         almacena archivos: si hace falta compartir un recurso, se usa un
+         enlace externo (Drive, Figma, Canva, Dropbox, etc.). -->
     <div class="admin-modal-overlay" id="deliverableModalOverlay">
         <div class="admin-modal" role="dialog" aria-modal="true">
             <div class="admin-modal-header">
-                <h3>Nuevo Entregable</h3>
+                <h3 id="deliverableModalTitle">Nuevo Entregable</h3>
                 <button type="button" class="admin-modal-close" data-close-modal="deliverableModalOverlay">
                     <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
             </div>
             <form id="deliverableForm" class="admin-form" novalidate>
                 <div class="admin-field">
-                    <label for="deliverableTitle">Título</label>
+                    <label for="deliverableTitle">Nombre del entregable</label>
                     <input type="text" id="deliverableTitle" placeholder="Ej. Manual de identidad visual">
                 </div>
                 <div class="admin-field">
                     <label for="deliverableDescription">Descripción</label>
                     <textarea id="deliverableDescription" rows="2" placeholder="Opcional"></textarea>
                 </div>
+                <div class="pd-task-modal-meta">
+                    <div class="admin-field">
+                        <label for="deliverableStatus">Estado</label>
+                        <select id="deliverableStatus">
+                            <option value="draft">Pendiente</option>
+                            <option value="delivered">Entregado</option>
+                            <option value="approved">Aprobado</option>
+                            <option value="rejected">Rechazado</option>
+                        </select>
+                    </div>
+                    <div class="admin-field">
+                        <label for="deliverableDueDate">Fecha límite</label>
+                        <input type="date" id="deliverableDueDate">
+                    </div>
+                    <div class="admin-field">
+                        <label for="deliverableDeliveredAt">Fecha de entrega</label>
+                        <input type="date" id="deliverableDeliveredAt">
+                    </div>
+                </div>
+                <div class="admin-field">
+                    <label for="deliverableExternalLink">Enlace externo (opcional)</label>
+                    <input type="url" id="deliverableExternalLink" placeholder="https://drive.google.com/... , https://figma.com/... , etc.">
+                </div>
+                <div class="admin-field">
+                    <label for="deliverableNotes">Observaciones</label>
+                    <textarea id="deliverableNotes" rows="2" placeholder="Opcional"></textarea>
+                </div>
                 <span class="admin-form-error" id="deliverableFormError"></span>
-                <div class="admin-modal-actions">
-                    <button type="button" class="admin-btn-secondary" data-close-modal="deliverableModalOverlay">Cancelar</button>
-                    <button type="submit" class="admin-btn-primary">Crear Entregable</button>
+                <div class="admin-modal-actions" style="justify-content:space-between;">
+                    <button type="button" class="admin-icon-btn danger" id="deliverableDeleteBtn" style="display:none;" title="Eliminar entregable">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="admin-btn-secondary" data-close-modal="deliverableModalOverlay">Cancelar</button>
+                        <button type="submit" class="admin-btn-primary" id="deliverableFormSubmitBtn">Crear Entregable</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -641,6 +642,7 @@
 
     <script src="../js/vendor/supabase-js.min.js"></script>
     <script src="../js/portal.js"></script>
+    <script src="../js/admin.js"></script>
     <script type="module" src="../js/admin/pages/proyectoDetallePage.js"></script>
 
 </body>

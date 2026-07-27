@@ -76,6 +76,39 @@ export async function decideApproval(approvalId, decision, comment, userId) {
     return data;
 }
 
+/**
+ * Lista TODAS las tareas de TODOS los proyectos (uso exclusivo del panel
+ * admin, sección "Tareas" standalone). RLS ya garantiza que solo un admin
+ * puede ejecutar esta consulta sin restricciones (project_tasks_admin_all).
+ * Incluye el árbol Proyecto -> Bloque -> Sección para poder mostrar/filtrar
+ * por cliente y proyecto sin duplicar datos en una tabla nueva.
+ */
+export async function listAllTasksForAdmin() {
+    const { data, error } = await supabase
+        .from('project_tasks')
+        .select(`
+            id, title, description, task_type, status, priority,
+            assignee_id, due_date, order_index, created_at, updated_at, section_id,
+            profiles:assignee_id ( id, full_name, email, role ),
+            project_sections!inner (
+                id, name, phase_id,
+                project_phases!inner (
+                    id, name, project_id,
+                    projects!inner (
+                        id, name, status, archived_at, workspace_id,
+                        workspaces (
+                            id, name, client_id,
+                            profiles:client_id ( id, full_name, email )
+                        )
+                    )
+                )
+            )
+        `)
+        .order('due_date', { ascending: true, nullsFirst: true });
+    if (error) throw error;
+    return data;
+}
+
 export async function listPendingApprovalsForProject(projectId) {
     const { data, error } = await supabase
         .from('approvals')

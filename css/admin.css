@@ -1011,6 +1011,17 @@ body.admin-page{
 
 .admin-select:focus{ outline:none; border-color:var(--blue); }
 
+/* Variante compacta para <select> embebidos dentro de filas de tabla
+   (ej. cambio rápido de estado en admin/tareas.html). */
+.admin-select--compact{
+    padding:6px 10px;
+    border-radius:8px;
+    font-size:11.5px;
+    font-weight:600;
+    width:auto;
+    max-width:150px;
+}
+
 /* ---- Grid de proyectos ---- */
 .admin-projects-grid{
     display:grid;

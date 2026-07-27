@@ -8,9 +8,11 @@
    componentes).
    ========================================================== */
 
-import { listClients, createClient, updateClient, deleteClient, getActiveProjectsCount } from '../services/clientService.js';
+import { listClients, createClient, updateClient, deleteClient, resetClientPassword, getActiveProjectsCount } from '../services/clientService.js';
 import { renderClientTable } from '../components/clientTable.js';
 import { openClientModal } from '../components/clientModal.js';
+import { openResetPasswordModal } from '../components/resetPasswordModal.js';
+import { openPasswordRevealModal } from '../components/passwordRevealModal.js';
 
 const tbody = document.getElementById('clientsTableBody');
 const newClientBtn = document.getElementById('newClientBtn');
@@ -61,6 +63,9 @@ async function loadClients() {
                 }
             });
         },
+        onResetPassword: function (client) {
+            handleResetPassword(client);
+        },
         onDelete: function (client) {
             handleDelete(client);
         }
@@ -70,8 +75,30 @@ async function loadClients() {
 }
 
 async function handleCreate(payload) {
-    await createClient(payload);
+    const result = await createClient(payload);
     await loadClients();
+
+    if (result && result.temporaryPassword) {
+        openPasswordRevealModal({
+            message: `Cliente "${payload.company}" creado correctamente. Copia esta contraseña temporal y envíasela a ${payload.email} por tu canal habitual (WhatsApp, correo, etc.). El cliente deberá cambiarla al iniciar sesión por primera vez.`,
+            password: result.temporaryPassword
+        });
+    }
+}
+
+function handleResetPassword(client) {
+    openResetPasswordModal({
+        clientLabel: `Cliente: ${client.contact} (${client.email})`,
+        onSubmit: async function (password) {
+            const result = await resetClientPassword({ profileId: client.profileId, password: password });
+            if (result && result.temporaryPassword) {
+                openPasswordRevealModal({
+                    message: `Contraseña temporal regenerada para ${client.contact}. Cópiala y envíasela por tu canal habitual. Deberá cambiarla en su próximo inicio de sesión.`,
+                    password: result.temporaryPassword
+                });
+            }
+        }
+    });
 }
 
 async function handleUpdate(client, payload) {

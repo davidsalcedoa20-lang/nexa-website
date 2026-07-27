@@ -4,23 +4,26 @@
    ==========================================================
    Vista "Plantilla Oficial" en modo SOLO LECTURA: el cliente
    visualiza etapas, bloques, secciones, tareas, entregables,
-   archivos, comentarios y cronología. Únicamente puede:
+   comentarios y cronología. Únicamente puede:
      - Marcar como "Lista" sus propias tareas (task_type = client).
      - Aprobar / solicitar cambios en tareas de aprobación.
-     - Subir archivos y comentar.
+     - Aprobar / rechazar entregables ya enviados.
+     - Comentar.
    No puede crear, eliminar ni modificar títulos/fechas/responsables.
+   NEXA Hub no almacena archivos (Supabase Storage): los
+   entregables usan un enlace externo opcional (Drive, Figma,
+   Canva, Dropbox, etc.) en vez de un archivo subido al sistema.
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
 import { getProject, getProjectStructure } from '../../services/projectService.js';
 import { setClientTaskStatus, decideApproval } from '../../services/taskService.js';
-import { listProjectFiles, uploadProjectFile, getFileSignedUrl } from '../../services/fileService.js';
 import { listComments, addComment } from '../../services/commentService.js';
 import { listTimelineEvents } from '../../services/timelineService.js';
-import { listProjectDeliverables } from '../../services/deliverableService.js';
+import { listProjectDeliverables, decideDeliverable } from '../../services/deliverableService.js';
 import {
     PROGRESS_STATUS_LABELS,
     APPROVAL_DECISION_LABELS, DELIVERABLE_STATUS_LABELS, TIMELINE_EVENT_ICONS,
-    formatDate, formatDateTime, formatFileSize, getInitials, escapeHtml, daysRemaining
+    formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining
 } from '../../components/projectUi.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -69,7 +72,6 @@ async function refreshAll() {
     currentProject = await getProject(projectId);
     currentStructure = await getProjectStructure(projectId);
     const deliverables = await listProjectDeliverables(projectId);
-    const files = await listProjectFiles(projectId);
     const comments = await listComments(projectId, 'project', projectId);
     const events = await listTimelineEvents(projectId);
 
@@ -80,7 +82,6 @@ async function refreshAll() {
     renderMyTasks(currentStructure.allTasks);
     renderDeliverables(deliverables);
     renderActivityPreview(events);
-    renderFiles(files);
     renderComments(comments);
     renderTimeline(events);
 }
@@ -331,17 +332,51 @@ function renderDeliverables(deliverables) {
     emptyState.style.display = 'none';
 
     const doneCheck = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const linkIcon = '<svg viewBox="0 0 24 24" fill="none" style="width:13px;height:13px;"><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
     list.innerHTML = deliverables.map((d) => {
-        const isDone = d.status === 'delivered' || d.status === 'approved';
+        const isDone = d.status === 'approved';
+        const canDecide = d.status === 'delivered';
         return `
-            <div class="dash-deliverable-row">
+            <div class="dash-deliverable-row" data-deliverable-id="${d.id}" style="flex-wrap:wrap;">
                 <span class="dash-deliverable-check" style="background:${isDone ? 'rgba(60,210,140,.16)' : 'rgba(255,177,45,.16)'}; color:${isDone ? '#4ADE80' : '#FFC15F'};">${isDone ? doneCheck : ''}</span>
-                <span class="dash-deliverable-title">${escapeHtml(d.title)}</span>
+                <span class="dash-deliverable-title">${escapeHtml(d.title)}${d.due_date ? ` <span style="color:#7a7a7a; font-weight:400;">· vence ${formatDate(d.due_date)}</span>` : ''}</span>
                 <span class="dash-badge ${isDone ? 'dash-badge--done' : 'dash-badge--pending'}">${DELIVERABLE_STATUS_LABELS[d.status] || d.status}</span>
+                ${d.external_link ? `<a href="${escapeHtml(d.external_link)}" target="_blank" rel="noopener" class="dash-btn-outline" title="Abrir enlace externo" style="text-decoration:none;">${linkIcon} Ver enlace</a>` : ''}
+                ${canDecide ? `
+                    <div style="display:flex; gap:8px; width:100%; margin-top:4px;">
+                        <button type="button" class="dash-task-mark-btn" data-approve-deliverable="${d.id}">Aprobar</button>
+                        <button type="button" class="dash-btn-outline" data-reject-deliverable="${d.id}">Rechazar</button>
+                    </div>` : ''}
             </div>
         `;
     }).join('');
+
+    list.querySelectorAll('[data-approve-deliverable]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+                await decideDeliverable(btn.getAttribute('data-approve-deliverable'), 'approved');
+                await refreshAll();
+            } catch (error) {
+                alert(`No se pudo actualizar el entregable: ${error.message}`);
+                btn.disabled = false;
+            }
+        });
+    });
+
+    list.querySelectorAll('[data-reject-deliverable]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            btn.disabled = true;
+            try {
+                await decideDeliverable(btn.getAttribute('data-reject-deliverable'), 'rejected');
+                await refreshAll();
+            } catch (error) {
+                alert(`No se pudo actualizar el entregable: ${error.message}`);
+                btn.disabled = false;
+            }
+        });
+    });
 }
 
 /* ---------------------------------------------------------
@@ -363,60 +398,6 @@ function renderActivityPreview(events) {
         </div>
     `).join('');
 }
-
-/* ---------------------------------------------------------
-   Archivos
---------------------------------------------------------- */
-function renderFiles(files) {
-    const list = el('filesList');
-    const emptyState = el('filesEmptyState');
-
-    if (!files.length) {
-        list.innerHTML = '';
-        emptyState.style.display = 'block';
-        return;
-    }
-    emptyState.style.display = 'none';
-
-    list.innerHTML = files.map((file) => `
-        <div class="dash-file-row" data-storage-path="${escapeHtml(file.storage_path)}">
-            <div class="dash-file-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="dash-file-info">
-                <strong>${escapeHtml(file.file_name)}</strong>
-                <span>${file.folder} · ${formatFileSize(file.size_bytes)} · ${formatDate(file.created_at)}</span>
-            </div>
-            <button type="button" class="dash-btn-outline" data-download-file>Descargar</button>
-        </div>
-    `).join('');
-
-    list.querySelectorAll('[data-download-file]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            const path = btn.closest('.dash-file-row').dataset.storagePath;
-            try {
-                const url = await getFileSignedUrl(path);
-                window.open(url, '_blank');
-            } catch (error) {
-                alert(`No se pudo generar el enlace: ${error.message}`);
-            }
-        });
-    });
-}
-
-el('fileUploadInput')?.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-        await uploadProjectFile({ projectId, folder: 'Cliente', file, uploadedBy: currentUserId });
-        const files = await listProjectFiles(projectId);
-        renderFiles(files);
-    } catch (error) {
-        alert(`No se pudo subir el archivo: ${error.message}`);
-    } finally {
-        e.target.value = '';
-    }
-});
 
 /* ---------------------------------------------------------
    Comentarios

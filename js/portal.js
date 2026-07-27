@@ -164,6 +164,10 @@ if (portalLoginForm) {
         }
 
         if (profile.role === 'client') {
+            if (authData.user.user_metadata && authData.user.user_metadata.must_change_password === true) {
+                window.location.href = 'change-password.html';
+                return;
+            }
             window.location.href = '../dashboard/index.html';
             return;
         }
@@ -176,6 +180,109 @@ if (portalLoginForm) {
     [portalUser, portalPass].forEach(function (field) {
         field.addEventListener('input', function () {
             portalError.classList.remove('active');
+        });
+    });
+}
+
+/* ============ CAMBIO DE CONTRASEÑA OBLIGATORIO — /portal/change-password.html ============
+   Se muestra cuando un cliente inicia sesión con la contraseña
+   temporal que le asignó un administrador (user_metadata.must_change_password
+   === true, ver Edge Functions create-client / reset-client-password).
+   No usa el mecanismo genérico de [data-auth-guard] porque su condición
+   de acceso es distinta (no basta con el rol: importa el estado de
+   must_change_password), así que valida la sesión por su cuenta. */
+const changePasswordForm = document.getElementById('changePasswordForm');
+
+if (changePasswordForm) {
+    initChangePasswordPage(changePasswordForm);
+}
+
+async function initChangePasswordPage(form) {
+    const newPasswordInput = document.getElementById('newPassword');
+    const confirmPasswordInput = document.getElementById('confirmPassword');
+    const errorEl = document.getElementById('changePasswordError');
+    const submitBtn = form.querySelector('.portal-submit');
+    const MIN_PASSWORD_LENGTH = 8;
+
+    function showError(message) {
+        errorEl.textContent = message;
+        errorEl.classList.add('active');
+    }
+
+    function setLoading(isLoading) {
+        submitBtn.disabled = isLoading;
+        submitBtn.style.opacity = isLoading ? '.7' : '1';
+        submitBtn.style.cursor = isLoading ? 'wait' : 'pointer';
+    }
+
+    const supabase = await getSupabase();
+
+    if (!supabase) {
+        showError('No se pudo conectar con el servidor. Intenta más tarde.');
+        return;
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    // Sin sesión activa: no tiene nada que cambiar aquí.
+    if (!user) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    // Si ya cambió su contraseña (o es un admin que llegó por error a esta
+    // URL), no debe quedarse en esta pantalla.
+    if (!user.user_metadata || user.user_metadata.must_change_password !== true) {
+        const profile = await fetchOrCreateProfile(supabase, user);
+        window.location.href = profile && profile.role === 'admin' ? '../admin/index.html' : '../dashboard/index.html';
+        return;
+    }
+
+    form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        errorEl.classList.remove('active');
+
+        const newPassword = newPasswordInput.value;
+        const confirmPassword = confirmPasswordInput.value;
+
+        if (!newPassword || !confirmPassword) {
+            showError('Completa ambos campos para continuar.');
+            return;
+        }
+
+        if (newPassword.length < MIN_PASSWORD_LENGTH) {
+            showError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+            return;
+        }
+
+        if (newPassword !== confirmPassword) {
+            showError('Las contraseñas no coinciden.');
+            return;
+        }
+
+        setLoading(true);
+
+        // Cambia la contraseña y limpia el flag en un solo llamado, usando
+        // la propia sesión del cliente (anon key): no requiere la Admin API
+        // ni la service_role key.
+        const { error } = await supabase.auth.updateUser({
+            password: newPassword,
+            data: { must_change_password: false }
+        });
+
+        setLoading(false);
+
+        if (error) {
+            showError(error.message || 'No se pudo cambiar la contraseña. Intenta de nuevo.');
+            return;
+        }
+
+        window.location.href = '../dashboard/index.html';
+    });
+
+    [newPasswordInput, confirmPasswordInput].forEach(function (field) {
+        field.addEventListener('input', function () {
+            errorEl.classList.remove('active');
         });
     });
 }
@@ -210,6 +317,16 @@ async function initAuthGuard(requiredRole) {
     if (!isValid) {
         await supabase.auth.signOut();
         window.location.href = '../portal/index.html';
+        return;
+    }
+
+    // Si el cliente todavía tiene pendiente cambiar su contraseña temporal
+    // (asignada por un admin al crear su cuenta o al regenerarla), no puede
+    // entrar directo al Dashboard aunque escriba la URL a mano: se le fuerza
+    // a pasar primero por /portal/change-password.html. No se cierra la
+    // sesión, solo se redirige (la sesión sigue siendo válida).
+    if (requiredRole === 'client' && user.user_metadata && user.user_metadata.must_change_password === true) {
+        window.location.href = '../portal/change-password.html';
         return;
     }
 

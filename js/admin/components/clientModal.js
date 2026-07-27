@@ -9,6 +9,8 @@
    js/admin/pages/clientsPage.js.
    ========================================================== */
 
+import { generateTemporaryPassword } from '../../utils/passwordGenerator.js';
+
 const overlay = document.getElementById('clientModalOverlay');
 const form = document.getElementById('clientForm');
 const titleEl = document.getElementById('clientModalTitle');
@@ -16,6 +18,10 @@ const submitBtn = document.getElementById('clientModalSubmit');
 const cancelBtn = document.getElementById('clientModalCancel');
 const closeBtn = document.getElementById('clientModalClose');
 const errorEl = document.getElementById('clientFormError');
+const passwordFieldWrap = document.getElementById('clientPasswordField');
+const passwordGenerateBtn = document.getElementById('clientPasswordGenerateBtn');
+
+const MIN_PASSWORD_LENGTH = 8;
 
 const fieldIds = {
     company: 'clientCompany',
@@ -23,8 +29,18 @@ const fieldIds = {
     email: 'clientEmail',
     phone: 'clientPhone',
     city: 'clientCity',
-    notes: 'clientNotes'
+    notes: 'clientNotes',
+    password: 'clientPassword'
 };
+
+if (passwordGenerateBtn) {
+    passwordGenerateBtn.addEventListener('click', function () {
+        const field = getField('password');
+        if (!field) return;
+        field.type = 'text';
+        field.value = generateTemporaryPassword();
+    });
+}
 
 let currentMode = 'create';
 let currentClient = null;
@@ -78,13 +94,27 @@ export function openClientModal(options) {
 
     const isView = currentMode === 'view';
     const isEdit = currentMode === 'edit';
+    const isCreate = currentMode === 'create';
 
     Object.keys(fieldIds).forEach(function (key) {
-        getField(key).disabled = isView;
+        const field = getField(key);
+        if (field) field.disabled = isView;
     });
 
     // El correo solo se puede definir al crear (cambiarlo requiere la Admin API).
     getField('email').disabled = isView || isEdit;
+
+    // La contraseña temporal SOLO se define al crear el cliente. Cambiarla
+    // después es una acción aparte ("Regenerar contraseña temporal" en la
+    // tabla de clientes), no se edita desde este modal.
+    if (passwordFieldWrap) {
+        passwordFieldWrap.style.display = isCreate ? 'flex' : 'none';
+    }
+    const passwordField = getField('password');
+    if (passwordField) {
+        passwordField.type = 'password';
+        passwordField.value = '';
+    }
 
     if (submitBtn) {
         submitBtn.style.display = isView ? 'none' : 'inline-flex';
@@ -146,6 +176,15 @@ if (form) {
         if (!payload.company || !payload.contact || (currentMode === 'create' && !payload.email)) {
             showModalError('Empresa, contacto y correo son obligatorios.');
             return;
+        }
+
+        if (currentMode === 'create') {
+            payload.password = getField('password').value;
+
+            if (!payload.password || payload.password.length < MIN_PASSWORD_LENGTH) {
+                showModalError(`La contraseña temporal debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
+                return;
+            }
         }
 
         setSubmitting(true);

@@ -1,7 +1,21 @@
 /* ==========================================================
    NEXA HUB — Servicio: Archivos del proyecto (Supabase Storage)
    ==========================================================
-   Convención de ruta en el bucket "project-files":
+   ⚠️ DESACTIVADO POR DECISIÓN DE ARQUITECTURA (2026-07-27):
+   NEXA Hub NO almacena archivos/documentos en Supabase Storage.
+   Ninguna pantalla del sistema (admin ni portal del cliente)
+   importa ya este archivo ni muestra botones de "Subir archivo".
+   Los entregables ahora usan enlaces externos (Drive, Figma,
+   Canva, Dropbox, etc.) — ver js/services/deliverableService.js.
+
+   Este archivo, la tabla "project_files" y el bucket de Storage
+   "project-files" NO se eliminaron: se dejan intactos por si en
+   una fase futura se decide reactivar la subida de archivos. No
+   agregues nuevos usos de este servicio sin antes confirmar que
+   la decisión de arquitectura anterior cambió.
+
+   Convención de ruta en el bucket "project-files" (si se llegara
+   a reactivar):
        {project_id}/{folder}/{timestamp}_{file_name}
    El primer segmento SIEMPRE debe ser el project_id (así lo
    validan las políticas RLS de storage.objects).

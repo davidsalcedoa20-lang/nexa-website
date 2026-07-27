@@ -90,7 +90,14 @@ export async function getActiveProjectsCount(workspaceId) {
  * + workspace) a través de la Edge Function "create-client".
  * No crea ningún proyecto.
  *
- * @param {{company:string, contact:string, email:string, phone?:string, city?:string, notes?:string}} payload
+ * La contraseña temporal ("password") la define el administrador
+ * en el formulario y viaja cifrada (HTTPS) directo a la Edge
+ * Function, que es la única que puede establecerla en Supabase
+ * Auth (Admin API). Nunca se guarda en ninguna tabla ni se expone
+ * la service_role key en el navegador.
+ *
+ * @param {{company:string, contact:string, email:string, phone?:string, city?:string, notes?:string, password:string}} payload
+ * @returns {Promise<{success:boolean, workspace:object, userId:string, temporaryPassword:string}>}
  */
 export async function createClient(payload) {
     const { data, error } = await supabase.functions.invoke('create-client', {
@@ -102,6 +109,32 @@ export async function createClient(payload) {
         // servidor en "error.message" (a veces solo dice "non-2xx status").
         const serverMessage = data && data.error;
         throw new Error(serverMessage || error.message || 'No se pudo crear el cliente.');
+    }
+
+    if (data && data.error) {
+        throw new Error(data.error);
+    }
+
+    return data;
+}
+
+/**
+ * Regenera la contraseña temporal de un cliente ya existente a
+ * través de la Edge Function "reset-client-password". Marca
+ * must_change_password = true para que el cliente sea obligado a
+ * definir una contraseña nueva en su próximo inicio de sesión.
+ *
+ * @param {{profileId:string, password:string}} payload
+ * @returns {Promise<{success:boolean, temporaryPassword:string}>}
+ */
+export async function resetClientPassword(payload) {
+    const { data, error } = await supabase.functions.invoke('reset-client-password', {
+        body: payload
+    });
+
+    if (error) {
+        const serverMessage = data && data.error;
+        throw new Error(serverMessage || error.message || 'No se pudo regenerar la contraseña.');
     }
 
     if (data && data.error) {

@@ -17,8 +17,10 @@
 
 <!--
     Detalle de un proyecto para el cliente (solo lectura + acciones
-    limitadas: completar sus propias tareas, decidir aprobaciones,
-    subir archivos, comentar). El id viaja en la URL: ?id=<uuid>
+    limitadas: completar sus propias tareas, decidir aprobaciones y
+    entregables, comentar). NEXA Hub no almacena archivos: los
+    entregables usan enlaces externos en vez de archivos subidos.
+    El id viaja en la URL: ?id=<uuid>
     Controlador: js/dashboard/pages/proyectoPage.js
 -->
 <body class="dash-page" data-auth-guard="client">
@@ -149,7 +151,6 @@
                     <button type="button" class="dash-tab-btn active" data-tab="resumen">Resumen</button>
                     <button type="button" class="dash-tab-btn" data-tab="bloques">Bloques</button>
                     <button type="button" class="dash-tab-btn" data-tab="entregables">Entregables</button>
-                    <button type="button" class="dash-tab-btn" data-tab="archivos">Archivos</button>
                     <button type="button" class="dash-tab-btn" data-tab="comentarios">Comentarios</button>
                     <button type="button" class="dash-tab-btn" data-tab="cronologia">Cronología</button>
                 </div>
@@ -182,20 +183,6 @@
                         <div id="pdDeliverablesList"></div>
                         <div class="dash-empty-inline" id="pdDeliverablesEmptyState" style="display:none;">Sin entregables todavía.</div>
                     </div>
-                </section>
-
-                <!-- ===== TAB: ARCHIVOS ===== -->
-                <section class="dash-tab-panel" data-tab-panel="archivos">
-                    <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
-                        <h2 style="color:white; font-size:15px; font-weight:600;">Archivos compartidos</h2>
-                        <label class="dash-btn-small" style="cursor:pointer;">
-                            <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            Subir archivo
-                            <input type="file" id="fileUploadInput" style="display:none;">
-                        </label>
-                    </div>
-                    <div id="filesList" style="display:flex; flex-direction:column; gap:10px; margin-top:16px;"></div>
-                    <div class="dash-empty-inline" id="filesEmptyState" style="display:none;">Todavía no hay archivos compartidos.</div>
                 </section>
 
                 <!-- ===== TAB: COMENTARIOS ===== -->

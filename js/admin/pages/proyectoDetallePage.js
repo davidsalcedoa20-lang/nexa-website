@@ -10,7 +10,6 @@ import { getProject, getProjectStructure, duplicateProject, updateProject, setPr
 import { createPhase, deletePhase, createSection, deleteSection } from '../../services/phaseService.js';
 import { createStage, updateStage, deleteStage } from '../../services/timelineStageService.js';
 import { createTask, updateTask, deleteTask } from '../../services/taskService.js';
-import { listProjectFiles, listTaskFiles, uploadProjectFile, deleteProjectFile, getFileSignedUrl } from '../../services/fileService.js';
 import { listComments, addComment } from '../../services/commentService.js';
 import { listTimelineEvents } from '../../services/timelineService.js';
 import { listProjectDeliverables, createDeliverable, updateDeliverable, deleteDeliverable } from '../../services/deliverableService.js';
@@ -18,10 +17,14 @@ import { listAdmins } from '../../services/profileService.js';
 import {
     PROJECT_STATUS_LABELS, PROGRESS_STATUS_LABELS, PD_STATUS_BADGE_CLASS,
     TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, DELIVERABLE_STATUS_LABELS, TIMELINE_EVENT_ICONS,
-    formatDate, formatDateTime, formatFileSize, getInitials, escapeHtml, daysRemaining
+    formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining
 } from '../../components/projectUi.js';
 
-const TASK_STATUS_OPTIONS = ['pending', 'in_progress', 'blocked', 'completed', 'approved', 'cancelled'];
+// Valores reales del enum public.progress_status (project_tasks.status).
+// "approved"/"cancelled" NO existen en este enum (son solo estados válidos
+// para approvals.decision / projects.status respectivamente); usarlos aquí
+// provocaría un error de Postgres al guardar.
+const TASK_STATUS_OPTIONS = ['pending', 'in_progress', 'waiting_approval', 'completed', 'blocked', 'finished'];
 
 const params = new URLSearchParams(window.location.search);
 const projectId = params.get('id');
@@ -35,12 +38,12 @@ let currentProject = null;
 let currentStructure = null;
 let currentDeliverables = [];
 let currentEvents = [];
-let currentFiles = [];
 
 let activeStageIdForPhase = null;
 let activePhaseIdForSection = null;
 let activeSectionIdForTask = null;
 let editingStageId = null;
+let editingDeliverableId = null;
 let activeTaskId = null;
 
 function el(id) { return document.getElementById(id); }
@@ -90,7 +93,6 @@ function populateTaskStatusSelect(select) {
 async function refreshAll() {
     currentProject = await getProject(projectId);
     currentStructure = await getProjectStructure(projectId);
-    currentFiles = await listProjectFiles(projectId);
     currentDeliverables = await listProjectDeliverables(projectId);
     currentEvents = await listTimelineEvents(projectId);
     const comments = await listComments(projectId, 'project', projectId);
@@ -103,7 +105,6 @@ async function refreshAll() {
     renderDeliverables(currentDeliverables);
     renderActivity(currentEvents);
     renderFullTimeline(currentEvents);
-    renderFiles(currentFiles);
     renderComments(comments);
     renderFooterBar(currentProject);
 }
@@ -609,46 +610,11 @@ async function openTaskDetailModal(taskId) {
     openModal('taskDetailModalOverlay');
 
     try {
-        const [files, comments] = await Promise.all([
-            listTaskFiles(taskId),
-            listComments(projectId, 'task', taskId)
-        ]);
-        renderTaskDetailFiles(files);
+        const comments = await listComments(projectId, 'task', taskId);
         renderTaskDetailComments(comments);
     } catch (error) {
         console.error('[proyectoDetallePage] Error cargando detalle de tarea:', error.message);
     }
-}
-
-function renderTaskDetailFiles(files) {
-    const list = el('taskDetailFilesList');
-    if (!files.length) {
-        list.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin archivos.</span>';
-        return;
-    }
-    list.innerHTML = files.map((file) => `
-        <div class="admin-file-row" data-file-id="${file.id}" data-storage-path="${escapeHtml(file.storage_path)}" style="padding:8px 10px;">
-            <div class="admin-file-info">
-                <strong style="font-size:12.5px;">${escapeHtml(file.file_name)}</strong>
-                <span style="font-size:10.5px;">${formatFileSize(file.size_bytes)} · ${formatDate(file.created_at)}</span>
-            </div>
-            <button type="button" class="admin-icon-btn" data-task-download-file title="Descargar">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-        </div>
-    `).join('');
-
-    list.querySelectorAll('[data-task-download-file]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            const path = btn.closest('.admin-file-row').dataset.storagePath;
-            try {
-                const url = await getFileSignedUrl(path);
-                window.open(url, '_blank');
-            } catch (error) {
-                alert(`No se pudo generar el enlace: ${error.message}`);
-            }
-        });
-    });
 }
 
 function renderTaskDetailComments(comments) {
@@ -705,20 +671,6 @@ el('taskDetailDeleteBtn')?.addEventListener('click', async () => {
     }
 });
 
-el('taskDetailFileInput')?.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeTaskId) return;
-    try {
-        await uploadProjectFile({ projectId, taskId: activeTaskId, folder: 'Tareas', file, uploadedBy: currentUserId });
-        const files = await listTaskFiles(activeTaskId);
-        renderTaskDetailFiles(files);
-    } catch (error) {
-        alert(`No se pudo subir el archivo: ${error.message}`);
-    } finally {
-        e.target.value = '';
-    }
-});
-
 el('taskDetailCommentForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const body = el('taskDetailCommentInput').value.trim();
@@ -749,20 +701,27 @@ function renderDeliverables(deliverables) {
 
     const doneCheck = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
+    const linkIcon = '<svg viewBox="0 0 24 24" fill="none"><path d="M10.5 13.5a3.5 3.5 0 0 0 5 0l3-3a3.5 3.5 0 0 0-5-5l-1 1M13.5 10.5a3.5 3.5 0 0 0-5 0l-3 3a3.5 3.5 0 0 0 5 5l1-1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    const editIcon = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.1l-1.9-1.9a1.5 1.5 0 0 0-2.1 0L4 16v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+
     list.innerHTML = deliverables.map((d) => {
         const isDone = d.status === 'delivered' || d.status === 'approved';
         return `
             <div class="pd-deliverable-row" data-deliverable-id="${d.id}">
                 <span class="pd-deliverable-check" style="background:${isDone ? 'rgba(60,210,140,.16)' : 'rgba(255,177,45,.16)'}; color:${isDone ? '#4ADE80' : '#FFC15F'};">${isDone ? doneCheck : ''}</span>
-                <span class="pd-deliverable-title">${escapeHtml(d.title)}</span>
+                <span class="pd-deliverable-title">${escapeHtml(d.title)}${d.due_date ? ` <span style="color:#7a7a7a; font-weight:400;">· vence ${formatDate(d.due_date)}</span>` : ''}</span>
                 <span class="pd-badge ${isDone ? 'pd-badge--completed' : 'pd-badge--pending'}">${DELIVERABLE_STATUS_LABELS[d.status] || d.status}</span>
+                ${d.external_link ? `<a href="${escapeHtml(d.external_link)}" target="_blank" rel="noopener" class="admin-action-btn" title="Abrir enlace externo" data-stop-row>${linkIcon}</a>` : ''}
+                <button type="button" class="admin-action-btn" data-edit-deliverable title="Editar entregable">${editIcon}</button>
             </div>
         `;
     }).join('');
 
     list.querySelectorAll('[data-deliverable-id]').forEach((row) => {
-        row.addEventListener('click', async () => {
-            const deliverable = deliverables.find((d) => d.id === row.dataset.deliverableId);
+        const deliverableId = row.dataset.deliverableId;
+
+        row.querySelector('.pd-deliverable-check').addEventListener('click', async () => {
+            const deliverable = deliverables.find((d) => d.id === deliverableId);
             if (!deliverable) return;
             const nextStatus = deliverable.status === 'draft' ? 'delivered'
                 : deliverable.status === 'delivered' ? 'approved'
@@ -775,10 +734,35 @@ function renderDeliverables(deliverables) {
                 alert(`No se pudo actualizar: ${error.message}`);
             }
         });
+
+        const editBtn = row.querySelector('[data-edit-deliverable]');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                const deliverable = deliverables.find((d) => d.id === deliverableId);
+                if (deliverable) openDeliverableModal(deliverable);
+            });
+        }
     });
 }
 
-el('pdAddDeliverableBtn')?.addEventListener('click', () => openModal('deliverableModalOverlay'));
+function openDeliverableModal(deliverable) {
+    editingDeliverableId = deliverable?.id || null;
+    el('deliverableModalTitle').textContent = deliverable ? 'Editar Entregable' : 'Nuevo Entregable';
+    el('deliverableFormSubmitBtn').textContent = deliverable ? 'Guardar cambios' : 'Crear Entregable';
+    el('deliverableDeleteBtn').style.display = deliverable ? 'inline-flex' : 'none';
+    el('deliverableTitle').value = deliverable?.title || '';
+    el('deliverableDescription').value = deliverable?.description || '';
+    el('deliverableStatus').value = deliverable?.status || 'draft';
+    el('deliverableDueDate').value = deliverable?.due_date || '';
+    el('deliverableDeliveredAt').value = deliverable?.delivered_at ? deliverable.delivered_at.slice(0, 10) : '';
+    el('deliverableExternalLink').value = deliverable?.external_link || '';
+    el('deliverableNotes').value = deliverable?.notes || '';
+    el('deliverableFormError').textContent = '';
+    el('deliverableFormError').classList.remove('active');
+    openModal('deliverableModalOverlay');
+}
+
+el('pdAddDeliverableBtn')?.addEventListener('click', () => openDeliverableModal(null));
 
 el('deliverableForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -787,12 +771,22 @@ el('deliverableForm')?.addEventListener('submit', async (e) => {
     errorEl.classList.remove('active');
     if (!title) { errorEl.textContent = 'El título es obligatorio.'; errorEl.classList.add('active'); return; }
 
+    const payload = {
+        title,
+        description: el('deliverableDescription').value.trim() || null,
+        status: el('deliverableStatus').value,
+        due_date: el('deliverableDueDate').value || null,
+        delivered_at: el('deliverableDeliveredAt').value || null,
+        external_link: el('deliverableExternalLink').value.trim() || null,
+        notes: el('deliverableNotes').value.trim() || null
+    };
+
     try {
-        await createDeliverable({
-            project_id: projectId,
-            title,
-            description: el('deliverableDescription').value.trim() || null
-        });
+        if (editingDeliverableId) {
+            await updateDeliverable(editingDeliverableId, payload);
+        } else {
+            await createDeliverable({ project_id: projectId, ...payload });
+        }
         closeModal('deliverableModalOverlay');
         el('deliverableForm').reset();
         currentDeliverables = await listProjectDeliverables(projectId);
@@ -800,6 +794,19 @@ el('deliverableForm')?.addEventListener('submit', async (e) => {
     } catch (error) {
         errorEl.textContent = error.message;
         errorEl.classList.add('active');
+    }
+});
+
+el('deliverableDeleteBtn')?.addEventListener('click', async () => {
+    if (!editingDeliverableId) return;
+    if (!window.confirm('¿Eliminar este entregable?')) return;
+    try {
+        await deleteDeliverable(editingDeliverableId);
+        closeModal('deliverableModalOverlay');
+        currentDeliverables = await listProjectDeliverables(projectId);
+        renderDeliverables(currentDeliverables);
+    } catch (error) {
+        alert(`No se pudo eliminar: ${error.message}`);
     }
 });
 
@@ -844,80 +851,6 @@ function renderFullTimeline(events) {
 }
 
 el('pdViewAllActivityBtn')?.addEventListener('click', () => openDrawer('activityDrawerOverlay'));
-
-/* ---------------------------------------------------------
-   Archivos (drawer)
---------------------------------------------------------- */
-function renderFiles(files) {
-    const list = el('filesList');
-    const emptyState = el('filesEmptyState');
-
-    if (!files.length) {
-        list.innerHTML = '';
-        emptyState.style.display = 'block';
-        return;
-    }
-    emptyState.style.display = 'none';
-
-    list.innerHTML = files.map((file) => `
-        <div class="admin-file-row" data-file-id="${file.id}" data-storage-path="${escapeHtml(file.storage_path)}">
-            <div class="admin-file-icon">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="admin-file-info">
-                <strong>${escapeHtml(file.file_name)}</strong>
-                <span>${file.folder} · ${formatFileSize(file.size_bytes)} · ${escapeHtml(file.profiles?.full_name || 'NEXA')} · ${formatDate(file.created_at)}</span>
-            </div>
-            <button type="button" class="admin-icon-btn" data-download-file title="Descargar">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-            <button type="button" class="admin-icon-btn danger" data-delete-file title="Eliminar">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-        </div>
-    `).join('');
-
-    list.querySelectorAll('[data-download-file]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            const path = btn.closest('.admin-file-row').dataset.storagePath;
-            try {
-                const url = await getFileSignedUrl(path);
-                window.open(url, '_blank');
-            } catch (error) {
-                alert(`No se pudo generar el enlace: ${error.message}`);
-            }
-        });
-    });
-
-    list.querySelectorAll('[data-delete-file]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            const row = btn.closest('.admin-file-row');
-            const file = files.find((f) => f.id === row.dataset.fileId);
-            if (!window.confirm(`¿Eliminar "${file.file_name}"?`)) return;
-            try {
-                await deleteProjectFile(file);
-                currentFiles = await listProjectFiles(projectId);
-                renderFiles(currentFiles);
-            } catch (error) {
-                alert(`No se pudo eliminar: ${error.message}`);
-            }
-        });
-    });
-}
-
-el('fileUploadInput')?.addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-        await uploadProjectFile({ projectId, file, uploadedBy: currentUserId });
-        currentFiles = await listProjectFiles(projectId);
-        renderFiles(currentFiles);
-    } catch (error) {
-        alert(`No se pudo subir el archivo: ${error.message}`);
-    } finally {
-        e.target.value = '';
-    }
-});
 
 /* ---------------------------------------------------------
    Comentarios del proyecto (drawer)
@@ -1054,7 +987,6 @@ document.querySelectorAll('.pd-drawer-overlay').forEach((overlay) => {
     });
 });
 
-el('pdFilesBtn')?.addEventListener('click', () => openDrawer('filesDrawerOverlay'));
 el('pdCommentsBtn')?.addEventListener('click', () => openDrawer('commentsDrawerOverlay'));
 
 init();
