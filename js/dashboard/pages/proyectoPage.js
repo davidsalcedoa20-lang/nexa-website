@@ -1,6 +1,14 @@
 /* ==========================================================
    NEXA HUB — Página: Detalle de Proyecto (cliente)
    dashboard/proyecto.html
+   ==========================================================
+   Vista "Plantilla Oficial" en modo SOLO LECTURA: el cliente
+   visualiza etapas, bloques, secciones, tareas, entregables,
+   archivos, comentarios y cronología. Únicamente puede:
+     - Marcar como "Lista" sus propias tareas (task_type = client).
+     - Aprobar / solicitar cambios en tareas de aprobación.
+     - Subir archivos y comentar.
+   No puede crear, eliminar ni modificar títulos/fechas/responsables.
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
 import { getProject, getProjectStructure } from '../../services/projectService.js';
@@ -8,10 +16,11 @@ import { setClientTaskStatus, decideApproval } from '../../services/taskService.
 import { listProjectFiles, uploadProjectFile, getFileSignedUrl } from '../../services/fileService.js';
 import { listComments, addComment } from '../../services/commentService.js';
 import { listTimelineEvents } from '../../services/timelineService.js';
+import { listProjectDeliverables } from '../../services/deliverableService.js';
 import {
-    PROJECT_STATUS_LABELS, PROGRESS_STATUS_LABELS, TASK_TYPE_LABELS,
-    APPROVAL_DECISION_LABELS, TIMELINE_EVENT_ICONS,
-    formatDate, formatDateTime, formatFileSize, getInitials, escapeHtml
+    PROGRESS_STATUS_LABELS,
+    APPROVAL_DECISION_LABELS, DELIVERABLE_STATUS_LABELS, TIMELINE_EVENT_ICONS,
+    formatDate, formatDateTime, formatFileSize, getInitials, escapeHtml, daysRemaining
 } from '../../components/projectUi.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -21,6 +30,8 @@ const mainEl = document.getElementById('projectDetailMain');
 const loadingEl = document.getElementById('projectDetailLoadingState');
 
 let currentUserId = null;
+let currentProject = null;
+let currentStructure = null;
 
 function el(id) { return document.getElementById(id); }
 
@@ -30,7 +41,9 @@ const DASH_BADGE_CLASS = {
     waiting_approval: 'dash-badge--waiting',
     completed: 'dash-badge--done',
     blocked: 'dash-badge--blocked',
-    finished: 'dash-badge--done'
+    finished: 'dash-badge--done',
+    approved: 'dash-badge--done',
+    cancelled: 'dash-badge--pending'
 };
 
 async function init() {
@@ -53,38 +66,88 @@ async function init() {
 }
 
 async function refreshAll() {
-    const project = await getProject(projectId);
-    renderHeader(project);
-
-    const phases = await getProjectStructure(projectId);
-    renderPhases(phases);
-
+    currentProject = await getProject(projectId);
+    currentStructure = await getProjectStructure(projectId);
+    const deliverables = await listProjectDeliverables(projectId);
     const files = await listProjectFiles(projectId);
-    renderFiles(files);
-
     const comments = await listComments(projectId, 'project', projectId);
-    renderComments(comments);
-
     const events = await listTimelineEvents(projectId);
+
+    renderHeader(currentProject);
+    renderStageProgress(currentStructure.stages);
+    renderTimelineChips(currentStructure.stages);
+    renderPhases(currentStructure.stages, currentStructure.unassignedPhases);
+    renderMyTasks(currentStructure.allTasks);
+    renderDeliverables(deliverables);
+    renderActivityPreview(events);
+    renderFiles(files);
+    renderComments(comments);
     renderTimeline(events);
 }
 
 function renderHeader(project) {
     document.title = `${project.name} | NEXA Hub`;
-    el('detailProjectName').textContent = project.name;
-    el('detailProjectMeta').textContent =
-        `${project.project_types?.name || 'Proyecto'} · ${PROJECT_STATUS_LABELS[project.status] || project.status}`;
+    el('pdBreadcrumbName').textContent = project.name;
 
+    const titleEl = el('pdTitle');
+    const primaryColor = project.color_hex || project.project_types?.color_hex || '#2D8CFF';
+    const secondaryColor = project.secondary_color_hex || '#FF8A3D';
+    titleEl.style.setProperty('--project-color', primaryColor);
+    titleEl.style.setProperty('--project-color-2', secondaryColor);
+
+    if (project.name.includes(' + ')) {
+        const [first, ...rest] = project.name.split(' + ');
+        titleEl.innerHTML = `<span class="dash-title-part">${escapeHtml(first)}</span><span class="dash-title-sep">+</span><span class="dash-title-part dash-title-part--secondary">${escapeHtml(rest.join(' + '))}</span>`;
+    } else {
+        titleEl.innerHTML = `<span class="dash-title-part">${escapeHtml(project.name)}</span>`;
+    }
+
+    const remaining = daysRemaining(project.end_date);
+    el('detailProjectMeta').textContent =
+        `${project.project_types?.name || 'Proyecto'} · ${remaining !== null && remaining >= 0 ? `Entrega en ${remaining} día${remaining === 1 ? '' : 's'}` : ''}`;
+
+    el('pdMetaModality').textContent = project.modality || 'Sin definir';
     el('detailOverallProgress').textContent = `${project.progress_percent || 0}%`;
     el('detailOverallProgressBar').style.width = `${project.progress_percent || 0}%`;
     el('detailClientProgress').textContent = `${project.client_progress_percent || 0}%`;
-    el('detailClientProgressBar').style.width = `${project.client_progress_percent || 0}%`;
     el('detailNexaProgress').textContent = `${project.nexa_progress_percent || 0}%`;
-    el('detailNexaProgressBar').style.width = `${project.nexa_progress_percent || 0}%`;
 
     el('detailDescription').textContent = project.description || 'Sin descripción.';
     el('detailStartDate').textContent = formatDate(project.start_date);
     el('detailEndDate').textContent = formatDate(project.end_date);
+    el('detailResponsible').textContent = project.responsible?.full_name || 'NEXA';
+}
+
+function renderStageProgress(stages) {
+    const list = el('pdStageProgressList');
+    if (!stages.length) {
+        list.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin etapas todavía.</span>';
+        return;
+    }
+    list.innerHTML = stages.map((stage, idx) => `
+        <div class="dash-stage-progress-item">
+            <span class="dash-stage-progress-code" style="--stage-color:${escapeHtml(stage.color_hex)}">A${idx + 1}</span>
+            <span class="dash-stage-progress-name">${escapeHtml(stage.name)}</span>
+            <span class="dash-stage-progress-percent">${stage.progress_percent || 0}%</span>
+        </div>
+    `).join('');
+}
+
+function renderTimelineChips(stages) {
+    const track = el('pdTimelineTrack');
+    if (!stages.length) {
+        track.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin etapas todavía.</span>';
+        return;
+    }
+    track.innerHTML = stages.map((stage, idx) => `
+        <div class="dash-timeline-chip" style="--stage-color:${escapeHtml(stage.color_hex)}">
+            <div class="dash-timeline-chip-top">
+                <span class="dash-timeline-chip-num">${idx + 1}</span>
+                <span class="dash-timeline-chip-name">${escapeHtml(stage.name)}</span>
+            </div>
+            <span class="dash-timeline-chip-sub">${stage.progress_percent || 0}% · ${PROGRESS_STATUS_LABELS[stage.status] || stage.status}</span>
+        </div>
+    `).join('');
 }
 
 /* ---------------------------------------------------------
@@ -100,72 +163,82 @@ document.querySelectorAll('.dash-tab-btn').forEach((btn) => {
 });
 
 /* ---------------------------------------------------------
-   Bloques / Tareas / Aprobaciones
+   Bloques / Secciones / Tareas (solo lectura + acciones propias)
 --------------------------------------------------------- */
-function renderPhases(phases) {
+function renderPhases(stages, unassignedPhases) {
     const list = el('phaseList');
     const emptyState = el('phasesEmptyState');
 
-    if (!phases.length) {
+    const allPhases = [...stages.flatMap((s) => s.phases.map((p) => ({ ...p, stageColor: s.color_hex }))), ...unassignedPhases];
+
+    if (!allPhases.length) {
         list.innerHTML = '';
         emptyState.style.display = 'block';
         return;
     }
     emptyState.style.display = 'none';
 
-    list.innerHTML = phases.map((phase) => `
-        <div class="dash-phase" data-phase-id="${phase.id}">
-            <div class="dash-phase-header" data-phase-toggle>
-                <div class="dash-phase-header-main">
-                    <div class="dash-phase-title-row">
+    list.innerHTML = allPhases.map((phase) => `
+        <div class="dash-block">
+            <div class="dash-block-header">
+                <div>
+                    <div class="dash-block-title">
+                        <span class="dash-block-title-dot" style="--stage-color:${escapeHtml(phase.stageColor || '#2D8CFF')}"></span>
                         <strong>${escapeHtml(phase.name)}</strong>
-                        <span class="dash-badge ${DASH_BADGE_CLASS[phase.status] || 'dash-badge--pending'}">${PROGRESS_STATUS_LABELS[phase.status] || phase.status}</span>
-                        ${phase.duration_days ? `<span style="color:#7a7a7a; font-size:12px;">${phase.duration_days} días</span>` : ''}
+                        <span class="dash-badge ${DASH_BADGE_CLASS[phase.status] || 'dash-badge--pending'}">${PROGRESS_STATUS_LABELS[phase.status] || phase.status} — ${phase.progress_percent || 0}%</span>
                     </div>
-                    <div class="dash-progress-track" style="max-width:260px;">
-                        <div class="dash-progress-fill" style="width:${phase.progress_percent || 0}%"></div>
-                    </div>
+                    ${phase.description ? `<span class="dash-block-desc">${escapeHtml(phase.description)}</span>` : ''}
                 </div>
-                <svg class="dash-phase-caret" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
             </div>
-            <div class="dash-phase-body">
+            <div class="dash-block-body">
                 ${(phase.sections || []).map((section) => `
-                    <div class="dash-section-block">
-                        <h4>${escapeHtml(section.name)}</h4>
-                        ${(section.tasks || []).map((task) => renderTaskRow(task)).join('') || '<span style="color:#7a7a7a; font-size:12px;">Sin tareas.</span>'}
+                    <div>
+                        <div class="dash-section-group-header">
+                            <span class="dash-section-group-dot" style="--section-color:${escapeHtml(section.color_hex || '#2D8CFF')}"></span>
+                            <span class="dash-section-group-name">${escapeHtml(section.name)}</span>
+                            ${section.handle ? `<span class="dash-section-group-handle">—@${escapeHtml(section.handle)}</span>` : ''}
+                        </div>
+                        <div class="dash-task-grid">
+                            ${(section.tasks || []).map((task, idx) => renderTaskCard(task, idx)).join('') || '<span style="color:#7a7a7a; font-size:12px;">Sin tareas.</span>'}
+                        </div>
                     </div>
-                `).join('')}
+                `).join('') || '<span class="dash-empty-inline">Este bloque todavía no tiene secciones.</span>'}
             </div>
         </div>
     `).join('');
 
-    document.querySelectorAll('[data-phase-toggle]').forEach((header) => {
-        header.addEventListener('click', () => header.closest('.dash-phase').classList.toggle('is-open'));
-    });
-
     wireTaskActions();
 }
 
-function renderTaskRow(task) {
+function renderTaskCard(task, idx) {
     const approval = task.approvals?.[0] || task.approvals;
     let actionHtml = '';
 
-    if (task.task_type === 'client' && task.status !== 'completed' && task.status !== 'finished') {
-        actionHtml = `<button type="button" class="dash-btn-small" data-complete-task="${task.id}">Marcar como hecha</button>`;
+    if (task.task_type === 'client' && !['completed', 'finished', 'approved'].includes(task.status)) {
+        actionHtml = `<button type="button" class="dash-task-mark-btn" data-complete-task="${task.id}">Marcar como lista</button>`;
     } else if (task.task_type === 'approval' && approval && approval.decision === 'pending') {
         actionHtml = `
-            <button type="button" class="dash-btn-small" data-approve="${approval.id}">Aprobar</button>
-            <button type="button" class="dash-btn-outline" data-request-changes="${approval.id}">Solicitar cambios</button>`;
+            <div style="display:flex; gap:8px; margin-top:4px;">
+                <button type="button" class="dash-task-mark-btn" data-approve="${approval.id}">Aprobar</button>
+                <button type="button" class="dash-btn-outline" data-request-changes="${approval.id}">Solicitar cambios</button>
+            </div>`;
     } else if (task.task_type === 'approval' && approval) {
         actionHtml = `<span class="dash-badge ${approval.decision === 'approved' ? 'dash-badge--done' : 'dash-badge--waiting'}">${APPROVAL_DECISION_LABELS[approval.decision]}</span>`;
     }
 
     return `
-        <div class="dash-task-row">
-            <span class="dash-task-tag dash-task-tag--${task.task_type}">${TASK_TYPE_LABELS[task.task_type]}</span>
-            <div class="dash-task-row-main">
-                <strong>${escapeHtml(task.title)}</strong>
-                <span>${task.due_date ? `Vence ${formatDate(task.due_date)}` : PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
+        <div class="dash-task-card">
+            <div class="dash-task-card-top">
+                <span class="dash-task-card-code">1.${idx + 1}</span>
+                <span class="dash-task-card-title">${escapeHtml(task.title)}</span>
+            </div>
+            <span class="dash-badge ${DASH_BADGE_CLASS[task.status] || 'dash-badge--pending'}" style="align-self:flex-start;">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
+            ${task.description ? `<p class="dash-task-card-desc">${escapeHtml(task.description)}</p>` : ''}
+            <div class="dash-task-card-footer">
+                <div class="dash-task-avatar-row">
+                    <span class="dash-task-avatar">${getInitials(task.task_type === 'client' ? 'Tú' : (task.profiles?.full_name || 'NEXA'))}</span>
+                    <span class="dash-task-avatar-name">${task.task_type === 'client' ? 'Tú' : escapeHtml(task.profiles?.full_name || 'Equipo NEXA')}${task.due_date ? ` · ${formatDate(task.due_date)}` : ''}</span>
+                </div>
             </div>
             ${actionHtml}
         </div>
@@ -177,12 +250,14 @@ function wireTaskActions() {
         btn.addEventListener('click', async () => {
             const taskId = btn.getAttribute('data-complete-task');
             btn.disabled = true;
+            btn.textContent = 'Guardando...';
             try {
                 await setClientTaskStatus(taskId, 'completed');
                 await refreshAll();
             } catch (error) {
                 alert(`No se pudo actualizar la tarea: ${error.message}`);
                 btn.disabled = false;
+                btn.textContent = 'Marcar como lista';
             }
         });
     });
@@ -216,6 +291,77 @@ function wireTaskActions() {
             }
         });
     });
+}
+
+/* ---------------------------------------------------------
+   "Tus tareas" (resumen) — atajo directo sin entrar a Bloques
+--------------------------------------------------------- */
+function renderMyTasks(tasks) {
+    const list = el('pdMyTasksList');
+    const emptyState = el('pdMyTasksEmptyState');
+    const myTasks = tasks.filter((t) => t.task_type === 'client' || t.task_type === 'approval');
+
+    if (!myTasks.length) {
+        list.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+
+    list.innerHTML = myTasks.map((task) => `
+        <div class="dash-task-checkrow ${['completed', 'finished', 'approved'].includes(task.status) ? 'is-done' : ''}">
+            <span class="dash-badge ${DASH_BADGE_CLASS[task.status] || 'dash-badge--pending'}">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
+            <span class="dash-task-checkrow-title">${escapeHtml(task.title)}</span>
+        </div>
+    `).join('');
+}
+
+/* ---------------------------------------------------------
+   Entregables
+--------------------------------------------------------- */
+function renderDeliverables(deliverables) {
+    const list = el('pdDeliverablesList');
+    const emptyState = el('pdDeliverablesEmptyState');
+
+    if (!deliverables.length) {
+        list.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+
+    const doneCheck = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    list.innerHTML = deliverables.map((d) => {
+        const isDone = d.status === 'delivered' || d.status === 'approved';
+        return `
+            <div class="dash-deliverable-row">
+                <span class="dash-deliverable-check" style="background:${isDone ? 'rgba(60,210,140,.16)' : 'rgba(255,177,45,.16)'}; color:${isDone ? '#4ADE80' : '#FFC15F'};">${isDone ? doneCheck : ''}</span>
+                <span class="dash-deliverable-title">${escapeHtml(d.title)}</span>
+                <span class="dash-badge ${isDone ? 'dash-badge--done' : 'dash-badge--pending'}">${DELIVERABLE_STATUS_LABELS[d.status] || d.status}</span>
+            </div>
+        `;
+    }).join('');
+}
+
+/* ---------------------------------------------------------
+   Actividad reciente (vista corta en Resumen)
+--------------------------------------------------------- */
+function renderActivityPreview(events) {
+    const list = el('pdActivityList');
+    if (!events.length) {
+        list.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin actividad todavía.</span>';
+        return;
+    }
+    list.innerHTML = events.slice(0, 6).map((event) => `
+        <div class="dash-activity-item">
+            <span class="dash-activity-avatar">${getInitials(event.profiles?.full_name)}</span>
+            <div>
+                <span class="dash-activity-text">${escapeHtml(event.description)}</span>
+                <span class="dash-activity-time">${formatDateTime(event.created_at)}</span>
+            </div>
+        </div>
+    `).join('');
 }
 
 /* ---------------------------------------------------------
@@ -263,7 +409,8 @@ el('fileUploadInput')?.addEventListener('change', async (e) => {
     if (!file) return;
     try {
         await uploadProjectFile({ projectId, folder: 'Cliente', file, uploadedBy: currentUserId });
-        await refreshAll();
+        const files = await listProjectFiles(projectId);
+        renderFiles(files);
     } catch (error) {
         alert(`No se pudo subir el archivo: ${error.message}`);
     } finally {

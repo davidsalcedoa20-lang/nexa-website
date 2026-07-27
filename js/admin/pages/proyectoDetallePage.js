@@ -1,20 +1,27 @@
 /* ==========================================================
    NEXA HUB — Página: Detalle de Proyecto (admin/proyecto-detalle.html)
+   ==========================================================
+   Vista "Plantilla Oficial": Proyecto -> Etapas (línea de tiempo)
+   -> Bloques -> Secciones -> Tareas. El administrador puede
+   editar absolutamente todo desde esta página.
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
-import { getProject, getProjectStructure, duplicateProject } from '../../services/projectService.js';
+import { getProject, getProjectStructure, duplicateProject, updateProject, setProjectStatus, archiveProject } from '../../services/projectService.js';
 import { createPhase, deletePhase, createSection, deleteSection } from '../../services/phaseService.js';
+import { createStage, updateStage, deleteStage } from '../../services/timelineStageService.js';
 import { createTask, updateTask, deleteTask } from '../../services/taskService.js';
-import { listProjectFiles, uploadProjectFile, deleteProjectFile, getFileSignedUrl } from '../../services/fileService.js';
+import { listProjectFiles, listTaskFiles, uploadProjectFile, deleteProjectFile, getFileSignedUrl } from '../../services/fileService.js';
 import { listComments, addComment } from '../../services/commentService.js';
 import { listTimelineEvents } from '../../services/timelineService.js';
+import { listProjectDeliverables, createDeliverable, updateDeliverable, deleteDeliverable } from '../../services/deliverableService.js';
 import { listAdmins } from '../../services/profileService.js';
 import {
-    PROJECT_STATUS_LABELS, PROJECT_STATUS_BADGE_CLASS,
-    PROGRESS_STATUS_LABELS, PROGRESS_STATUS_BADGE_CLASS, TASK_TYPE_LABELS, TASK_PRIORITY_LABELS,
-    APPROVAL_DECISION_LABELS, TIMELINE_EVENT_ICONS,
-    formatDate, formatDateTime, formatFileSize, getInitials, escapeHtml
+    PROJECT_STATUS_LABELS, PROGRESS_STATUS_LABELS, PD_STATUS_BADGE_CLASS,
+    TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, DELIVERABLE_STATUS_LABELS, TIMELINE_EVENT_ICONS,
+    formatDate, formatDateTime, formatFileSize, getInitials, escapeHtml, daysRemaining
 } from '../../components/projectUi.js';
+
+const TASK_STATUS_OPTIONS = ['pending', 'in_progress', 'blocked', 'completed', 'approved', 'cancelled'];
 
 const params = new URLSearchParams(window.location.search);
 const projectId = params.get('id');
@@ -24,8 +31,17 @@ const loadingEl = document.getElementById('projectDetailLoadingState');
 
 let currentUserId = null;
 let admins = [];
+let currentProject = null;
+let currentStructure = null;
+let currentDeliverables = [];
+let currentEvents = [];
+let currentFiles = [];
+
+let activeStageIdForPhase = null;
 let activePhaseIdForSection = null;
 let activeSectionIdForTask = null;
+let editingStageId = null;
+let activeTaskId = null;
 
 function el(id) { return document.getElementById(id); }
 
@@ -43,7 +59,12 @@ async function init() {
 
     try {
         admins = await listAdmins();
-        populateAssigneeSelect();
+        populateSelect(el('taskAssignee'), admins, 'Sin asignar');
+        populateSelect(el('stageResponsible'), admins, 'Sin asignar');
+        populateSelect(el('taskDetailAssignee'), admins, 'Sin asignar');
+        populateSelect(el('editProjectResponsible'), admins, 'Sin asignar');
+        populateTaskStatusSelect(el('taskDetailStatus'));
+
         await refreshAll();
         loadingEl.style.display = 'none';
         mainEl.style.display = 'flex';
@@ -53,53 +74,70 @@ async function init() {
     }
 }
 
+function populateSelect(select, items, emptyLabel) {
+    if (!select) return;
+    select.innerHTML = `<option value="">${emptyLabel}</option>` +
+        items.map((a) => `<option value="${a.id}">${escapeHtml(a.full_name || a.email)}</option>`).join('');
+}
+
+function populateTaskStatusSelect(select) {
+    if (!select) return;
+    select.innerHTML = TASK_STATUS_OPTIONS
+        .map((status) => `<option value="${status}">${PROGRESS_STATUS_LABELS[status]}</option>`)
+        .join('');
+}
+
 async function refreshAll() {
-    const project = await getProject(projectId);
-    renderHeader(project);
-
-    const phases = await getProjectStructure(projectId);
-    renderPhases(phases);
-
-    const files = await listProjectFiles(projectId);
-    renderFiles(files);
-
+    currentProject = await getProject(projectId);
+    currentStructure = await getProjectStructure(projectId);
+    currentFiles = await listProjectFiles(projectId);
+    currentDeliverables = await listProjectDeliverables(projectId);
+    currentEvents = await listTimelineEvents(projectId);
     const comments = await listComments(projectId, 'project', projectId);
-    renderComments(comments);
 
-    const events = await listTimelineEvents(projectId);
-    renderTimeline(events);
+    renderHeader(currentProject);
+    renderProgressCards(currentProject, currentStructure.stages);
+    renderTimeline(currentStructure.stages);
+    renderBlocks(currentStructure.stages, currentStructure.unassignedPhases);
+    renderTasksByResponsible(currentStructure.allTasks, currentProject);
+    renderDeliverables(currentDeliverables);
+    renderActivity(currentEvents);
+    renderFullTimeline(currentEvents);
+    renderFiles(currentFiles);
+    renderComments(comments);
+    renderFooterBar(currentProject);
 }
 
 /* ---------------------------------------------------------
-   Header + progreso + resumen
+   Header
 --------------------------------------------------------- */
 function renderHeader(project) {
-    const color = project.color_hex || project.project_types?.color_hex || '#2D8CFF';
     const clientName = project.workspaces?.profiles?.full_name || project.workspaces?.name || 'Sin cliente';
-
     document.title = `${project.name} | NEXA Hub`;
-    el('detailProjectName').textContent = project.name;
-    el('detailProjectClient').textContent = `Cliente: ${clientName}`;
+    el('pdBreadcrumbName').textContent = project.name;
 
-    const statusBadge = el('detailProjectStatusBadge');
-    statusBadge.textContent = PROJECT_STATUS_LABELS[project.status] || project.status;
-    statusBadge.className = `admin-badge ${PROJECT_STATUS_BADGE_CLASS[project.status] || 'admin-badge--pending'}`;
+    const titleEl = el('pdTitle');
+    const primaryColor = project.color_hex || project.project_types?.color_hex || '#2D8CFF';
+    const secondaryColor = project.secondary_color_hex || '#FF8A3D';
+    titleEl.style.setProperty('--project-color', primaryColor);
+    titleEl.style.setProperty('--project-color-2', secondaryColor);
 
-    const typeTag = el('detailProjectTypeTag');
-    typeTag.textContent = project.project_types?.name || 'Sin tipo';
-    typeTag.style.setProperty('--project-color', color);
+    if (project.name.includes(' + ')) {
+        const [first, ...rest] = project.name.split(' + ');
+        titleEl.innerHTML = `<span class="pd-title-part">${escapeHtml(first)}</span><span class="pd-title-sep">+</span><span class="pd-title-part pd-title-part--secondary">${escapeHtml(rest.join(' + '))}</span>`;
+    } else {
+        titleEl.innerHTML = `<span class="pd-title-part">${escapeHtml(project.name)}</span>`;
+    }
 
-    el('detailOverallProgress').textContent = `${project.progress_percent || 0}%`;
-    el('detailOverallProgressBar').style.width = `${project.progress_percent || 0}%`;
-    el('detailClientProgress').textContent = `${project.client_progress_percent || 0}%`;
-    el('detailClientProgressBar').style.width = `${project.client_progress_percent || 0}%`;
-    el('detailNexaProgress').textContent = `${project.nexa_progress_percent || 0}%`;
-    el('detailNexaProgressBar').style.width = `${project.nexa_progress_percent || 0}%`;
+    el('pdDescription').textContent = project.description || 'Sin descripción.';
+    el('pdMetaClient').textContent = clientName;
+    el('pdMetaModality').textContent = project.modality || 'Sin definir';
+    el('pdMetaStart').textContent = formatDate(project.start_date);
+    el('pdMetaEnd').textContent = formatDate(project.end_date);
 
-    el('detailDescription').textContent = project.description || 'Sin descripción.';
-    el('detailStartDate').textContent = formatDate(project.start_date);
-    el('detailEndDate').textContent = formatDate(project.end_date);
-    el('detailResponsible').textContent = admins.find((a) => a.id === project.responsible_id)?.full_name || 'Sin asignar';
+    [el('pdEditProjectBtn'), el('pdEditProjectBtn2')].forEach((btn) => {
+        btn.onclick = () => openEditProjectModal(project);
+    });
 
     el('detailDuplicateBtn').onclick = async () => {
         const newName = window.prompt('Nombre del nuevo proyecto duplicado:', `${project.name} (copia)`);
@@ -113,130 +151,202 @@ function renderHeader(project) {
     };
 }
 
+function renderFooterBar(project) {
+    const responsibleName = admins.find((a) => a.id === project.responsible_id)?.full_name
+        || project.responsible?.full_name || 'Sin asignar';
+    el('pdFooterResponsible').textContent = responsibleName;
+    el('pdFooterUpdated').textContent = formatDateTime(project.updated_at || project.created_at);
+
+    const isActive = project.status === 'in_progress' && !project.archived_at;
+    el('pdStatusDot').style.background = isActive ? '#4ADE80' : '#8a8a8a';
+    el('pdStatusDot').style.boxShadow = isActive ? '0 0 8px rgba(74,222,128,.6)' : 'none';
+    el('pdStatusLabel').textContent = project.archived_at
+        ? 'Proyecto archivado'
+        : `Proyecto ${(PROJECT_STATUS_LABELS[project.status] || project.status).toLowerCase()}`;
+}
+
 /* ---------------------------------------------------------
-   Tabs
+   Progreso general + por etapa
 --------------------------------------------------------- */
-document.querySelectorAll('.admin-tab-btn').forEach((btn) => {
-    btn.addEventListener('click', () => {
-        document.querySelectorAll('.admin-tab-btn').forEach((b) => b.classList.remove('active'));
-        document.querySelectorAll('.admin-tab-panel').forEach((p) => p.classList.remove('active'));
-        btn.classList.add('active');
-        document.querySelector(`[data-tab-panel="${btn.dataset.tab}"]`)?.classList.add('active');
+function renderProgressCards(project, stages) {
+    el('pdOverallProgressBig').textContent = `${project.progress_percent || 0}%`;
+    el('pdOverallProgressBar').style.width = `${project.progress_percent || 0}%`;
+
+    const remaining = daysRemaining(project.end_date);
+    el('pdDaysRemaining').textContent = remaining === null
+        ? ''
+        : remaining >= 0 ? `Entrega en ${remaining} día${remaining === 1 ? '' : 's'}` : `Entrega vencida hace ${Math.abs(remaining)} día${Math.abs(remaining) === 1 ? '' : 's'}`;
+
+    const list = el('pdStageProgressList');
+    if (!stages.length) {
+        list.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin etapas todavía.</span>';
+        return;
+    }
+    list.innerHTML = stages.map((stage, idx) => `
+        <div class="pd-stage-progress-item">
+            <span class="pd-stage-progress-code" style="--stage-color:${escapeHtml(stage.color_hex)}">A${idx + 1}</span>
+            <span class="pd-stage-progress-name">${escapeHtml(stage.name)}</span>
+            <span class="pd-stage-progress-percent">${stage.progress_percent || 0}%</span>
+        </div>
+    `).join('');
+}
+
+/* ---------------------------------------------------------
+   Línea de tiempo (etapas)
+--------------------------------------------------------- */
+function renderTimeline(stages) {
+    const track = el('pdTimelineTrack');
+    track.innerHTML = stages.map((stage, idx) => `
+        <div class="pd-timeline-chip" data-stage-id="${stage.id}" style="--stage-color:${escapeHtml(stage.color_hex)}">
+            <div class="pd-timeline-chip-top">
+                <span class="pd-timeline-chip-num">${idx + 1}</span>
+                <span class="pd-timeline-chip-name">${escapeHtml(stage.name)}</span>
+            </div>
+            <span class="pd-timeline-chip-sub">${stage.progress_percent || 0}% · ${(PROGRESS_STATUS_LABELS[stage.status] || stage.status)}</span>
+        </div>
+    `).join('') + `
+        <button type="button" class="pd-timeline-add-chip" id="pdAddStageChipBtn">
+            <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Nueva etapa
+        </button>
+    `;
+
+    track.querySelectorAll('[data-stage-id]').forEach((chip) => {
+        chip.addEventListener('click', () => {
+            const stage = stages.find((s) => s.id === chip.dataset.stageId);
+            if (stage) openStageModal(stage);
+        });
     });
-});
+    el('pdAddStageChipBtn')?.addEventListener('click', () => openStageModal(null));
+}
 
 /* ---------------------------------------------------------
    Bloques / Secciones / Tareas
 --------------------------------------------------------- */
-function populateAssigneeSelect() {
-    const select = el('taskAssignee');
-    if (!select) return;
-    select.innerHTML = '<option value="">Sin asignar</option>' +
-        admins.map((a) => `<option value="${a.id}">${escapeHtml(a.full_name || a.email)}</option>`).join('');
-}
+function renderBlocks(stages, unassignedPhases) {
+    const list = el('pdBlocksList');
+    const emptyState = el('pdBlocksEmptyState');
 
-function renderPhases(phases) {
-    const list = el('phaseList');
-    const emptyState = el('phasesEmptyState');
-    el('detailPhasesCount').textContent = String(phases.length);
+    const groups = [
+        ...stages.map((stage) => ({ stage, phases: stage.phases })),
+        ...(unassignedPhases.length ? [{ stage: null, phases: unassignedPhases }] : [])
+    ];
 
-    if (!phases.length) {
+    const totalPhases = groups.reduce((sum, g) => sum + g.phases.length, 0);
+    if (!totalPhases && !stages.length) {
         list.innerHTML = '';
         emptyState.style.display = 'block';
         return;
     }
     emptyState.style.display = 'none';
 
-    list.innerHTML = phases.map((phase) => `
-        <div class="admin-phase" data-phase-id="${phase.id}">
-            <div class="admin-phase-header" data-phase-toggle>
-                <div class="admin-phase-header-main">
-                    <div class="admin-phase-title-row">
-                        <strong>${escapeHtml(phase.name)}</strong>
-                        <span class="admin-badge ${PROGRESS_STATUS_BADGE_CLASS[phase.status] || 'admin-badge--pending'}">${PROGRESS_STATUS_LABELS[phase.status] || phase.status}</span>
-                        ${phase.duration_days ? `<span style="color:#7a7a7a; font-size:12px;">${phase.duration_days} días</span>` : ''}
-                    </div>
-                    <div class="admin-progress-track" style="max-width:280px;">
-                        <div class="admin-progress-fill" style="width:${phase.progress_percent || 0}%"></div>
-                    </div>
-                </div>
-                <button type="button" class="admin-icon-btn danger" data-delete-phase title="Eliminar bloque">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <svg class="admin-phase-caret" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </div>
-            <div class="admin-phase-body">
-                ${(phase.sections || []).map((section) => renderSectionBlock(section)).join('')}
-                <button type="button" class="admin-inline-add-btn" data-add-section="${phase.id}">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                    Agregar sección
-                </button>
-            </div>
-        </div>
+    list.innerHTML = groups.map((group) => `
+        ${(group.phases || []).map((phase) => renderPhaseCard(phase, group.stage)).join('')}
+        <button type="button" class="pd-timeline-add-chip" style="align-self:flex-start; padding:10px 18px;" data-add-phase-to-stage="${group.stage ? group.stage.id : ''}">
+            <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Nuevo bloque ${group.stage ? `en "${escapeHtml(group.stage.name)}"` : ''}
+        </button>
     `).join('');
 
-    wirePhaseEvents();
+    if (!stages.length) {
+        list.innerHTML += `<button type="button" class="pd-timeline-add-chip" style="align-self:flex-start; padding:10px 18px;" data-add-phase-to-stage="">
+            <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            Nuevo bloque
+        </button>`;
+    }
+
+    wireBlockEvents();
 }
 
-function renderSectionBlock(section) {
+function renderPhaseCard(phase, stage) {
+    const stageColor = stage?.color_hex || '#2D8CFF';
     return `
-        <div class="admin-section-block" data-section-id="${section.id}">
-            <div class="admin-section-block-header">
-                <h4>${escapeHtml(section.name)}</h4>
-                <button type="button" class="admin-icon-btn danger" data-delete-section title="Eliminar sección">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <div class="pd-block" data-phase-id="${phase.id}">
+            <div class="pd-block-header">
+                <div class="pd-block-header-main">
+                    <div class="pd-block-title">
+                        <span class="pd-block-title-dot" style="--stage-color:${escapeHtml(stageColor)}"></span>
+                        <strong>${escapeHtml(phase.name)}</strong>
+                        <span class="pd-badge ${PD_STATUS_BADGE_CLASS[phase.status] || 'pd-badge--pending'}">${(PROGRESS_STATUS_LABELS[phase.status] || phase.status)} — ${phase.progress_percent || 0}%</span>
+                    </div>
+                    ${phase.description ? `<span class="pd-block-desc">${escapeHtml(phase.description)}</span>` : ''}
+                </div>
+                <div class="pd-block-header-actions">
+                    <button type="button" class="admin-icon-btn" data-add-section="${phase.id}" title="Agregar sección">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    </button>
+                    <button type="button" class="admin-icon-btn danger" data-delete-phase title="Eliminar bloque">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="pd-block-body">
+                ${(phase.sections || []).map((section) => renderSectionGroup(section)).join('') || '<span class="admin-empty-inline">Este bloque todavía no tiene secciones.</span>'}
+            </div>
+        </div>
+    `;
+}
+
+function renderSectionGroup(section) {
+    const color = section.color_hex || '#2D8CFF';
+    return `
+        <div class="pd-section-group" data-section-id="${section.id}">
+            <div class="pd-section-group-header">
+                <span class="pd-section-group-dot" style="--section-color:${escapeHtml(color)}"></span>
+                <span class="pd-section-group-name">${escapeHtml(section.name)}</span>
+                ${section.handle ? `<span class="pd-section-group-handle">—@${escapeHtml(section.handle)}</span>` : ''}
+                <div class="pd-section-group-actions">
+                    <button type="button" class="admin-icon-btn danger" data-delete-section title="Eliminar sección">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div class="pd-task-grid">
+                ${(section.tasks || []).map((task, idx) => renderTaskCard(task, idx)).join('')}
+                <button type="button" class="pd-add-task-card" data-add-task="${section.id}">
+                    <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                    Nueva tarea
                 </button>
             </div>
-            <div class="admin-task-list">
-                ${(section.tasks || []).map((task) => renderTaskRow(task)).join('') || '<div class="admin-empty-inline">Sin tareas todavía.</div>'}
-            </div>
-            <button type="button" class="admin-inline-add-btn" data-add-task="${section.id}">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                Agregar tarea
-            </button>
         </div>
     `;
 }
 
-function renderTaskRow(task) {
-    const approval = task.approvals?.[0] || task.approvals;
-    const decisionLabel = task.task_type === 'approval' && approval
-        ? `<span style="color:#7a7a7a; font-size:11px;">${APPROVAL_DECISION_LABELS[approval.decision] || approval.decision}</span>`
-        : '';
-
-    const statusOptions = Object.entries(PROGRESS_STATUS_LABELS)
-        .map(([value, label]) => `<option value="${value}" ${task.status === value ? 'selected' : ''}>${label}</option>`)
-        .join('');
+function renderTaskCard(task, idx) {
+    const responsibleName = task.task_type === 'client'
+        ? (currentProject?.workspaces?.profiles?.full_name || 'Cliente')
+        : (task.profiles?.full_name || 'Sin asignar');
 
     return `
-        <div class="admin-task-row" data-task-id="${task.id}">
-            <span class="admin-task-tag admin-task-tag--${task.task_type}">${TASK_TYPE_LABELS[task.task_type]}</span>
-            <div class="admin-task-row-main">
-                <strong>${escapeHtml(task.title)}</strong>
-                <span>${task.profiles?.full_name ? `Responsable: ${escapeHtml(task.profiles.full_name)}` : 'Sin responsable'} ${task.due_date ? `· Vence ${formatDate(task.due_date)}` : ''}</span>
+        <button type="button" class="pd-task-card" data-task-id="${task.id}">
+            <div class="pd-task-card-top">
+                <span class="pd-task-card-code">1.${idx + 1}</span>
+                <span class="pd-task-card-title">${escapeHtml(task.title)}</span>
             </div>
-            <span class="admin-task-priority">${TASK_PRIORITY_LABELS[task.priority] || task.priority}</span>
-            ${decisionLabel}
-            <select class="admin-task-status-select" data-task-status>${statusOptions}</select>
-            <button type="button" class="admin-icon-btn danger" data-delete-task title="Eliminar tarea">
-                <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-            </button>
-        </div>
+            <span class="pd-badge ${PD_STATUS_BADGE_CLASS[task.status] || 'pd-badge--pending'}" style="align-self:flex-start;">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
+            ${task.description ? `<p class="pd-task-card-desc">${escapeHtml(task.description)}</p>` : ''}
+            <div class="pd-task-card-footer">
+                <div class="pd-task-avatar-row">
+                    <span class="pd-task-avatar">${getInitials(responsibleName)}</span>
+                    <span class="pd-task-avatar-name">${escapeHtml(responsibleName)}${task.task_type === 'client' ? ' (Cliente)' : ''}</span>
+                </div>
+            </div>
+        </button>
     `;
 }
 
-function wirePhaseEvents() {
-    document.querySelectorAll('[data-phase-toggle]').forEach((header) => {
-        header.addEventListener('click', (e) => {
-            if (e.target.closest('[data-delete-phase]')) return;
-            header.closest('.admin-phase').classList.toggle('is-open');
+function wireBlockEvents() {
+    document.querySelectorAll('[data-add-phase-to-stage]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            activeStageIdForPhase = btn.getAttribute('data-add-phase-to-stage') || null;
+            openModal('phaseModalOverlay');
         });
     });
 
     document.querySelectorAll('[data-delete-phase]').forEach((btn) => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
-            const phaseId = btn.closest('.admin-phase').dataset.phaseId;
+            const phaseId = btn.closest('.pd-block').dataset.phaseId;
             if (!window.confirm('¿Eliminar este bloque y todo su contenido (secciones y tareas)?')) return;
             try {
                 await deletePhase(phaseId);
@@ -247,9 +357,16 @@ function wirePhaseEvents() {
         });
     });
 
+    document.querySelectorAll('[data-add-section]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            activePhaseIdForSection = btn.getAttribute('data-add-section');
+            openModal('sectionModalOverlay');
+        });
+    });
+
     document.querySelectorAll('[data-delete-section]').forEach((btn) => {
         btn.addEventListener('click', async () => {
-            const sectionId = btn.closest('.admin-section-block').dataset.sectionId;
+            const sectionId = btn.closest('.pd-section-group').dataset.sectionId;
             if (!window.confirm('¿Eliminar esta sección y sus tareas?')) return;
             try {
                 await deleteSection(sectionId);
@@ -260,66 +377,126 @@ function wirePhaseEvents() {
         });
     });
 
-    document.querySelectorAll('[data-delete-task]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-            const taskId = btn.closest('.admin-task-row').dataset.taskId;
-            if (!window.confirm('¿Eliminar esta tarea?')) return;
-            try {
-                await deleteTask(taskId);
-                await refreshAll();
-            } catch (error) {
-                alert(`No se pudo eliminar: ${error.message}`);
-            }
-        });
-    });
-
-    document.querySelectorAll('[data-task-status]').forEach((select) => {
-        select.addEventListener('click', (e) => e.stopPropagation());
-        select.addEventListener('change', async () => {
-            const taskId = select.closest('.admin-task-row').dataset.taskId;
-            try {
-                await updateTask(taskId, { status: select.value });
-                await refreshAll();
-            } catch (error) {
-                alert(`No se pudo actualizar el estado: ${error.message}`);
-            }
-        });
-    });
-
-    document.querySelectorAll('[data-add-section]').forEach((btn) => {
-        btn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            activePhaseIdForSection = btn.getAttribute('data-add-section');
-            openModal('sectionModalOverlay');
-        });
-    });
-
     document.querySelectorAll('[data-add-task]').forEach((btn) => {
         btn.addEventListener('click', () => {
             activeSectionIdForTask = btn.getAttribute('data-add-task');
             openModal('taskModalOverlay');
         });
     });
+
+    document.querySelectorAll('[data-task-id]').forEach((card) => {
+        card.addEventListener('click', () => openTaskDetailModal(card.dataset.taskId));
+    });
 }
 
 /* ---------------------------------------------------------
-   Modales genéricos (abrir/cerrar)
+   Tareas agrupadas por responsable (panel inferior)
 --------------------------------------------------------- */
-function openModal(id) { document.getElementById(id)?.classList.add('active'); }
-function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
+function renderTasksByResponsible(tasks, project) {
+    const container = el('pdTasksByResponsible');
+    if (!tasks.length) {
+        container.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin tareas todavía.</span>';
+        return;
+    }
 
-document.querySelectorAll('[data-close-phase-modal]').forEach((b) => b.addEventListener('click', () => closeModal('phaseModalOverlay')));
-document.querySelectorAll('[data-close-section-modal]').forEach((b) => b.addEventListener('click', () => closeModal('sectionModalOverlay')));
-document.querySelectorAll('[data-close-task-modal]').forEach((b) => b.addEventListener('click', () => closeModal('taskModalOverlay')));
+    const clientName = project.workspaces?.profiles?.full_name || 'Cliente';
+    const groups = new Map();
 
-[['phaseModalOverlay'], ['sectionModalOverlay'], ['taskModalOverlay']].forEach(([id]) => {
-    document.getElementById(id)?.addEventListener('click', (e) => {
-        if (e.target === e.currentTarget) closeModal(id);
+    tasks.forEach((task) => {
+        let key, label;
+        if (task.task_type === 'client' || task.task_type === 'approval') {
+            key = 'client';
+            label = `Tareas del cliente (${clientName})`;
+        } else if (task.assignee_id) {
+            key = task.assignee_id;
+            label = `Tareas de ${task.profiles?.full_name || 'equipo'}`;
+        } else {
+            key = 'nexa';
+            label = 'Tareas de NEXA (equipo)';
+        }
+        if (!groups.has(key)) groups.set(key, { label, tasks: [] });
+        groups.get(key).tasks.push(task);
     });
+
+    container.innerHTML = [...groups.values()].map((group) => `
+        <div class="pd-task-responsible-group">
+            <span class="pd-task-responsible-header">${escapeHtml(group.label)}</span>
+            ${group.tasks.map((task) => `
+                <div class="pd-task-checkrow ${['completed', 'finished', 'approved'].includes(task.status) ? 'is-done' : ''}" data-task-id="${task.id}">
+                    <span class="pd-badge ${PD_STATUS_BADGE_CLASS[task.status] || 'pd-badge--pending'}">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
+                    <span class="pd-task-checkrow-title">${escapeHtml(task.title)}</span>
+                </div>
+            `).join('')}
+        </div>
+    `).join('');
+
+    container.querySelectorAll('[data-task-id]').forEach((row) => {
+        row.addEventListener('click', () => openTaskDetailModal(row.dataset.taskId));
+    });
+}
+
+/* ---------------------------------------------------------
+   Modal: Nueva/Editar Etapa
+--------------------------------------------------------- */
+function openStageModal(stage) {
+    editingStageId = stage?.id || null;
+    el('stageModalTitle').textContent = stage ? 'Editar Etapa' : 'Nueva Etapa';
+    el('stageFormSubmitBtn').textContent = stage ? 'Guardar cambios' : 'Crear Etapa';
+    el('stageDeleteBtn').style.display = stage ? 'inline-flex' : 'none';
+    el('stageName').value = stage?.name || '';
+    el('stageColor').value = stage?.color_hex || '#2D8CFF';
+    el('stageResponsible').value = stage?.responsible_id || '';
+    el('stageEstimatedDate').value = stage?.estimated_date || '';
+    el('stageDescription').value = stage?.description || '';
+    el('stageFormError').textContent = '';
+    el('stageFormError').classList.remove('active');
+    openModal('stageModalOverlay');
+}
+
+el('stageForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = el('stageName').value.trim();
+    const errorEl = el('stageFormError');
+    errorEl.classList.remove('active');
+    if (!name) { errorEl.textContent = 'El nombre es obligatorio.'; errorEl.classList.add('active'); return; }
+
+    const payload = {
+        name,
+        color_hex: el('stageColor').value,
+        responsible_id: el('stageResponsible').value || null,
+        estimated_date: el('stageEstimatedDate').value || null,
+        description: el('stageDescription').value.trim() || null
+    };
+
+    try {
+        if (editingStageId) {
+            await updateStage(editingStageId, payload);
+        } else {
+            await createStage({ project_id: projectId, order_index: (currentStructure?.stages.length || 0), ...payload });
+        }
+        closeModal('stageModalOverlay');
+        await refreshAll();
+    } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.add('active');
+    }
 });
 
-el('detailNewPhaseBtn')?.addEventListener('click', () => openModal('phaseModalOverlay'));
+el('stageDeleteBtn')?.addEventListener('click', async () => {
+    if (!editingStageId) return;
+    if (!window.confirm('¿Eliminar esta etapa? Los bloques que contiene quedarán sin etapa asignada.')) return;
+    try {
+        await deleteStage(editingStageId);
+        closeModal('stageModalOverlay');
+        await refreshAll();
+    } catch (error) {
+        alert(`No se pudo eliminar: ${error.message}`);
+    }
+});
 
+/* ---------------------------------------------------------
+   Modal: Nuevo Bloque
+--------------------------------------------------------- */
 el('phaseForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = el('phaseName').value.trim();
@@ -330,6 +507,7 @@ el('phaseForm')?.addEventListener('submit', async (e) => {
     try {
         await createPhase({
             project_id: projectId,
+            timeline_stage_id: activeStageIdForPhase || null,
             name,
             duration_days: Number(el('phaseDuration').value) || null,
             description: el('phaseDescription').value.trim()
@@ -343,6 +521,9 @@ el('phaseForm')?.addEventListener('submit', async (e) => {
     }
 });
 
+/* ---------------------------------------------------------
+   Modal: Nueva Sección
+--------------------------------------------------------- */
 el('sectionForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = el('sectionName').value.trim();
@@ -351,7 +532,12 @@ el('sectionForm')?.addEventListener('submit', async (e) => {
     if (!name || !activePhaseIdForSection) { errorEl.textContent = 'El nombre es obligatorio.'; errorEl.classList.add('active'); return; }
 
     try {
-        await createSection({ phase_id: activePhaseIdForSection, name });
+        await createSection({
+            phase_id: activePhaseIdForSection,
+            name,
+            handle: el('sectionHandle').value.trim() || null,
+            color_hex: el('sectionColor').value || null
+        });
         closeModal('sectionModalOverlay');
         el('sectionForm').reset();
         await refreshAll();
@@ -359,6 +545,14 @@ el('sectionForm')?.addEventListener('submit', async (e) => {
         errorEl.textContent = error.message;
         errorEl.classList.add('active');
     }
+});
+
+/* ---------------------------------------------------------
+   Modal: Nueva Tarea
+--------------------------------------------------------- */
+el('taskType')?.addEventListener('change', () => {
+    const isNexa = el('taskType').value === 'nexa';
+    el('taskAssigneeField').style.display = isNexa ? 'flex' : 'none';
 });
 
 el('taskForm')?.addEventListener('submit', async (e) => {
@@ -375,12 +569,13 @@ el('taskForm')?.addEventListener('submit', async (e) => {
             description: el('taskDescription').value.trim(),
             task_type: el('taskType').value,
             priority: el('taskPriority').value,
-            assignee_id: el('taskAssignee').value || null,
+            assignee_id: el('taskType').value === 'nexa' ? (el('taskAssignee').value || null) : null,
             due_date: el('taskDueDate').value || null,
             created_by: currentUserId
         });
         closeModal('taskModalOverlay');
         el('taskForm').reset();
+        el('taskAssigneeField').style.display = 'flex';
         await refreshAll();
     } catch (error) {
         errorEl.textContent = error.message;
@@ -389,7 +584,269 @@ el('taskForm')?.addEventListener('submit', async (e) => {
 });
 
 /* ---------------------------------------------------------
-   Archivos
+   Modal: Detalle de Tarea (edición + archivos + comentarios)
+--------------------------------------------------------- */
+function findTaskById(taskId) {
+    return (currentStructure?.allTasks || []).find((t) => t.id === taskId);
+}
+
+async function openTaskDetailModal(taskId) {
+    const task = findTaskById(taskId);
+    if (!task) return;
+    activeTaskId = taskId;
+
+    el('taskDetailTitle').textContent = task.title;
+    el('taskDetailTitleInput').value = task.title;
+    el('taskDetailDescription').value = task.description || '';
+    el('taskDetailStatus').value = task.status;
+    el('taskDetailPriority').value = task.priority;
+    el('taskDetailAssignee').value = task.assignee_id || '';
+    el('taskDetailAssignee').closest('.admin-field').style.display = task.task_type === 'nexa' ? 'flex' : 'none';
+    el('taskDetailDueDate').value = task.due_date || '';
+    el('taskDetailFormError').textContent = '';
+    el('taskDetailFormError').classList.remove('active');
+
+    openModal('taskDetailModalOverlay');
+
+    try {
+        const [files, comments] = await Promise.all([
+            listTaskFiles(taskId),
+            listComments(projectId, 'task', taskId)
+        ]);
+        renderTaskDetailFiles(files);
+        renderTaskDetailComments(comments);
+    } catch (error) {
+        console.error('[proyectoDetallePage] Error cargando detalle de tarea:', error.message);
+    }
+}
+
+function renderTaskDetailFiles(files) {
+    const list = el('taskDetailFilesList');
+    if (!files.length) {
+        list.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin archivos.</span>';
+        return;
+    }
+    list.innerHTML = files.map((file) => `
+        <div class="admin-file-row" data-file-id="${file.id}" data-storage-path="${escapeHtml(file.storage_path)}" style="padding:8px 10px;">
+            <div class="admin-file-info">
+                <strong style="font-size:12.5px;">${escapeHtml(file.file_name)}</strong>
+                <span style="font-size:10.5px;">${formatFileSize(file.size_bytes)} · ${formatDate(file.created_at)}</span>
+            </div>
+            <button type="button" class="admin-icon-btn" data-task-download-file title="Descargar">
+                <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+        </div>
+    `).join('');
+
+    list.querySelectorAll('[data-task-download-file]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const path = btn.closest('.admin-file-row').dataset.storagePath;
+            try {
+                const url = await getFileSignedUrl(path);
+                window.open(url, '_blank');
+            } catch (error) {
+                alert(`No se pudo generar el enlace: ${error.message}`);
+            }
+        });
+    });
+}
+
+function renderTaskDetailComments(comments) {
+    const list = el('taskDetailCommentsList');
+    if (!comments.length) {
+        list.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin comentarios.</span>';
+        return;
+    }
+    list.innerHTML = comments.map((c) => `
+        <div class="admin-comment" style="padding:8px 0;">
+            <div class="admin-comment-avatar" style="width:26px; height:26px; font-size:10px;">${getInitials(c.profiles?.full_name)}</div>
+            <div class="admin-comment-body">
+                <div class="admin-comment-header"><strong style="font-size:12px;">${escapeHtml(c.profiles?.full_name || 'Usuario')}</strong><span style="font-size:10px;">${formatDateTime(c.created_at)}</span></div>
+                <div class="admin-comment-text" style="font-size:12px;">${escapeHtml(c.body)}</div>
+            </div>
+        </div>
+    `).join('');
+}
+
+el('taskDetailForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (!activeTaskId) return;
+    const errorEl = el('taskDetailFormError');
+    errorEl.classList.remove('active');
+    const title = el('taskDetailTitleInput').value.trim();
+    if (!title) { errorEl.textContent = 'El título es obligatorio.'; errorEl.classList.add('active'); return; }
+
+    try {
+        await updateTask(activeTaskId, {
+            title,
+            description: el('taskDetailDescription').value.trim() || null,
+            status: el('taskDetailStatus').value,
+            priority: el('taskDetailPriority').value,
+            assignee_id: el('taskDetailAssignee').value || null,
+            due_date: el('taskDetailDueDate').value || null
+        });
+        closeModal('taskDetailModalOverlay');
+        await refreshAll();
+    } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.add('active');
+    }
+});
+
+el('taskDetailDeleteBtn')?.addEventListener('click', async () => {
+    if (!activeTaskId) return;
+    if (!window.confirm('¿Eliminar esta tarea?')) return;
+    try {
+        await deleteTask(activeTaskId);
+        closeModal('taskDetailModalOverlay');
+        await refreshAll();
+    } catch (error) {
+        alert(`No se pudo eliminar: ${error.message}`);
+    }
+});
+
+el('taskDetailFileInput')?.addEventListener('change', async (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeTaskId) return;
+    try {
+        await uploadProjectFile({ projectId, taskId: activeTaskId, folder: 'Tareas', file, uploadedBy: currentUserId });
+        const files = await listTaskFiles(activeTaskId);
+        renderTaskDetailFiles(files);
+    } catch (error) {
+        alert(`No se pudo subir el archivo: ${error.message}`);
+    } finally {
+        e.target.value = '';
+    }
+});
+
+el('taskDetailCommentForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = el('taskDetailCommentInput').value.trim();
+    if (!body || !activeTaskId) return;
+    try {
+        await addComment({ projectId, commentableType: 'task', commentableId: activeTaskId, authorId: currentUserId, body });
+        el('taskDetailCommentInput').value = '';
+        const comments = await listComments(projectId, 'task', activeTaskId);
+        renderTaskDetailComments(comments);
+    } catch (error) {
+        alert(`No se pudo enviar el comentario: ${error.message}`);
+    }
+});
+
+/* ---------------------------------------------------------
+   Entregables
+--------------------------------------------------------- */
+function renderDeliverables(deliverables) {
+    const list = el('pdDeliverablesList');
+    const emptyState = el('pdDeliverablesEmptyState');
+
+    if (!deliverables.length) {
+        list.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+
+    const doneCheck = '<svg viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+    list.innerHTML = deliverables.map((d) => {
+        const isDone = d.status === 'delivered' || d.status === 'approved';
+        return `
+            <div class="pd-deliverable-row" data-deliverable-id="${d.id}">
+                <span class="pd-deliverable-check" style="background:${isDone ? 'rgba(60,210,140,.16)' : 'rgba(255,177,45,.16)'}; color:${isDone ? '#4ADE80' : '#FFC15F'};">${isDone ? doneCheck : ''}</span>
+                <span class="pd-deliverable-title">${escapeHtml(d.title)}</span>
+                <span class="pd-badge ${isDone ? 'pd-badge--completed' : 'pd-badge--pending'}">${DELIVERABLE_STATUS_LABELS[d.status] || d.status}</span>
+            </div>
+        `;
+    }).join('');
+
+    list.querySelectorAll('[data-deliverable-id]').forEach((row) => {
+        row.addEventListener('click', async () => {
+            const deliverable = deliverables.find((d) => d.id === row.dataset.deliverableId);
+            if (!deliverable) return;
+            const nextStatus = deliverable.status === 'draft' ? 'delivered'
+                : deliverable.status === 'delivered' ? 'approved'
+                : 'draft';
+            try {
+                await updateDeliverable(deliverable.id, { status: nextStatus });
+                currentDeliverables = await listProjectDeliverables(projectId);
+                renderDeliverables(currentDeliverables);
+            } catch (error) {
+                alert(`No se pudo actualizar: ${error.message}`);
+            }
+        });
+    });
+}
+
+el('pdAddDeliverableBtn')?.addEventListener('click', () => openModal('deliverableModalOverlay'));
+
+el('deliverableForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title = el('deliverableTitle').value.trim();
+    const errorEl = el('deliverableFormError');
+    errorEl.classList.remove('active');
+    if (!title) { errorEl.textContent = 'El título es obligatorio.'; errorEl.classList.add('active'); return; }
+
+    try {
+        await createDeliverable({
+            project_id: projectId,
+            title,
+            description: el('deliverableDescription').value.trim() || null
+        });
+        closeModal('deliverableModalOverlay');
+        el('deliverableForm').reset();
+        currentDeliverables = await listProjectDeliverables(projectId);
+        renderDeliverables(currentDeliverables);
+    } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.add('active');
+    }
+});
+
+/* ---------------------------------------------------------
+   Actividad reciente
+--------------------------------------------------------- */
+function renderActivity(events) {
+    const list = el('pdActivityList');
+    if (!events.length) {
+        list.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin actividad todavía.</span>';
+        return;
+    }
+    list.innerHTML = events.slice(0, 8).map((event) => `
+        <div class="pd-activity-item">
+            <span class="pd-activity-avatar">${getInitials(event.profiles?.full_name)}</span>
+            <div>
+                <span class="pd-activity-text">${escapeHtml(event.description)}</span>
+                <span class="pd-activity-time">${formatDateTime(event.created_at)}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderFullTimeline(events) {
+    const list = el('timelineList');
+    const emptyState = el('timelineEmptyState');
+    if (!events.length) {
+        list.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+    list.innerHTML = events.map((event) => `
+        <div class="admin-timeline-item">
+            <div class="admin-timeline-dot"><svg viewBox="0 0 24 24" fill="none">${TIMELINE_EVENT_ICONS[event.event_type] || '<circle cx="12" cy="12" r="3" fill="currentColor"/>'}</svg></div>
+            <div class="admin-timeline-content">
+                <p>${escapeHtml(event.description)}</p>
+                <span>${formatDateTime(event.created_at)}${event.profiles?.full_name ? ` · ${escapeHtml(event.profiles.full_name)}` : ''}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+el('pdViewAllActivityBtn')?.addEventListener('click', () => openDrawer('activityDrawerOverlay'));
+
+/* ---------------------------------------------------------
+   Archivos (drawer)
 --------------------------------------------------------- */
 function renderFiles(files) {
     const list = el('filesList');
@@ -439,7 +896,8 @@ function renderFiles(files) {
             if (!window.confirm(`¿Eliminar "${file.file_name}"?`)) return;
             try {
                 await deleteProjectFile(file);
-                await refreshAll();
+                currentFiles = await listProjectFiles(projectId);
+                renderFiles(currentFiles);
             } catch (error) {
                 alert(`No se pudo eliminar: ${error.message}`);
             }
@@ -452,7 +910,8 @@ el('fileUploadInput')?.addEventListener('change', async (e) => {
     if (!file) return;
     try {
         await uploadProjectFile({ projectId, file, uploadedBy: currentUserId });
-        await refreshAll();
+        currentFiles = await listProjectFiles(projectId);
+        renderFiles(currentFiles);
     } catch (error) {
         alert(`No se pudo subir el archivo: ${error.message}`);
     } finally {
@@ -461,7 +920,7 @@ el('fileUploadInput')?.addEventListener('change', async (e) => {
 });
 
 /* ---------------------------------------------------------
-   Comentarios
+   Comentarios del proyecto (drawer)
 --------------------------------------------------------- */
 function renderComments(comments) {
     const list = el('commentsList');
@@ -500,28 +959,102 @@ el('commentForm')?.addEventListener('submit', async (e) => {
 });
 
 /* ---------------------------------------------------------
-   Cronología
+   Editar proyecto
 --------------------------------------------------------- */
-function renderTimeline(events) {
-    const list = el('timelineList');
-    const emptyState = el('timelineEmptyState');
-
-    if (!events.length) {
-        list.innerHTML = '';
-        emptyState.style.display = 'block';
-        return;
-    }
-    emptyState.style.display = 'none';
-
-    list.innerHTML = events.map((event) => `
-        <div class="admin-timeline-item">
-            <div class="admin-timeline-dot"><svg viewBox="0 0 24 24" fill="none">${TIMELINE_EVENT_ICONS[event.event_type] || '<circle cx="12" cy="12" r="3" fill="currentColor"/>'}</svg></div>
-            <div class="admin-timeline-content">
-                <p>${escapeHtml(event.description)}</p>
-                <span>${formatDateTime(event.created_at)}${event.profiles?.full_name ? ` · ${escapeHtml(event.profiles.full_name)}` : ''}</span>
-            </div>
-        </div>
-    `).join('');
+function openEditProjectModal(project) {
+    el('editProjectName').value = project.name;
+    el('editProjectDescription').value = project.description || '';
+    el('editProjectModality').value = project.modality || '';
+    el('editProjectResponsible').value = project.responsible_id || '';
+    el('editProjectStart').value = project.start_date || '';
+    el('editProjectEnd').value = project.end_date || '';
+    el('editProjectColor').value = project.color_hex || '#2D8CFF';
+    el('editProjectColor2').value = project.secondary_color_hex || '#FF8A3D';
+    el('editProjectFormError').textContent = '';
+    el('editProjectFormError').classList.remove('active');
+    openModal('editProjectModalOverlay');
 }
+
+el('editProjectForm')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = el('editProjectName').value.trim();
+    const errorEl = el('editProjectFormError');
+    errorEl.classList.remove('active');
+    if (!name) { errorEl.textContent = 'El nombre es obligatorio.'; errorEl.classList.add('active'); return; }
+
+    try {
+        await updateProject(projectId, {
+            name,
+            description: el('editProjectDescription').value.trim() || null,
+            modality: el('editProjectModality').value.trim() || null,
+            responsible_id: el('editProjectResponsible').value || null,
+            start_date: el('editProjectStart').value || null,
+            end_date: el('editProjectEnd').value || null,
+            color_hex: el('editProjectColor').value || null,
+            secondary_color_hex: el('editProjectColor2').value || null
+        });
+        closeModal('editProjectModalOverlay');
+        await refreshAll();
+    } catch (error) {
+        errorEl.textContent = error.message;
+        errorEl.classList.add('active');
+    }
+});
+
+/* ---------------------------------------------------------
+   Menú "..." (estado del proyecto / archivar)
+--------------------------------------------------------- */
+el('pdMoreMenuBtn')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    el('pdMoreMenu').classList.toggle('active');
+});
+document.addEventListener('click', () => el('pdMoreMenu')?.classList.remove('active'));
+
+document.querySelectorAll('[data-project-action]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+        const action = btn.getAttribute('data-project-action');
+        try {
+            if (action === 'archive') {
+                if (!window.confirm('¿Archivar este proyecto?')) return;
+                await archiveProject(projectId);
+                window.location.href = 'proyectos.html';
+                return;
+            }
+            await setProjectStatus(projectId, action);
+            await refreshAll();
+        } catch (error) {
+            alert(`No se pudo actualizar el estado: ${error.message}`);
+        }
+    });
+});
+
+/* ---------------------------------------------------------
+   Modales / drawers genéricos
+--------------------------------------------------------- */
+function openModal(id) { document.getElementById(id)?.classList.add('active'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
+function openDrawer(id) { document.getElementById(id)?.classList.add('active'); }
+function closeDrawer(id) { document.getElementById(id)?.classList.remove('active'); }
+
+document.querySelectorAll('[data-close-modal]').forEach((btn) => {
+    btn.addEventListener('click', () => closeModal(btn.getAttribute('data-close-modal')));
+});
+document.querySelectorAll('.admin-modal-overlay').forEach((overlay) => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) overlay.classList.remove('active');
+    });
+});
+
+document.querySelectorAll('[data-close-drawer]').forEach((btn) => {
+    btn.addEventListener('click', () => closeDrawer(btn.getAttribute('data-close-drawer')));
+});
+document.querySelectorAll('.pd-drawer-overlay').forEach((overlay) => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === e.currentTarget) overlay.classList.remove('active');
+    });
+});
+
+el('pdFilesBtn')?.addEventListener('click', () => openDrawer('filesDrawerOverlay'));
+el('pdCommentsBtn')?.addEventListener('click', () => openDrawer('commentsDrawerOverlay'));
 
 init();

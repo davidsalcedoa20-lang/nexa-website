@@ -6,9 +6,11 @@ export const PROGRESS_STATUS_LABELS = {
     pending: 'Pendiente',
     in_progress: 'En proceso',
     waiting_approval: 'Esperando aprobación',
-    completed: 'Completado',
+    completed: 'Listo',
     blocked: 'Bloqueado',
-    finished: 'Finalizado'
+    finished: 'Finalizado',
+    approved: 'Aprobado',
+    cancelled: 'Cancelado'
 };
 
 export const PROGRESS_STATUS_BADGE_CLASS = {
@@ -17,8 +19,29 @@ export const PROGRESS_STATUS_BADGE_CLASS = {
     waiting_approval: 'admin-badge--paused',
     completed: 'admin-badge--active',
     blocked: 'admin-badge--completed',
-    finished: 'admin-badge--active'
+    finished: 'admin-badge--active',
+    approved: 'admin-badge--active',
+    cancelled: 'admin-badge--pending'
 };
+
+/** Mismas claves que PROGRESS_STATUS_LABELS, pero con las clases
+ *  "pd-badge--*" usadas en la vista "Plantilla Oficial" del proyecto. */
+export const PD_STATUS_BADGE_CLASS = {
+    pending: 'pd-badge--pending',
+    in_progress: 'pd-badge--in_progress',
+    waiting_approval: 'pd-badge--waiting_approval',
+    completed: 'pd-badge--completed',
+    blocked: 'pd-badge--blocked',
+    finished: 'pd-badge--finished',
+    approved: 'pd-badge--approved',
+    cancelled: 'pd-badge--cancelled'
+};
+
+export function pdBadgeHtml(status) {
+    const label = PROGRESS_STATUS_LABELS[status] || status;
+    const cls = PD_STATUS_BADGE_CLASS[status] || 'pd-badge--pending';
+    return `<span class="pd-badge ${cls}">${label}</span>`;
+}
 
 export const PROJECT_STATUS_LABELS = {
     not_started: 'Sin iniciar',

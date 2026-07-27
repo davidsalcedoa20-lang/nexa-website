@@ -111,8 +111,10 @@ async function handleArchive(projectId) {
 
 async function handleCreate(payload) {
     const { data: authUser } = await supabase.auth.getUser();
-    await createProject({ ...payload, created_by: authUser?.user?.id });
-    await loadProjects();
+    const newProject = await createProject({ ...payload, created_by: authUser?.user?.id });
+    // El proyecto nunca se crea vacío: create_project_with_template() ya generó
+    // su línea de tiempo inicial, así que llevamos al admin directo a editarla.
+    window.location.href = `proyecto-detalle.html?id=${newProject.id}`;
 }
 
 async function setupModalOptions() {

@@ -60,6 +60,7 @@ export function openProjectModal({ onSubmit }) {
     clearError();
     form.reset();
     document.getElementById('projectColor').value = '#2D8CFF';
+    document.getElementById('projectColor2').value = '#FF8A3D';
     overlay.classList.add('active');
 }
 
@@ -98,9 +99,11 @@ if (form) {
             name: document.getElementById('projectName').value.trim(),
             project_type_id: document.getElementById('projectType').value || null,
             responsible_id: document.getElementById('projectResponsible').value || null,
+            modality: document.getElementById('projectModality').value.trim() || null,
             start_date: document.getElementById('projectStart').value || null,
             end_date: document.getElementById('projectEnd').value || null,
             color_hex: document.getElementById('projectColor').value || null,
+            secondary_color_hex: document.getElementById('projectColor2').value || null,
             description: document.getElementById('projectDescription').value.trim()
         };
 

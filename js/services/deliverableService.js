@@ -46,3 +46,20 @@ export async function decideDeliverable(deliverableId, status) {
     if (error) throw error;
     return data;
 }
+
+/** Edición libre del administrador (título, descripción, estado, etc.). */
+export async function updateDeliverable(deliverableId, payload) {
+    const { data, error } = await supabase
+        .from('project_deliverables')
+        .update(payload)
+        .eq('id', deliverableId)
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+export async function deleteDeliverable(deliverableId) {
+    const { error } = await supabase.from('project_deliverables').delete().eq('id', deliverableId);
+    if (error) throw error;
+}

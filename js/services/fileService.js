@@ -20,7 +20,18 @@ export async function listProjectFiles(projectId) {
     return data;
 }
 
-export async function uploadProjectFile({ projectId, folder = 'General', file, uploadedBy, visibleToClient = true }) {
+/** Archivos adjuntos a una tarea puntual (para el modal de detalle de tarea). */
+export async function listTaskFiles(taskId) {
+    const { data, error } = await supabase
+        .from('project_files')
+        .select('*, profiles:uploaded_by ( id, full_name )')
+        .eq('task_id', taskId)
+        .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data;
+}
+
+export async function uploadProjectFile({ projectId, taskId = null, folder = 'General', file, uploadedBy, visibleToClient = true }) {
     const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
     const storagePath = `${projectId}/${folder}/${Date.now()}_${safeName}`;
 
@@ -34,6 +45,7 @@ export async function uploadProjectFile({ projectId, folder = 'General', file, u
         .from('project_files')
         .insert({
             project_id: projectId,
+            task_id: taskId || null,
             folder,
             file_name: file.name,
             storage_path: storagePath,

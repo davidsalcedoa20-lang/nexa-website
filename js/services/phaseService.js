@@ -4,14 +4,26 @@
 import { supabase } from './supabaseClient.js';
 
 export async function createPhase(payload) {
-    const { project_id, name, description, order_index, duration_days } = payload;
+    const { project_id, timeline_stage_id, name, description, order_index, duration_days } = payload;
     const { data, error } = await supabase
         .from('project_phases')
-        .insert({ project_id, name, description: description || null, order_index: order_index ?? 0, duration_days: duration_days || null })
+        .insert({
+            project_id,
+            timeline_stage_id: timeline_stage_id || null,
+            name,
+            description: description || null,
+            order_index: order_index ?? 0,
+            duration_days: duration_days || null
+        })
         .select()
         .single();
     if (error) throw error;
     return data;
+}
+
+/** Mueve un bloque a otra etapa de la línea de tiempo (drag & drop / selector). */
+export async function movePhaseToStage(phaseId, timelineStageId) {
+    return updatePhase(phaseId, { timeline_stage_id: timelineStageId || null });
 }
 
 export async function updatePhase(phaseId, payload) {
@@ -31,10 +43,16 @@ export async function deletePhase(phaseId) {
 }
 
 export async function createSection(payload) {
-    const { phase_id, name, order_index } = payload;
+    const { phase_id, name, order_index, color_hex, handle } = payload;
     const { data, error } = await supabase
         .from('project_sections')
-        .insert({ phase_id, name, order_index: order_index ?? 0 })
+        .insert({
+            phase_id,
+            name,
+            order_index: order_index ?? 0,
+            color_hex: color_hex || null,
+            handle: handle || null
+        })
         .select()
         .single();
     if (error) throw error;

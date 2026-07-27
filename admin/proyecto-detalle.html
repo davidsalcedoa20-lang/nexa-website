@@ -150,102 +150,116 @@
 
             </header>
 
-            <!-- MAIN -->
-            <main class="admin-main" id="projectDetailMain" style="display:none;">
+            <!-- MAIN — vista "Plantilla Oficial" del proyecto -->
+            <main class="admin-main pd-main" id="projectDetailMain" style="display:none;">
 
-                <a href="proyectos.html" class="admin-back-link">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Volver a Proyectos
-                </a>
+                <div class="pd-breadcrumb">
+                    <a href="proyectos.html">Proyectos</a>
+                    <span>&rsaquo;</span>
+                    <strong id="pdBreadcrumbName">Cargando...</strong>
+                </div>
 
-                <div class="admin-project-header">
-                    <div class="admin-project-header-info">
-                        <h1 id="detailProjectName">Cargando...</h1>
-                        <div class="admin-project-header-tags">
-                            <span class="admin-badge" id="detailProjectStatusBadge"></span>
-                            <span class="admin-project-type-tag" id="detailProjectTypeTag" style="--project-color:#2D8CFF;"></span>
-                            <span style="color:#8a8a8a; font-size:12.5px;" id="detailProjectClient"></span>
+                <div class="pd-header-top">
+                    <div>
+                        <div class="pd-title-row">
+                            <h1 class="pd-title" id="pdTitle">Cargando...</h1>
+                            <button type="button" class="admin-icon-btn pd-title-edit-btn" id="pdEditProjectBtn2" title="Editar proyecto">
+                                <svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                            </button>
                         </div>
                     </div>
-                    <div class="admin-project-header-actions">
+                    <div class="pd-header-actions">
+                        <button type="button" class="admin-icon-btn" id="pdFilesBtn" title="Archivos del proyecto">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M7 3h7l5 5v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M14 3v5h5" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button type="button" class="admin-icon-btn" id="pdCommentsBtn" title="Comentarios del proyecto">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l2-4a8.5 8.5 0 1 1 15-4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                        </button>
                         <button type="button" class="admin-btn-secondary" id="detailDuplicateBtn">Duplicar</button>
-                        <button type="button" class="admin-btn-primary" id="detailNewPhaseBtn">+ Nuevo Bloque</button>
+                        <div class="pd-menu-wrap">
+                            <button type="button" class="admin-icon-btn" id="pdMoreMenuBtn" title="Más opciones">
+                                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="18" r="1.6" fill="currentColor"/></svg>
+                            </button>
+                            <div class="pd-more-menu" id="pdMoreMenu">
+                                <button type="button" data-project-action="in_progress">Marcar en curso</button>
+                                <button type="button" data-project-action="paused">Pausar proyecto</button>
+                                <button type="button" data-project-action="completed">Marcar como completado</button>
+                                <button type="button" data-project-action="cancelled">Cancelar proyecto</button>
+                                <button type="button" data-project-action="archive" class="danger">Archivar proyecto</button>
+                            </div>
+                        </div>
+                        <a href="proyectos.html" class="admin-btn-primary">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+                            Nuevo proyecto
+                        </a>
                     </div>
                 </div>
 
-                <div class="admin-progress-overview">
-                    <div class="admin-progress-card">
-                        <div class="admin-progress-card-top"><span>Progreso general</span></div>
-                        <span class="admin-progress-card-value" id="detailOverallProgress">0%</span>
-                        <div class="admin-progress-track"><div class="admin-progress-fill" id="detailOverallProgressBar" style="width:0%"></div></div>
-                    </div>
-                    <div class="admin-progress-card">
-                        <div class="admin-progress-card-top"><span>Progreso del cliente</span></div>
-                        <span class="admin-progress-card-value" id="detailClientProgress">0%</span>
-                        <div class="admin-progress-track"><div class="admin-progress-fill" id="detailClientProgressBar" style="width:0%"></div></div>
-                    </div>
-                    <div class="admin-progress-card">
-                        <div class="admin-progress-card-top"><span>Progreso de NEXA</span></div>
-                        <span class="admin-progress-card-value" id="detailNexaProgress">0%</span>
-                        <div class="admin-progress-track"><div class="admin-progress-fill" id="detailNexaProgressBar" style="width:0%"></div></div>
-                    </div>
+                <p class="pd-description" id="pdDescription">Sin descripción.</p>
+
+                <div class="pd-meta-row">
+                    <div class="pd-meta-item"><span>Cliente</span><strong id="pdMetaClient">—</strong></div>
+                    <div class="pd-meta-item"><span>Modalidad</span><strong id="pdMetaModality">—</strong></div>
+                    <div class="pd-meta-item"><span>Inicio</span><strong id="pdMetaStart">—</strong></div>
+                    <div class="pd-meta-item"><span>Entrega estimada</span><strong id="pdMetaEnd">—</strong></div>
+                    <button type="button" class="admin-btn-secondary pd-edit-project-btn" id="pdEditProjectBtn">Editar proyecto</button>
                 </div>
 
-                <div class="admin-tabs" id="detailTabs">
-                    <button type="button" class="admin-tab-btn active" data-tab="resumen">Resumen</button>
-                    <button type="button" class="admin-tab-btn" data-tab="bloques">Bloques</button>
-                    <button type="button" class="admin-tab-btn" data-tab="archivos">Archivos</button>
-                    <button type="button" class="admin-tab-btn" data-tab="comentarios">Comentarios</button>
-                    <button type="button" class="admin-tab-btn" data-tab="cronologia">Cronología</button>
-                </div>
-
-                <!-- ===== TAB: RESUMEN ===== -->
-                <section class="admin-tab-panel active" data-tab-panel="resumen">
-                    <div class="admin-table-wrapper" style="padding:24px;">
-                        <p style="color:#dedede; font-size:14px; line-height:1.8;" id="detailDescription">Sin descripción.</p>
-                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px,1fr)); gap:20px; margin-top:22px;">
-                            <div><span style="display:block; color:#7a7a7a; font-size:12px; margin-bottom:4px;">Fecha de inicio</span><strong style="color:white; font-size:14px;" id="detailStartDate">—</strong></div>
-                            <div><span style="display:block; color:#7a7a7a; font-size:12px; margin-bottom:4px;">Fecha estimada de fin</span><strong style="color:white; font-size:14px;" id="detailEndDate">—</strong></div>
-                            <div><span style="display:block; color:#7a7a7a; font-size:12px; margin-bottom:4px;">Responsable NEXA</span><strong style="color:white; font-size:14px;" id="detailResponsible">Sin asignar</strong></div>
-                            <div><span style="display:block; color:#7a7a7a; font-size:12px; margin-bottom:4px;">Bloques</span><strong style="color:white; font-size:14px;" id="detailPhasesCount">0</strong></div>
+                <div class="pd-top-grid">
+                    <div class="pd-top-main">
+                        <!-- placeholder: espacio reservado por si se agrega contenido adicional a la izquierda -->
+                    </div>
+                    <div class="pd-top-side">
+                        <div class="pd-progress-card">
+                            <span class="pd-progress-card-label">PROGRESO GENERAL</span>
+                            <strong class="pd-progress-big" id="pdOverallProgressBig">0%</strong>
+                            <div class="pd-progress-track"><div class="pd-progress-fill" id="pdOverallProgressBar" style="width:0%"></div></div>
+                            <div style="margin-top:10px; font-size:11.5px; color:#8a8a8a;" id="pdDaysRemaining"></div>
+                        </div>
+                        <div class="pd-stage-progress-card">
+                            <span class="pd-progress-card-label">POR ETAPA</span>
+                            <div class="pd-stage-progress-list" id="pdStageProgressList"></div>
                         </div>
                     </div>
-                </section>
+                </div>
 
-                <!-- ===== TAB: BLOQUES ===== -->
-                <section class="admin-tab-panel" data-tab-panel="bloques">
-                    <div class="admin-phase-list" id="phaseList"></div>
-                    <div class="admin-empty-inline" id="phasesEmptyState" style="display:none;">Este proyecto todavía no tiene bloques. Usa "+ Nuevo Bloque".</div>
-                </section>
-
-                <!-- ===== TAB: ARCHIVOS ===== -->
-                <section class="admin-tab-panel" data-tab-panel="archivos">
-                    <div class="admin-section-header">
-                        <h2 style="font-size:15px;">Archivos del proyecto</h2>
-                        <label class="admin-btn-primary" style="cursor:pointer;">
-                            <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            Subir archivo
-                            <input type="file" id="fileUploadInput" style="display:none;">
-                        </label>
+                <section class="pd-section">
+                    <div class="pd-section-header">
+                        <h2>Línea de tiempo</h2>
                     </div>
-                    <div id="filesList" style="display:flex; flex-direction:column; gap:10px;"></div>
-                    <div class="admin-empty-inline" id="filesEmptyState" style="display:none;">Todavía no se han subido archivos.</div>
+                    <div class="pd-timeline-track" id="pdTimelineTrack"></div>
                 </section>
 
-                <!-- ===== TAB: COMENTARIOS ===== -->
-                <section class="admin-tab-panel" data-tab-panel="comentarios">
-                    <div class="admin-comment-list" id="commentsList"></div>
-                    <form class="admin-comment-form" id="commentForm">
-                        <textarea id="commentInput" placeholder="Escribe un comentario para el equipo y el cliente..." rows="2"></textarea>
-                        <button type="submit" class="admin-btn-primary">Enviar</button>
-                    </form>
+                <section class="pd-section">
+                    <div class="pd-blocks-list" id="pdBlocksList"></div>
+                    <div class="admin-empty-inline" id="pdBlocksEmptyState" style="display:none;">Este proyecto todavía no tiene bloques.</div>
                 </section>
 
-                <!-- ===== TAB: CRONOLOGÍA ===== -->
-                <section class="admin-tab-panel" data-tab-panel="cronologia">
-                    <div class="admin-timeline" id="timelineList"></div>
-                    <div class="admin-empty-inline" id="timelineEmptyState" style="display:none;">Todavía no hay eventos registrados.</div>
+                <section class="pd-footer-grid">
+                    <div class="pd-footer-panel pd-tasks-panel">
+                        <h3>Tareas</h3>
+                        <div id="pdTasksByResponsible"></div>
+                    </div>
+                    <div class="pd-footer-panel pd-deliverables-panel">
+                        <div class="pd-panel-header">
+                            <h3>Entregables</h3>
+                            <button type="button" class="pd-mini-add-btn" id="pdAddDeliverableBtn">+ Nuevo entregable</button>
+                        </div>
+                        <div id="pdDeliverablesList"></div>
+                        <div class="admin-empty-inline" id="pdDeliverablesEmptyState" style="display:none;">Sin entregables todavía.</div>
+                    </div>
+                    <div class="pd-footer-panel pd-activity-panel">
+                        <h3>Actividad reciente</h3>
+                        <div id="pdActivityList"></div>
+                        <button type="button" class="pd-view-all-btn" id="pdViewAllActivityBtn">Ver toda la actividad</button>
+                    </div>
                 </section>
+
+                <div class="pd-bottom-bar">
+                    <span>Responsable del proyecto: <strong id="pdFooterResponsible">—</strong></span>
+                    <span>Última actualización: <strong id="pdFooterUpdated">—</strong></span>
+                    <span class="pd-status-dot-label"><span class="pd-status-dot" id="pdStatusDot"></span><strong id="pdStatusLabel">Proyecto activo</strong></span>
+                </div>
 
             </main>
 
@@ -258,12 +272,116 @@
 
     </div>
 
+    <!-- ================= DRAWER: ARCHIVOS ================= -->
+    <div class="pd-drawer-overlay" id="filesDrawerOverlay">
+        <div class="pd-drawer">
+            <div class="pd-drawer-header">
+                <h3>Archivos del proyecto</h3>
+                <button type="button" class="admin-modal-close" data-close-drawer="filesDrawerOverlay">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <div class="pd-drawer-body">
+                <div id="filesList" style="display:flex; flex-direction:column; gap:10px;"></div>
+                <div class="admin-empty-inline" id="filesEmptyState" style="display:none;">Todavía no se han subido archivos.</div>
+            </div>
+            <div class="pd-drawer-footer">
+                <label class="admin-btn-primary" style="cursor:pointer; width:100%; justify-content:center;">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M12 3v12m0 0-4-4m4 4 4-4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    Subir archivo
+                    <input type="file" id="fileUploadInput" style="display:none;">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= DRAWER: COMENTARIOS ================= -->
+    <div class="pd-drawer-overlay" id="commentsDrawerOverlay">
+        <div class="pd-drawer">
+            <div class="pd-drawer-header">
+                <h3>Comentarios del proyecto</h3>
+                <button type="button" class="admin-modal-close" data-close-drawer="commentsDrawerOverlay">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <div class="pd-drawer-body">
+                <div class="admin-comment-list" id="commentsList"></div>
+            </div>
+            <div class="pd-drawer-footer">
+                <form class="admin-comment-form" id="commentForm">
+                    <textarea id="commentInput" placeholder="Escribe un comentario para el equipo y el cliente..." rows="2"></textarea>
+                    <button type="submit" class="admin-btn-primary">Enviar</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= DRAWER: TODA LA ACTIVIDAD ================= -->
+    <div class="pd-drawer-overlay" id="activityDrawerOverlay">
+        <div class="pd-drawer">
+            <div class="pd-drawer-header">
+                <h3>Cronología completa</h3>
+                <button type="button" class="admin-modal-close" data-close-drawer="activityDrawerOverlay">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <div class="pd-drawer-body">
+                <div class="admin-timeline" id="timelineList"></div>
+                <div class="admin-empty-inline" id="timelineEmptyState" style="display:none;">Todavía no hay eventos registrados.</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: NUEVA/EDITAR ETAPA ================= -->
+    <div class="admin-modal-overlay" id="stageModalOverlay">
+        <div class="admin-modal" role="dialog" aria-modal="true">
+            <div class="admin-modal-header">
+                <h3 id="stageModalTitle">Nueva Etapa</h3>
+                <button type="button" class="admin-modal-close" data-close-modal="stageModalOverlay">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <form id="stageForm" class="admin-form" novalidate>
+                <div class="admin-field">
+                    <label for="stageName">Nombre de la etapa</label>
+                    <input type="text" id="stageName" placeholder="Ej. Ecosistema">
+                </div>
+                <div class="admin-field">
+                    <label for="stageColor">Color</label>
+                    <input type="color" id="stageColor" value="#2D8CFF" style="height:42px; padding:4px;">
+                </div>
+                <div class="admin-field">
+                    <label for="stageResponsible">Responsable</label>
+                    <select id="stageResponsible"><option value="">Sin asignar</option></select>
+                </div>
+                <div class="admin-field">
+                    <label for="stageEstimatedDate">Fecha estimada</label>
+                    <input type="date" id="stageEstimatedDate">
+                </div>
+                <div class="admin-field">
+                    <label for="stageDescription">Descripción</label>
+                    <textarea id="stageDescription" rows="2" placeholder="Opcional"></textarea>
+                </div>
+                <span class="admin-form-error" id="stageFormError"></span>
+                <div class="admin-modal-actions" style="justify-content:space-between;">
+                    <button type="button" class="admin-icon-btn danger" id="stageDeleteBtn" style="display:none;" title="Eliminar etapa">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="admin-btn-secondary" data-close-modal="stageModalOverlay">Cancelar</button>
+                        <button type="submit" class="admin-btn-primary" id="stageFormSubmitBtn">Crear Etapa</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- ================= MODAL: NUEVO BLOQUE ================= -->
     <div class="admin-modal-overlay" id="phaseModalOverlay">
         <div class="admin-modal" role="dialog" aria-modal="true">
             <div class="admin-modal-header">
                 <h3>Nuevo Bloque</h3>
-                <button type="button" class="admin-modal-close" data-close-phase-modal>
+                <button type="button" class="admin-modal-close" data-close-modal="phaseModalOverlay">
                     <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
             </div>
@@ -282,7 +400,7 @@
                 </div>
                 <span class="admin-form-error" id="phaseFormError"></span>
                 <div class="admin-modal-actions">
-                    <button type="button" class="admin-btn-secondary" data-close-phase-modal>Cancelar</button>
+                    <button type="button" class="admin-btn-secondary" data-close-modal="phaseModalOverlay">Cancelar</button>
                     <button type="submit" class="admin-btn-primary">Crear Bloque</button>
                 </div>
             </form>
@@ -294,18 +412,26 @@
         <div class="admin-modal" role="dialog" aria-modal="true">
             <div class="admin-modal-header">
                 <h3>Nueva Sección</h3>
-                <button type="button" class="admin-modal-close" data-close-section-modal>
+                <button type="button" class="admin-modal-close" data-close-modal="sectionModalOverlay">
                     <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
             </div>
             <form id="sectionForm" class="admin-form" novalidate>
                 <div class="admin-field">
                     <label for="sectionName">Nombre de la sección</label>
-                    <input type="text" id="sectionName" placeholder="Ej. Fotografía">
+                    <input type="text" id="sectionName" placeholder="Ej. Compacto Urbano">
+                </div>
+                <div class="admin-field">
+                    <label for="sectionHandle">Handle (opcional)</label>
+                    <input type="text" id="sectionHandle" placeholder="Ej. compacto_urbano">
+                </div>
+                <div class="admin-field">
+                    <label for="sectionColor">Color</label>
+                    <input type="color" id="sectionColor" value="#2D8CFF" style="height:42px; padding:4px;">
                 </div>
                 <span class="admin-form-error" id="sectionFormError"></span>
                 <div class="admin-modal-actions">
-                    <button type="button" class="admin-btn-secondary" data-close-section-modal>Cancelar</button>
+                    <button type="button" class="admin-btn-secondary" data-close-modal="sectionModalOverlay">Cancelar</button>
                     <button type="submit" class="admin-btn-primary">Crear Sección</button>
                 </div>
             </form>
@@ -317,7 +443,7 @@
         <div class="admin-modal" role="dialog" aria-modal="true">
             <div class="admin-modal-header">
                 <h3>Nueva Tarea</h3>
-                <button type="button" class="admin-modal-close" data-close-task-modal>
+                <button type="button" class="admin-modal-close" data-close-modal="taskModalOverlay">
                     <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
             </div>
@@ -327,12 +453,16 @@
                     <input type="text" id="taskTitle" placeholder="Ej. Diseñar portada del sitio">
                 </div>
                 <div class="admin-field">
-                    <label for="taskType">Tipo de tarea</label>
+                    <label for="taskType">Asignar a</label>
                     <select id="taskType">
-                        <option value="nexa">NEXA</option>
+                        <option value="nexa">Equipo NEXA</option>
                         <option value="client">Cliente</option>
-                        <option value="approval">Aprobación</option>
+                        <option value="approval">Aprobación (Cliente)</option>
                     </select>
+                </div>
+                <div class="admin-field" id="taskAssigneeField">
+                    <label for="taskAssignee">Responsable</label>
+                    <select id="taskAssignee"><option value="">Sin asignar</option></select>
                 </div>
                 <div class="admin-field">
                     <label for="taskPriority">Prioridad</label>
@@ -344,10 +474,6 @@
                     </select>
                 </div>
                 <div class="admin-field">
-                    <label for="taskAssignee">Responsable (NEXA)</label>
-                    <select id="taskAssignee"><option value="">Sin asignar</option></select>
-                </div>
-                <div class="admin-field">
                     <label for="taskDueDate">Fecha límite</label>
                     <input type="date" id="taskDueDate">
                 </div>
@@ -357,8 +483,157 @@
                 </div>
                 <span class="admin-form-error" id="taskFormError"></span>
                 <div class="admin-modal-actions">
-                    <button type="button" class="admin-btn-secondary" data-close-task-modal>Cancelar</button>
+                    <button type="button" class="admin-btn-secondary" data-close-modal="taskModalOverlay">Cancelar</button>
                     <button type="submit" class="admin-btn-primary">Crear Tarea</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: DETALLE DE TAREA ================= -->
+    <div class="admin-modal-overlay" id="taskDetailModalOverlay">
+        <div class="admin-modal pd-task-modal" role="dialog" aria-modal="true">
+            <div class="admin-modal-header">
+                <h3 id="taskDetailTitle">Tarea</h3>
+                <button type="button" class="admin-modal-close" data-close-modal="taskDetailModalOverlay">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <form id="taskDetailForm" class="admin-form" novalidate>
+                <div class="admin-field">
+                    <label for="taskDetailTitleInput">Título</label>
+                    <input type="text" id="taskDetailTitleInput">
+                </div>
+                <div class="admin-field">
+                    <label for="taskDetailDescription">Descripción</label>
+                    <textarea id="taskDetailDescription" rows="2"></textarea>
+                </div>
+                <div class="pd-task-modal-meta">
+                    <div class="admin-field">
+                        <label for="taskDetailStatus">Estado</label>
+                        <select id="taskDetailStatus"></select>
+                    </div>
+                    <div class="admin-field">
+                        <label for="taskDetailPriority">Prioridad</label>
+                        <select id="taskDetailPriority">
+                            <option value="low">Baja</option>
+                            <option value="medium">Media</option>
+                            <option value="high">Alta</option>
+                            <option value="urgent">Urgente</option>
+                        </select>
+                    </div>
+                    <div class="admin-field">
+                        <label for="taskDetailAssignee">Responsable</label>
+                        <select id="taskDetailAssignee"><option value="">Sin asignar</option></select>
+                    </div>
+                    <div class="admin-field">
+                        <label for="taskDetailDueDate">Fecha límite</label>
+                        <input type="date" id="taskDetailDueDate">
+                    </div>
+                </div>
+                <span class="admin-form-error" id="taskDetailFormError"></span>
+                <div class="admin-modal-actions" style="justify-content:space-between;">
+                    <button type="button" class="admin-icon-btn danger" id="taskDetailDeleteBtn" title="Eliminar tarea">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                    </button>
+                    <div style="display:flex; gap:10px;">
+                        <button type="button" class="admin-btn-secondary" data-close-modal="taskDetailModalOverlay">Cerrar</button>
+                        <button type="submit" class="admin-btn-primary">Guardar cambios</button>
+                    </div>
+                </div>
+            </form>
+
+            <p class="pd-task-modal-section-title">Archivos</p>
+            <div class="pd-task-files-list" id="taskDetailFilesList"></div>
+            <label class="admin-btn-secondary" style="cursor:pointer; margin-top:8px; display:inline-flex;">
+                Subir archivo
+                <input type="file" id="taskDetailFileInput" style="display:none;">
+            </label>
+
+            <p class="pd-task-modal-section-title">Comentarios</p>
+            <div class="pd-task-comments-list" id="taskDetailCommentsList"></div>
+            <form id="taskDetailCommentForm" class="admin-comment-form" style="margin-top:8px;">
+                <textarea id="taskDetailCommentInput" placeholder="Escribe un comentario..." rows="2"></textarea>
+                <button type="submit" class="admin-btn-primary">Enviar</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: NUEVO ENTREGABLE ================= -->
+    <div class="admin-modal-overlay" id="deliverableModalOverlay">
+        <div class="admin-modal" role="dialog" aria-modal="true">
+            <div class="admin-modal-header">
+                <h3>Nuevo Entregable</h3>
+                <button type="button" class="admin-modal-close" data-close-modal="deliverableModalOverlay">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <form id="deliverableForm" class="admin-form" novalidate>
+                <div class="admin-field">
+                    <label for="deliverableTitle">Título</label>
+                    <input type="text" id="deliverableTitle" placeholder="Ej. Manual de identidad visual">
+                </div>
+                <div class="admin-field">
+                    <label for="deliverableDescription">Descripción</label>
+                    <textarea id="deliverableDescription" rows="2" placeholder="Opcional"></textarea>
+                </div>
+                <span class="admin-form-error" id="deliverableFormError"></span>
+                <div class="admin-modal-actions">
+                    <button type="button" class="admin-btn-secondary" data-close-modal="deliverableModalOverlay">Cancelar</button>
+                    <button type="submit" class="admin-btn-primary">Crear Entregable</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ================= MODAL: EDITAR PROYECTO ================= -->
+    <div class="admin-modal-overlay" id="editProjectModalOverlay">
+        <div class="admin-modal" role="dialog" aria-modal="true">
+            <div class="admin-modal-header">
+                <h3>Editar Proyecto</h3>
+                <button type="button" class="admin-modal-close" data-close-modal="editProjectModalOverlay">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+            <form id="editProjectForm" class="admin-form" novalidate>
+                <div class="admin-field">
+                    <label for="editProjectName">Nombre del proyecto</label>
+                    <input type="text" id="editProjectName">
+                </div>
+                <div class="admin-field">
+                    <label for="editProjectDescription">Descripción</label>
+                    <textarea id="editProjectDescription" rows="2"></textarea>
+                </div>
+                <div class="admin-field">
+                    <label for="editProjectModality">Modalidad</label>
+                    <input type="text" id="editProjectModality" placeholder="Ej. Remota">
+                </div>
+                <div class="admin-field">
+                    <label for="editProjectResponsible">Responsable NEXA</label>
+                    <select id="editProjectResponsible"><option value="">Sin asignar</option></select>
+                </div>
+                <div class="pd-task-modal-meta">
+                    <div class="admin-field">
+                        <label for="editProjectStart">Inicio</label>
+                        <input type="date" id="editProjectStart">
+                    </div>
+                    <div class="admin-field">
+                        <label for="editProjectEnd">Entrega estimada</label>
+                        <input type="date" id="editProjectEnd">
+                    </div>
+                    <div class="admin-field">
+                        <label for="editProjectColor">Color principal</label>
+                        <input type="color" id="editProjectColor" style="height:42px; padding:4px;">
+                    </div>
+                    <div class="admin-field">
+                        <label for="editProjectColor2">Color secundario</label>
+                        <input type="color" id="editProjectColor2" style="height:42px; padding:4px;">
+                    </div>
+                </div>
+                <span class="admin-form-error" id="editProjectFormError"></span>
+                <div class="admin-modal-actions">
+                    <button type="button" class="admin-btn-secondary" data-close-modal="editProjectModalOverlay">Cancelar</button>
+                    <button type="submit" class="admin-btn-primary">Guardar cambios</button>
                 </div>
             </form>
         </div>

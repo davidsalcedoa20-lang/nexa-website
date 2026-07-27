@@ -4,11 +4,12 @@
 import { supabase } from './supabaseClient.js';
 
 const LIST_SELECT = `
-    id, name, description, status, start_date, end_date,
+    id, name, description, status, start_date, end_date, modality,
     progress_percent, client_progress_percent, nexa_progress_percent,
-    color_hex, archived_at, created_at, workspace_id, project_type_id, responsible_id,
+    color_hex, secondary_color_hex, archived_at, created_at, workspace_id, project_type_id, responsible_id,
     project_types ( id, name, slug, color_hex ),
-    workspaces ( id, name, client_id, profiles:client_id ( id, full_name, email ) )
+    workspaces ( id, name, client_id, profiles:client_id ( id, full_name, email ) ),
+    responsible:responsible_id ( id, full_name )
 `;
 
 /**
@@ -44,11 +45,23 @@ export async function getProject(projectId) {
 }
 
 /**
- * Estructura completa: bloques > secciones > tareas (+ aprobación
- * si aplica), en orden. Usado por la vista de detalle (admin y
- * cliente).
+ * Estructura completa: etapas (línea de tiempo) > bloques >
+ * secciones > tareas (+ aprobación si aplica), en orden. Usado
+ * por la vista de detalle (admin y cliente).
+ *
+ * Devuelve { stages, unassignedPhases }: "stages" trae cada
+ * etapa con sus bloques anidados; "unassignedPhases" son bloques
+ * legacy sin etapa asignada (no debería pasar en proyectos nuevos,
+ * pero se muestran igual para no perder información).
  */
 export async function getProjectStructure(projectId) {
+    const { data: stages, error: stagesError } = await supabase
+        .from('project_timeline_stages')
+        .select('*, profiles:responsible_id ( id, full_name )')
+        .eq('project_id', projectId)
+        .order('order_index', { ascending: true });
+    if (stagesError) throw stagesError;
+
     const { data: phases, error: phasesError } = await supabase
         .from('project_phases')
         .select('*')
@@ -80,7 +93,7 @@ export async function getProjectStructure(projectId) {
         tasks = data;
     }
 
-    return phases.map((phase) => ({
+    const phasesWithChildren = phases.map((phase) => ({
         ...phase,
         sections: sections
             .filter((s) => s.phase_id === phase.id)
@@ -89,25 +102,46 @@ export async function getProjectStructure(projectId) {
                 tasks: tasks.filter((t) => t.section_id === section.id)
             }))
     }));
+
+    const stagesWithPhases = stages.map((stage) => ({
+        ...stage,
+        phases: phasesWithChildren.filter((p) => p.timeline_stage_id === stage.id)
+    }));
+
+    const unassignedPhases = phasesWithChildren.filter((p) => !p.timeline_stage_id);
+
+    return { stages: stagesWithPhases, unassignedPhases, allTasks: tasks, allPhases: phasesWithChildren };
 }
 
+/**
+ * Crea un proyecto NUEVO. Nunca queda vacío: la función RPC
+ * "create_project_with_template" crea automáticamente la línea
+ * de tiempo inicial (etapas) según el tipo de proyecto elegido
+ * (o una plantilla genérica de 5 etapas si no aplica).
+ * Devuelve el id del proyecto recién creado.
+ */
 export async function createProject(payload) {
     const {
-        workspace_id, name, description, project_type_id, start_date, end_date,
-        color_hex, responsible_id, created_by
+        workspace_id, name, description, project_type_id, modality, start_date, end_date,
+        color_hex, secondary_color_hex, responsible_id, created_by
     } = payload;
 
-    const { data, error } = await supabase
-        .from('projects')
-        .insert({
-            workspace_id, name, description: description || null, project_type_id: project_type_id || null,
-            start_date: start_date || null, end_date: end_date || null,
-            color_hex: color_hex || null, responsible_id: responsible_id || null, created_by
-        })
-        .select()
-        .single();
+    const { data: newProjectId, error } = await supabase.rpc('create_project_with_template', {
+        p_workspace_id: workspace_id,
+        p_name: name,
+        p_project_type_id: project_type_id || null,
+        p_description: description || null,
+        p_modality: modality || null,
+        p_start_date: start_date || null,
+        p_end_date: end_date || null,
+        p_color_hex: color_hex || null,
+        p_secondary_color_hex: secondary_color_hex || null,
+        p_responsible_id: responsible_id || null,
+        p_created_by: created_by
+    });
     if (error) throw error;
-    return data;
+
+    return getProject(newProjectId);
 }
 
 export async function updateProject(projectId, payload) {

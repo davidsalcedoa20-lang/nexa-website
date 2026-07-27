@@ -104,37 +104,51 @@
 
             <main class="dash-main-inner" id="projectDetailMain" style="display:none;">
 
-                <a href="proyectos.html" class="dash-back-link">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M15 18l-6-6 6-6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                    Volver a mis proyectos
-                </a>
+                <div class="dash-breadcrumb">
+                    <a href="proyectos.html">Mis proyectos</a>
+                    <span>&rsaquo;</span>
+                    <strong id="pdBreadcrumbName">Cargando...</strong>
+                </div>
 
                 <div class="dash-page-title">
-                    <h1 id="detailProjectName">Cargando...</h1>
+                    <h1 class="dash-title" id="pdTitle">Cargando...</h1>
                     <p id="detailProjectMeta"></p>
                 </div>
 
-                <div class="dash-progress-overview">
-                    <div class="dash-progress-card">
-                        <span>Progreso general</span>
-                        <strong id="detailOverallProgress">0%</strong>
-                        <div class="dash-progress-track"><div class="dash-progress-fill" id="detailOverallProgressBar" style="width:0%"></div></div>
-                    </div>
-                    <div class="dash-progress-card">
-                        <span>Tus tareas</span>
-                        <strong id="detailClientProgress">0%</strong>
-                        <div class="dash-progress-track"><div class="dash-progress-fill" id="detailClientProgressBar" style="width:0%"></div></div>
-                    </div>
-                    <div class="dash-progress-card">
-                        <span>Equipo NEXA</span>
-                        <strong id="detailNexaProgress">0%</strong>
-                        <div class="dash-progress-track"><div class="dash-progress-fill" id="detailNexaProgressBar" style="width:0%"></div></div>
+                <div class="dash-meta-row">
+                    <div class="dash-meta-item"><span>Modalidad</span><strong id="pdMetaModality">—</strong></div>
+                    <div class="dash-meta-item"><span>Inicio</span><strong id="detailStartDate">—</strong></div>
+                    <div class="dash-meta-item"><span>Entrega estimada</span><strong id="detailEndDate">—</strong></div>
+                    <div class="dash-meta-item"><span>Responsable NEXA</span><strong id="detailResponsible">NEXA</strong></div>
+                </div>
+
+                <div class="dash-top-grid">
+                    <div></div>
+                    <div class="dash-top-side">
+                        <div class="dash-progress-card">
+                            <span class="dash-progress-card-label">PROGRESO GENERAL</span>
+                            <strong class="dash-progress-big" id="detailOverallProgress">0%</strong>
+                            <div class="dash-progress-track"><div class="dash-progress-fill" id="detailOverallProgressBar" style="width:0%"></div></div>
+                            <div style="display:flex; justify-content:space-between; margin-top:10px; font-size:11px; color:#8a8a8a;">
+                                <span>Tus tareas: <strong id="detailClientProgress" style="color:white;">0%</strong></span>
+                                <span>Equipo NEXA: <strong id="detailNexaProgress" style="color:white;">0%</strong></span>
+                            </div>
+                        </div>
+                        <div class="dash-stage-progress-card">
+                            <span class="dash-progress-card-label">POR ETAPA</span>
+                            <div class="dash-stage-progress-list" id="pdStageProgressList"></div>
+                        </div>
                     </div>
                 </div>
 
-                <div class="dash-tabs">
+                <div style="margin-top:22px;">
+                    <div class="dash-timeline-track" id="pdTimelineTrack"></div>
+                </div>
+
+                <div class="dash-tabs" style="margin-top:26px;">
                     <button type="button" class="dash-tab-btn active" data-tab="resumen">Resumen</button>
                     <button type="button" class="dash-tab-btn" data-tab="bloques">Bloques</button>
+                    <button type="button" class="dash-tab-btn" data-tab="entregables">Entregables</button>
                     <button type="button" class="dash-tab-btn" data-tab="archivos">Archivos</button>
                     <button type="button" class="dash-tab-btn" data-tab="comentarios">Comentarios</button>
                     <button type="button" class="dash-tab-btn" data-tab="cronologia">Cronología</button>
@@ -144,11 +158,15 @@
                 <section class="dash-tab-panel active" data-tab-panel="resumen">
                     <div class="dash-panel-card">
                         <p style="color:#dedede; font-size:14px; line-height:1.8;" id="detailDescription">Sin descripción.</p>
-                        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(160px,1fr)); gap:18px; margin-top:20px;">
-                            <div><span style="display:block; color:#7a7a7a; font-size:12px;">Inicio</span><strong style="color:white; font-size:13.5px;" id="detailStartDate">—</strong></div>
-                            <div><span style="display:block; color:#7a7a7a; font-size:12px;">Fin estimado</span><strong style="color:white; font-size:13.5px;" id="detailEndDate">—</strong></div>
-                            <div><span style="display:block; color:#7a7a7a; font-size:12px;">Responsable NEXA</span><strong style="color:white; font-size:13.5px;" id="detailResponsible">NEXA</strong></div>
-                        </div>
+                    </div>
+                    <div class="dash-footer-panel">
+                        <h3>Tus tareas</h3>
+                        <div id="pdMyTasksList"></div>
+                        <div class="dash-empty-inline" id="pdMyTasksEmptyState" style="display:none;">No tienes tareas asignadas por ahora.</div>
+                    </div>
+                    <div class="dash-footer-panel">
+                        <h3>Actividad reciente</h3>
+                        <div id="pdActivityList"></div>
                     </div>
                 </section>
 
@@ -156,6 +174,14 @@
                 <section class="dash-tab-panel" data-tab-panel="bloques" style="gap:14px;">
                     <div id="phaseList" style="display:flex; flex-direction:column; gap:14px;"></div>
                     <div class="dash-empty-inline" id="phasesEmptyState" style="display:none;">Tu proyecto aún no tiene bloques definidos.</div>
+                </section>
+
+                <!-- ===== TAB: ENTREGABLES ===== -->
+                <section class="dash-tab-panel" data-tab-panel="entregables">
+                    <div class="dash-footer-panel" style="max-height:none;">
+                        <div id="pdDeliverablesList"></div>
+                        <div class="dash-empty-inline" id="pdDeliverablesEmptyState" style="display:none;">Sin entregables todavía.</div>
+                    </div>
                 </section>
 
                 <!-- ===== TAB: ARCHIVOS ===== -->
