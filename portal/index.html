@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Portal de Clientes | NEXA</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/portal.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="portal-page">
+
+    <div class="portal-bg"></div>
+
+    <div class="portal-shell">
+
+        <a href="../index.html" class="portal-logo">
+            <img src="../assets/logo/nexa-logo.png" alt="Nexa Logo">
+        </a>
+
+        <div class="portal-card">
+
+            <span class="portal-badge">
+                <span class="badge-dot"></span>
+                NEXA HUB
+            </span>
+
+            <h1 class="portal-title">Portal de Clientes</h1>
+
+            <p class="portal-subtitle">
+                Accede a tu espacio de trabajo personalizado para consultar
+                el avance de tu proyecto con NEXA.
+            </p>
+
+            <form id="portalLoginForm" class="portal-form" novalidate>
+
+                <div class="portal-field">
+                    <label for="portalUser">Correo electrónico</label>
+                    <input type="email" id="portalUser" name="email" placeholder="tucorreo@ejemplo.com" autocomplete="username">
+                </div>
+
+                <div class="portal-field">
+                    <label for="portalPass">Contraseña</label>
+                    <input type="password" id="portalPass" name="password" placeholder="Tu contraseña" autocomplete="current-password">
+                </div>
+
+                <span class="portal-error" id="portalError">
+                    Por favor completa ambos campos para continuar.
+                </span>
+
+                <button type="submit" class="portal-submit">
+                    Iniciar sesión
+                    <span class="btn-arrow">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                            <path d="M5 12h14M13 5l7 7-7 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    </span>
+                </button>
+
+            </form>
+
+            <div class="portal-help">
+                <span>¿Problemas para acceder?</span>
+                <a href="../pages/contacto.html">Contacta a tu asesor NEXA.</a>
+            </div>
+
+        </div>
+
+    </div>
+
+    <script src="../js/vendor/supabase-js.min.js"></script>
+    <script src="../js/env.js"></script>
+    <script src="../js/portal.js"></script>
+
+</body>
+</html>

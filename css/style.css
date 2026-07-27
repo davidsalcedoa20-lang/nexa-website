@@ -94,6 +94,9 @@ header{
    3. BOTONES GLOBALES
    ========================================================== */
 .btn-cotizar{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
     text-decoration:none;
     padding:12px 22px;
     border-radius:30px;
@@ -104,6 +107,17 @@ header{
 
 .btn-cotizar:hover{
     transform:translateY(-2px);
+}
+
+.btn-cotizar svg,
+.mobile-btn svg{
+    flex-shrink:0;
+    transition:transform .35s;
+}
+
+.btn-cotizar:hover svg,
+.mobile-btn:hover svg{
+    transform:translateX(3px);
 }
 
 .btn-primary{
@@ -3372,6 +3386,7 @@ textarea{
         display:inline-flex;
         align-items:center;
         justify-content:center;
+        gap:8px;
         padding:14px 28px;
         border-radius:40px;
         background:linear-gradient(90deg,#2D8CFF,#9C27FF,#FF2D95);

@@ -1,0 +1,948 @@
+/* ==========================================================
+   NEXA HUB — Portal de Clientes
+   Índice:
+     1. Base (login / dashboard)
+     2. Login — Portal de Clientes
+     3. Dashboard — Estructura
+     4. Dashboard — Sidebar
+     5. Dashboard — Contenido / Placeholder
+     6. Dashboard — Proyectos (motor PROYECTOS, vista cliente)
+     7. Responsive
+   ========================================================== */
+
+/* ==========================================================
+   1. BASE
+   ========================================================== */
+body.portal-page,
+body.dash-page{
+    padding-top:0;
+    min-height:100vh;
+}
+
+/* ==========================================================
+   2. LOGIN — PORTAL DE CLIENTES
+   ========================================================== */
+.portal-page{
+    position:relative;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow-x:hidden;
+    padding:60px 20px;
+}
+
+.portal-bg{
+    position:fixed;
+    inset:0;
+    z-index:0;
+    pointer-events:none;
+    background:
+        radial-gradient(circle at 15% 15%, rgba(45,140,255,.16), transparent 45%),
+        radial-gradient(circle at 85% 85%, rgba(156,39,255,.16), transparent 45%),
+        radial-gradient(circle at 85% 15%, rgba(255,45,149,.08), transparent 40%),
+        var(--bg);
+}
+
+.portal-shell{
+    position:relative;
+    z-index:1;
+    width:100%;
+    max-width:460px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+}
+
+.portal-logo{
+    display:inline-flex;
+    margin-bottom:36px;
+}
+
+.portal-logo img{
+    height:42px;
+    width:auto;
+}
+
+.portal-card{
+    position:relative;
+    width:100%;
+    padding:48px 42px;
+    border-radius:28px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(20px);
+    text-align:center;
+    overflow:hidden;
+}
+
+.portal-card::before{
+    content:"";
+    position:absolute;
+    width:400px;
+    height:400px;
+    top:-220px;
+    left:50%;
+    transform:translateX(-50%);
+    background:radial-gradient(circle, rgba(45,140,255,.16), transparent 70%);
+    filter:blur(50px);
+    pointer-events:none;
+}
+
+.portal-badge{
+    position:relative;
+    z-index:1;
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:9px 18px;
+    border-radius:100px;
+    border:1px solid rgba(140,82,255,.35);
+    background:rgba(140,82,255,.08);
+    color:#B98CFF;
+    font-size:.75rem;
+    font-weight:600;
+    letter-spacing:2px;
+    margin-bottom:22px;
+}
+
+.portal-title{
+    position:relative;
+    z-index:1;
+    color:white;
+    font-size:30px;
+    font-weight:700;
+    margin-bottom:14px;
+}
+
+.portal-subtitle{
+    position:relative;
+    z-index:1;
+    color:var(--text-soft);
+    font-size:14.5px;
+    line-height:1.7;
+    max-width:340px;
+    margin:0 auto 34px;
+}
+
+.portal-form{
+    position:relative;
+    z-index:1;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    text-align:left;
+}
+
+.portal-field{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+
+.portal-field label{
+    color:#dedede;
+    font-size:13px;
+    font-weight:500;
+    letter-spacing:.3px;
+}
+
+.portal-field input{
+    width:100%;
+    padding:14px 16px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.12);
+    color:white;
+    font-family:inherit;
+    font-size:14.5px;
+    transition:.3s;
+}
+
+.portal-field input::placeholder{
+    color:#6f6f6f;
+}
+
+.portal-field input:focus{
+    outline:none;
+    border-color:var(--blue);
+    background:rgba(45,140,255,.05);
+    box-shadow:0 0 0 3px rgba(45,140,255,.12);
+}
+
+.portal-error{
+    display:none;
+    color:#FF6B81;
+    font-size:13px;
+    margin-top:-6px;
+}
+
+.portal-error.active{
+    display:block;
+}
+
+.portal-submit{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    width:100%;
+    padding:15px 20px;
+    margin-top:6px;
+    border:none;
+    border-radius:14px;
+    background:var(--gradient);
+    color:white;
+    font-family:inherit;
+    font-size:15px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.35s;
+}
+
+.portal-submit:hover{
+    transform:translateY(-3px);
+    box-shadow:0 15px 40px rgba(45,140,255,.3);
+}
+
+.portal-submit:hover .btn-arrow{
+    transform:translateX(4px);
+}
+
+.portal-help{
+    position:relative;
+    z-index:1;
+    margin-top:30px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:13.5px;
+    color:var(--text-soft);
+}
+
+.portal-help a{
+    color:#5FA8FF;
+    text-decoration:none;
+    font-weight:500;
+}
+
+.portal-help a:hover{
+    text-decoration:underline;
+}
+
+/* ==========================================================
+   3. DASHBOARD — ESTRUCTURA
+   ========================================================== */
+.dash-shell{
+    display:flex;
+    min-height:100vh;
+    background:var(--bg);
+}
+
+/* ==========================================================
+   4. DASHBOARD — SIDEBAR
+   ========================================================== */
+.dash-sidebar{
+    position:sticky;
+    top:0;
+    height:100vh;
+    width:260px;
+    flex-shrink:0;
+    display:flex;
+    flex-direction:column;
+    padding:32px 24px;
+    background:rgba(255,255,255,.02);
+    border-right:1px solid rgba(255,255,255,.08);
+}
+
+.dash-logo{
+    display:inline-flex;
+    margin-bottom:44px;
+}
+
+.dash-logo img{
+    height:34px;
+    width:auto;
+}
+
+.dash-nav{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+    flex:1;
+}
+
+.dash-nav-item{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:13px 16px;
+    border-radius:14px;
+    color:var(--text-soft);
+    text-decoration:none;
+    font-size:14.5px;
+    font-weight:500;
+    transition:.3s;
+}
+
+.dash-nav-item svg{
+    width:19px;
+    height:19px;
+    flex-shrink:0;
+}
+
+.dash-nav-item:hover{
+    color:white;
+    background:rgba(255,255,255,.04);
+}
+
+.dash-nav-item.active{
+    color:white;
+    background:linear-gradient(135deg, rgba(45,140,255,.16), rgba(140,82,255,.10));
+    border:1px solid rgba(45,140,255,.3);
+}
+
+.dash-logout{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:13px 16px;
+    border-radius:14px;
+    color:var(--text-soft);
+    text-decoration:none;
+    font-size:14px;
+    font-weight:500;
+    border-top:1px solid rgba(255,255,255,.08);
+    margin-top:12px;
+    padding-top:20px;
+    transition:.3s;
+}
+
+.dash-logout svg{
+    width:18px;
+    height:18px;
+}
+
+.dash-logout:hover{
+    color:#FF6B81;
+}
+
+.dash-overlay{
+    display:none;
+}
+
+/* ==========================================================
+   5. DASHBOARD — CONTENIDO / PLACEHOLDER
+   ========================================================== */
+.dash-content{
+    flex:1;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+}
+
+.dash-topbar{
+    display:none;
+    align-items:center;
+    gap:16px;
+    padding:18px 20px;
+    border-bottom:1px solid rgba(255,255,255,.08);
+    background:rgba(5,5,5,.9);
+    backdrop-filter:blur(14px);
+    position:sticky;
+    top:0;
+    z-index:20;
+}
+
+.dash-menu-toggle{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:38px;
+    height:38px;
+    border-radius:10px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.03);
+    color:white;
+    cursor:pointer;
+}
+
+.dash-menu-toggle svg{
+    width:20px;
+    height:20px;
+}
+
+.dash-topbar-logo img{
+    height:26px;
+    width:auto;
+}
+
+.dash-main{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:60px 6%;
+}
+
+.dash-placeholder{
+    max-width:520px;
+    text-align:center;
+    padding:60px 44px;
+    border-radius:28px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(18px);
+}
+
+.dash-placeholder-icon{
+    width:64px;
+    height:64px;
+    margin:0 auto 24px;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(140,82,255,.12);
+    border:1px solid rgba(140,82,255,.3);
+    color:#B98CFF;
+}
+
+.dash-placeholder-icon svg{
+    width:28px;
+    height:28px;
+}
+
+.dash-placeholder h1{
+    color:white;
+    font-size:26px;
+    font-weight:700;
+    margin-bottom:16px;
+}
+
+.dash-placeholder p{
+    color:var(--text-soft);
+    font-size:15px;
+    line-height:1.8;
+}
+
+/* ==========================================================
+   6. DASHBOARD — PROYECTOS (motor PROYECTOS, vista cliente)
+   ========================================================== */
+.dash-main-inner{
+    flex:1;
+    padding:36px 5% 70px;
+    display:flex;
+    flex-direction:column;
+    gap:30px;
+    width:100%;
+}
+
+.dash-page-title h1{
+    color:white;
+    font-size:25px;
+    font-weight:700;
+    margin-bottom:8px;
+}
+
+.dash-page-title p{
+    color:var(--text-soft);
+    font-size:14px;
+}
+
+.dash-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:18px;
+}
+
+.dash-summary-card{
+    padding:22px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(16px);
+}
+
+.dash-summary-card span:first-child{
+    display:block;
+    color:#8a8a8a;
+    font-size:12.5px;
+    margin-bottom:8px;
+}
+
+.dash-summary-value{
+    color:white;
+    font-size:24px;
+    font-weight:700;
+}
+
+.dash-projects-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:18px;
+}
+
+.dash-project-card{
+    position:relative;
+    padding:22px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(16px);
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    text-decoration:none;
+    transition:transform .3s, border-color .3s, box-shadow .3s;
+    overflow:hidden;
+}
+
+.dash-project-card::before{
+    content:"";
+    position:absolute;
+    top:0; left:0;
+    width:4px;
+    height:100%;
+    background:var(--project-color, var(--gradient));
+}
+
+.dash-project-card:hover{
+    transform:translateY(-4px);
+    border-color:rgba(45,140,255,.3);
+    box-shadow:0 20px 45px rgba(0,0,0,.35);
+}
+
+.dash-project-name{
+    color:white;
+    font-size:16px;
+    font-weight:700;
+}
+
+.dash-project-type{
+    display:inline-flex;
+    width:fit-content;
+    padding:5px 11px;
+    border-radius:100px;
+    font-size:11px;
+    font-weight:600;
+    background:color-mix(in srgb, var(--project-color, #2D8CFF) 16%, transparent);
+    border:1px solid color-mix(in srgb, var(--project-color, #2D8CFF) 40%, transparent);
+    color:var(--project-color, #5FA8FF);
+}
+
+.dash-progress-track{
+    width:100%;
+    height:7px;
+    border-radius:100px;
+    background:rgba(255,255,255,.06);
+    overflow:hidden;
+}
+
+.dash-progress-fill{
+    height:100%;
+    border-radius:100px;
+    background:var(--project-color, var(--gradient));
+}
+
+.dash-project-meta{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    font-size:12px;
+    color:#8a8a8a;
+}
+
+.dash-empty-inline{
+    color:#7a7a7a;
+    font-size:13.5px;
+    padding:30px 0;
+    text-align:center;
+}
+
+/* ---- Detalle de proyecto (cliente) ---- */
+.dash-back-link{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    color:var(--text-soft);
+    text-decoration:none;
+    font-size:13.5px;
+    font-weight:500;
+    margin-bottom:4px;
+}
+
+.dash-back-link svg{ width:16px; height:16px; }
+.dash-back-link:hover{ color:white; }
+
+.dash-progress-overview{
+    display:grid;
+    grid-template-columns:repeat(3, 1fr);
+    gap:18px;
+}
+
+.dash-progress-card{
+    padding:20px 22px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(16px);
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.dash-progress-card span:first-child{ color:#8a8a8a; font-size:12.5px; }
+.dash-progress-card strong{ color:white; font-size:22px; font-weight:700; }
+
+.dash-tabs{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:6px;
+    border-radius:100px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    width:fit-content;
+    max-width:100%;
+    overflow-x:auto;
+}
+
+.dash-tab-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    padding:10px 18px;
+    border-radius:100px;
+    border:none;
+    background:none;
+    color:var(--text-soft);
+    font-family:inherit;
+    font-size:13.5px;
+    font-weight:600;
+    cursor:pointer;
+    white-space:nowrap;
+}
+
+.dash-tab-btn.active{ color:white; background:var(--gradient); }
+
+.dash-tab-panel{ display:none; flex-direction:column; gap:18px; }
+.dash-tab-panel.active{ display:flex; }
+
+.dash-panel-card{
+    padding:22px;
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(16px);
+}
+
+.dash-phase{
+    border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    overflow:hidden;
+}
+
+.dash-phase-header{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:16px 20px;
+    cursor:pointer;
+}
+
+.dash-phase-header-main{ flex:1; min-width:0; display:flex; flex-direction:column; gap:8px; }
+
+.dash-phase-title-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.dash-phase-title-row strong{ color:white; font-size:14.5px; font-weight:700; }
+
+.dash-phase-caret{ width:18px; height:18px; color:#8a8a8a; transition:transform .25s; flex-shrink:0; }
+.dash-phase.is-open .dash-phase-caret{ transform:rotate(180deg); }
+
+.dash-phase-body{
+    display:none;
+    flex-direction:column;
+    gap:14px;
+    padding:0 20px 20px;
+    border-top:1px solid rgba(255,255,255,.06);
+}
+
+.dash-phase.is-open .dash-phase-body{ display:flex; padding-top:16px; }
+
+.dash-section-block{
+    border-radius:14px;
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.06);
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.dash-section-block h4{ color:#dedede; font-size:13.5px; font-weight:600; }
+
+.dash-task-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    border-radius:12px;
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.06);
+    flex-wrap:wrap;
+}
+
+.dash-task-row-main{ flex:1; min-width:160px; display:flex; flex-direction:column; gap:4px; }
+.dash-task-row-main strong{ color:white; font-size:13.5px; font-weight:600; }
+.dash-task-row-main span{ color:#8a8a8a; font-size:11.5px; }
+
+.dash-task-tag{
+    display:inline-flex;
+    align-items:center;
+    padding:4px 10px;
+    border-radius:100px;
+    font-size:10px;
+    font-weight:700;
+    letter-spacing:.3px;
+    text-transform:uppercase;
+    white-space:nowrap;
+}
+
+.dash-task-tag--client{ background:rgba(45,140,255,.14); border:1px solid rgba(45,140,255,.32); color:#5FA8FF; }
+.dash-task-tag--nexa{ background:rgba(140,82,255,.14); border:1px solid rgba(140,82,255,.32); color:#B98CFF; }
+.dash-task-tag--approval{ background:rgba(255,177,45,.14); border:1px solid rgba(255,177,45,.32); color:#FFC15F; }
+
+.dash-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:5px 12px;
+    border-radius:100px;
+    font-size:11.5px;
+    font-weight:600;
+}
+
+.dash-badge::before{ content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+.dash-badge--pending{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16); color:#c9c9c9; }
+.dash-badge--progress{ background:rgba(45,140,255,.12); border:1px solid rgba(45,140,255,.3); color:#5FA8FF; }
+.dash-badge--waiting{ background:rgba(255,177,45,.12); border:1px solid rgba(255,177,45,.3); color:#FFC15F; }
+.dash-badge--done{ background:rgba(60,210,140,.12); border:1px solid rgba(60,210,140,.32); color:#4ADE80; }
+.dash-badge--blocked{ background:rgba(255,45,149,.12); border:1px solid rgba(255,45,149,.3); color:#FF6EC0; }
+
+.dash-btn-small{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 15px;
+    border-radius:100px;
+    border:none;
+    background:var(--gradient);
+    color:white;
+    font-family:inherit;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.25s;
+    white-space:nowrap;
+}
+
+.dash-btn-small:hover{ transform:translateY(-2px); }
+
+.dash-btn-outline{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 15px;
+    border-radius:100px;
+    border:1px solid rgba(255,255,255,.16);
+    background:rgba(255,255,255,.03);
+    color:var(--text-soft);
+    font-family:inherit;
+    font-size:12px;
+    font-weight:600;
+    cursor:pointer;
+    transition:.25s;
+    white-space:nowrap;
+}
+
+.dash-btn-outline:hover{ color:white; border-color:rgba(255,255,255,.3); }
+
+.dash-file-row{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:14px 16px;
+    border-radius:14px;
+    background:rgba(255,255,255,.02);
+    border:1px solid rgba(255,255,255,.06);
+}
+
+.dash-file-icon{
+    width:36px;
+    height:36px;
+    border-radius:10px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:rgba(45,140,255,.12);
+    border:1px solid rgba(45,140,255,.3);
+    color:#5FA8FF;
+    flex-shrink:0;
+}
+
+.dash-file-icon svg{ width:16px; height:16px; }
+.dash-file-info{ flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.dash-file-info strong{ color:white; font-size:13px; font-weight:600; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dash-file-info span{ color:#8a8a8a; font-size:11px; }
+
+.dash-comment{ display:flex; gap:12px; }
+
+.dash-comment-avatar{
+    width:34px; height:34px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--gradient); color:white; font-size:11.5px; font-weight:700; flex-shrink:0;
+}
+
+.dash-comment-body{
+    flex:1; min-width:0; padding:12px 15px; border-radius:14px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
+}
+
+.dash-comment-header{ display:flex; align-items:center; gap:9px; margin-bottom:5px; flex-wrap:wrap; }
+.dash-comment-header strong{ color:white; font-size:12.5px; }
+.dash-comment-header span{ color:#7a7a7a; font-size:10.5px; }
+.dash-comment-text{ color:#dedede; font-size:13px; line-height:1.6; }
+
+.dash-comment-form{ display:flex; gap:12px; align-items:flex-start; }
+
+.dash-comment-form textarea{
+    flex:1; padding:12px 14px; border-radius:14px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.12);
+    color:white; font-family:inherit; font-size:13px; resize:vertical; min-height:44px;
+}
+
+.dash-comment-form textarea:focus{ outline:none; border-color:var(--blue); }
+
+.dash-timeline-item{ display:flex; gap:14px; position:relative; padding-bottom:20px; }
+
+.dash-timeline-item::before{
+    content:""; position:absolute; left:14px; top:30px; bottom:0; width:1px; background:rgba(255,255,255,.1);
+}
+
+.dash-timeline-item:last-child::before{ display:none; }
+
+.dash-timeline-dot{
+    width:30px; height:30px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(140,82,255,.12); border:1px solid rgba(140,82,255,.3); color:#B98CFF;
+    flex-shrink:0; z-index:1;
+}
+
+.dash-timeline-dot svg{ width:13px; height:13px; }
+.dash-timeline-content p{ color:#dedede; font-size:13px; line-height:1.6; }
+.dash-timeline-content span{ display:block; color:#7a7a7a; font-size:11px; margin-top:2px; }
+
+/* ==========================================================
+   7. RESPONSIVE
+   ========================================================== */
+@media screen and (max-width:992px){
+
+    .portal-card{
+        padding:40px 30px;
+    }
+
+    .dash-summary-grid{
+        grid-template-columns:1fr 1fr;
+    }
+
+}
+
+@media screen and (max-width:900px){
+
+    .dash-sidebar{
+        position:fixed;
+        top:0;
+        left:0;
+        z-index:40;
+        transform:translateX(-100%);
+        box-shadow:0 0 60px rgba(0,0,0,.5);
+        transition:transform .35s ease;
+    }
+
+    .dash-sidebar.active{
+        transform:translateX(0);
+    }
+
+    .dash-overlay{
+        display:block;
+        position:fixed;
+        inset:0;
+        z-index:30;
+        background:rgba(0,0,0,.6);
+        backdrop-filter:blur(2px);
+        opacity:0;
+        pointer-events:none;
+        transition:opacity .35s ease;
+    }
+
+    .dash-overlay.active{
+        opacity:1;
+        pointer-events:auto;
+    }
+
+    .dash-topbar{
+        display:flex;
+    }
+
+}
+
+@media screen and (max-width:576px){
+
+    .portal-card{
+        padding:34px 22px;
+        border-radius:22px;
+    }
+
+    .portal-title{
+        font-size:25px;
+    }
+
+    .portal-logo img{
+        height:36px;
+    }
+
+    .dash-placeholder{
+        padding:44px 26px;
+    }
+
+    .dash-placeholder h1{
+        font-size:22px;
+    }
+
+    .dash-main-inner{
+        padding:28px 5% 56px;
+        gap:24px;
+    }
+
+    .dash-summary-grid{
+        grid-template-columns:1fr;
+    }
+
+    .dash-projects-grid{
+        grid-template-columns:1fr;
+    }
+
+    .dash-progress-overview{
+        grid-template-columns:1fr;
+    }
+
+    .dash-task-row{
+        flex-direction:column;
+        align-items:flex-start;
+    }
+
+    .dash-comment-form{
+        flex-direction:column;
+    }
+
+}

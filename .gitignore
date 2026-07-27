@@ -1,0 +1,15 @@
+# Dependencias (se instalan con "npm install")
+node_modules/
+
+# Variables de entorno / credenciales locales
+.env
+.env.local
+js/env.js
+
+# Scripts de un solo uso con credenciales en texto plano
+scripts/set-admin-passwords.mjs
+
+# Editor / SO
+.vscode/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Mis Proyectos | NEXA Hub</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/portal.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<body class="dash-page" data-auth-guard="client">
+
+    <div class="dash-shell">
+
+        <!-- ================= SIDEBAR ================= -->
+        <aside class="dash-sidebar" id="dashSidebar">
+
+            <a href="../index.html" class="dash-logo">
+                <img src="../assets/logo/nexa-logo.png" alt="Nexa Logo">
+            </a>
+
+            <nav class="dash-nav">
+
+                <a href="index.html" class="dash-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                        <rect x="13" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                        <rect x="3" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                        <rect x="13" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                    </svg>
+                    Resumen
+                </a>
+
+                <a href="proyectos.html" class="dash-nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M9 18l-5.4 2.2a1 1 0 0 1-1.4-.9V6.6a1 1 0 0 1 .6-.9L9 3m0 15V3m0 15l6 3m-6-18l6 3m0 0l5.4-2.2a1 1 0 0 1 1.4.9v12.7a1 1 0 0 1-.6.9L15 21m0-18v18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Ruta NEXA
+                </a>
+
+                <a href="#" class="dash-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M8 12.3l2.5 2.5L16 9.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Tareas
+                </a>
+
+                <a href="#" class="dash-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                    Calendario
+                </a>
+
+                <a href="#" class="dash-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4M17.7 17.7l-1.4-1.4M7.7 7.7L6.3 6.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                    Configuración
+                </a>
+
+            </nav>
+
+            <a href="../portal/index.html" class="dash-logout" data-logout>
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M15 17l5-5-5-5M20 12H9M12 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Cerrar sesión
+            </a>
+
+        </aside>
+
+        <div class="dash-overlay" id="dashOverlay"></div>
+
+        <!-- ================= CONTENIDO ================= -->
+        <div class="dash-content">
+
+            <div class="dash-topbar">
+                <button class="dash-menu-toggle" id="dashMenuToggle" aria-label="Abrir menú">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <a href="../index.html" class="dash-topbar-logo">
+                    <img src="../assets/logo/nexa-logo.png" alt="Nexa Logo">
+                </a>
+            </div>
+
+            <main class="dash-main-inner">
+
+                <div class="dash-page-title">
+                    <h1>Ruta NEXA — Tus proyectos</h1>
+                    <p>Consulta el avance de todos los proyectos que NEXA está desarrollando para ti.</p>
+                </div>
+
+                <div class="dash-projects-grid" id="clientProjectsGrid"></div>
+                <div class="dash-empty-inline" id="clientProjectsEmptyState" style="display:none;">
+                    Todavía no tienes proyectos activos.<br>Tu asesor NEXA los verá aparecer aquí en cuanto se creen.
+                </div>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <script src="../js/vendor/supabase-js.min.js"></script>
+    <script src="../js/env.js"></script>
+    <script src="../js/portal.js"></script>
+    <script type="module" src="../js/dashboard/pages/proyectosPage.js"></script>
+
+</body>
+</html>

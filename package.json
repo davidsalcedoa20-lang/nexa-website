@@ -1,0 +1,16 @@
+{
+  "name": "nexa-web",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "supabase:login": "supabase login",
+    "supabase:link": "supabase link --project-ref aeulqdihlxsvznviyozk",
+    "db:push": "supabase db push"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.8"
+  },
+  "devDependencies": {
+    "supabase": "^2.109.1"
+  }
+}
