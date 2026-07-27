@@ -3,6 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "scripts": {
+    "dev": "vercel dev",
     "supabase:login": "supabase login",
     "supabase:link": "supabase link --project-ref aeulqdihlxsvznviyozk",
     "db:push": "supabase db push"
@@ -11,6 +12,7 @@
     "@supabase/supabase-js": "^2.110.8"
   },
   "devDependencies": {
-    "supabase": "^2.109.1"
+    "supabase": "^2.109.1",
+    "vercel": "^57.0.0"
   }
 }

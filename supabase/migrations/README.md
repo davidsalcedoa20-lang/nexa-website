@@ -13,7 +13,7 @@ Deben aplicarse **en este orden** (el prefijo numérico ya lo garantiza):
 
 ## Cómo aplicarlas
 
-**No se ejecutaron todavía** porque hacerlo requiere credenciales de administrador de la base de datos (contraseña de Postgres o un access token de Supabase), que nunca deben vivir en este repositorio ni en el frontend — el proyecto solo usa la clave pública `anon` (`js/env.js`), que intencionalmente no puede correr DDL.
+**No se ejecutaron todavía** porque hacerlo requiere credenciales de administrador de la base de datos (contraseña de Postgres o un access token de Supabase), que nunca deben vivir en este repositorio ni en el frontend — el proyecto solo usa la clave pública `anon` (servida por `api/config.js` desde variables de entorno), que intencionalmente no puede correr DDL.
 
 Elige una opción:
 

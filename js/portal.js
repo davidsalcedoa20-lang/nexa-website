@@ -11,9 +11,14 @@
      verificando sesión + rol antes de mostrar contenido, y
      controlan el sidebar en vista móvil.
 
-   Requiere que, ANTES de este archivo, ya se hayan cargado:
+   Requiere que, ANTES de este archivo, ya se haya cargado:
      1. js/vendor/supabase-js.min.js
-     2. js/env.js
+
+   Las credenciales de Supabase (SUPABASE_URL / SUPABASE_ANON_KEY)
+   ya NO se leen de "window.__ENV__" ni de ningún "js/env.js": se
+   obtienen dentro de "js/supabase.js" desde el endpoint "/api/config"
+   (ver ese archivo para más detalle). Este archivo no necesita saber
+   de dónde salen: solo importa dinámicamente "./supabase.js".
 
    ---------------------------------------------------------
    BOOTSTRAP DE PERFILES (fetchOrCreateProfile)

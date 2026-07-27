@@ -2,9 +2,15 @@
 node_modules/
 
 # Variables de entorno / credenciales locales
+# (SUPABASE_URL / SUPABASE_ANON_KEY se leen desde aquí en desarrollo
+# con "vercel dev", y desde Vercel > Environment Variables en producción.
+# Ver api/config.js y .env.example)
 .env
 .env.local
-js/env.js
+.env*.local
+
+# Vercel
+.vercel
 
 # Scripts de un solo uso con credenciales en texto plano
 scripts/set-admin-passwords.mjs
