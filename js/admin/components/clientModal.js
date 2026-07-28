@@ -179,7 +179,13 @@ if (form) {
         }
 
         if (currentMode === 'create') {
-            payload.password = getField('password').value;
+            // .trim(): la Edge Function también recorta espacios antes de
+            // guardar la contraseña en Auth (ver create-client/index.ts).
+            // Se recorta aquí también para que la contraseña que se le
+            // muestre al admin en el modal "Contraseña temporal" (para
+            // copiar y enviar al cliente) sea EXACTAMENTE la misma que
+            // quedó guardada — nunca una versión con espacios de más.
+            payload.password = getField('password').value.trim();
 
             if (!payload.password || payload.password.length < MIN_PASSWORD_LENGTH) {
                 showModalError(`La contraseña temporal debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);

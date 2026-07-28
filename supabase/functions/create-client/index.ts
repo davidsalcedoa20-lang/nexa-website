@@ -135,7 +135,12 @@ Deno.serve(async (req) => {
         const phone = (body.phone || '').trim();
         const city = (body.city || '').trim();
         const notes = (body.notes || '').trim();
-        const password = String(body.password || '');
+        // .trim() es importante: si el admin (sin querer) deja un espacio al
+        // final al escribir la contraseña en el formulario, esa contraseña
+        // se guardaría en Auth CON el espacio, pero el formulario de login
+        // del Portal sí recorta espacios (ver js/portal.js) — eso por sí
+        // solo bastaría para que "la misma contraseña" nunca coincida.
+        const password = String(body.password || '').trim();
 
         if (!company || !contact || !email) {
             return json({ error: 'Empresa, contacto y correo son obligatorios.' }, 400);
@@ -218,6 +223,13 @@ Deno.serve(async (req) => {
         } else {
             const { data: updated, error: updateError } = await adminClient.auth.admin.updateUserById(authUser.id, {
                 password,
+                // Igual que en el alta (createUser abajo): sin esto, una
+                // cuenta que hubiera quedado sin confirmar (p. ej. creada
+                // antes con auth.admin.inviteUserByEmail(), que NO
+                // confirma el correo hasta que el usuario completa la
+                // invitación) seguiría sin poder iniciar sesión con
+                // contraseña aunque la contraseña ya esté bien puesta.
+                email_confirm: true,
                 user_metadata: { ...(authUser.user_metadata || {}), ...clientMetadata }
             });
 

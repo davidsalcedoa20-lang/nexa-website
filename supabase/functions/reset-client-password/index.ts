@@ -96,7 +96,10 @@ Deno.serve(async (req) => {
 
         const body = await req.json().catch(() => ({}));
         const profileId = (body.profileId || '').trim();
-        const password = String(body.password || '');
+        // .trim() por la misma razón que en create-client: el formulario de
+        // login del Portal recorta espacios (ver js/portal.js), así que la
+        // contraseña que se guarda en Auth debe quedar recortada igual.
+        const password = String(body.password || '').trim();
 
         if (!profileId) {
             return json({ error: 'Falta el identificador del cliente.' }, 400);
@@ -125,6 +128,11 @@ Deno.serve(async (req) => {
 
         const { error: updateError } = await adminClient.auth.admin.updateUserById(profileId, {
             password,
+            // Por si esta cuenta hubiera quedado sin confirmar (p. ej. creada
+            // originalmente con auth.admin.inviteUserByEmail()): sin esto
+            // seguiría sin poder iniciar sesión con contraseña aunque ya
+            // tenga una contraseña válida.
+            email_confirm: true,
             user_metadata: { ...(targetUser.user.user_metadata || {}), must_change_password: true }
         });
 

@@ -81,7 +81,9 @@ if (form) {
 
         clearError();
 
-        const password = valueInput ? valueInput.value : '';
+        // .trim(): la Edge Function "reset-client-password" también recorta
+        // espacios antes de guardar (mismo motivo que en clientModal.js).
+        const password = valueInput ? valueInput.value.trim() : '';
         if (!password || password.length < MIN_PASSWORD_LENGTH) {
             showError(`La contraseña temporal debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`);
             return;

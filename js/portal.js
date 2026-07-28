@@ -121,7 +121,11 @@ if (portalLoginForm) {
     portalLoginForm.addEventListener('submit', async function (e) {
         e.preventDefault();
 
-        const email = portalUser.value.trim();
+        // .toLowerCase() porque Supabase Auth guarda/compara el correo en
+        // minúsculas (igual que la Edge Function "create-client" al crear
+        // la cuenta, ver supabase/functions/create-client/index.ts): así
+        // "Cliente@Empresa.com" y "cliente@empresa.com" son el mismo login.
+        const email = portalUser.value.trim().toLowerCase();
         const password = portalPass.value.trim();
 
         if (email === '' || password === '') {
@@ -145,7 +149,22 @@ if (portalLoginForm) {
 
         if (authError || !authData || !authData.user) {
             setLoading(false);
-            showError('Correo o contraseña incorrectos.');
+
+            // Supabase distingue "credenciales inválidas" (correo/contraseña
+            // no coinciden) de "correo sin confirmar" (la cuenta existe y la
+            // contraseña podría ser correcta, pero Auth todavía no la marca
+            // como confirmada). Se registra el detalle real en consola para
+            // poder diagnosticar sin exponer nunca la contraseña, y se le
+            // muestra al usuario un mensaje distinto en cada caso.
+            if (authError) {
+                console.error('[NEXA HUB] Error de inicio de sesión:', authError.status, authError.message);
+            }
+
+            if (authError && /email not confirmed/i.test(authError.message || '')) {
+                showError('Tu cuenta todavía no está confirmada. Contacta a tu asesor NEXA para reactivarla.');
+            } else {
+                showError('Correo o contraseña incorrectos.');
+            }
             return;
         }
 
@@ -184,13 +203,17 @@ if (portalLoginForm) {
     });
 }
 
-/* ============ CAMBIO DE CONTRASEÑA OBLIGATORIO — /portal/change-password.html ============
-   Se muestra cuando un cliente inicia sesión con la contraseña
-   temporal que le asignó un administrador (user_metadata.must_change_password
-   === true, ver Edge Functions create-client / reset-client-password).
+/* ============ CAMBIO DE CONTRASEÑA — /portal/change-password.html ============
+   Sirve dos casos:
+     1. OBLIGATORIO: el cliente inició sesión con la contraseña temporal
+        que le asignó un administrador (user_metadata.must_change_password
+        === true, ver Edge Functions create-client / reset-client-password).
+     2. VOLUNTARIO: el cliente ya tiene su contraseña definitiva y entra
+        por su cuenta desde "Configuración" en el sidebar del Portal
+        porque simplemente quiere cambiarla.
    No usa el mecanismo genérico de [data-auth-guard] porque su condición
-   de acceso es distinta (no basta con el rol: importa el estado de
-   must_change_password), así que valida la sesión por su cuenta. */
+   de acceso es distinta (no basta con el rol: solo importa que haya
+   sesión activa de cliente), así que valida la sesión por su cuenta. */
 const changePasswordForm = document.getElementById('changePasswordForm');
 
 if (changePasswordForm) {
@@ -230,12 +253,28 @@ async function initChangePasswordPage(form) {
         return;
     }
 
-    // Si ya cambió su contraseña (o es un admin que llegó por error a esta
-    // URL), no debe quedarse en esta pantalla.
-    if (!user.user_metadata || user.user_metadata.must_change_password !== true) {
-        const profile = await fetchOrCreateProfile(supabase, user);
-        window.location.href = profile && profile.role === 'admin' ? '../admin/index.html' : '../dashboard/index.html';
+    const profile = await fetchOrCreateProfile(supabase, user);
+
+    // Este flujo es solo para clientes (los admins no tienen esta pantalla;
+    // si alguno llega aquí por error, se lo manda de vuelta a su panel).
+    if (!profile || profile.role !== 'client') {
+        window.location.href = profile && profile.role === 'admin' ? '../admin/index.html' : 'index.html';
         return;
+    }
+
+    // Ajusta el texto según si el cambio es obligatorio (contraseña
+    // temporal recién asignada) o voluntario (el cliente entró desde
+    // "Configuración" solo porque quiere cambiar su contraseña).
+    const isMandatory = user.user_metadata && user.user_metadata.must_change_password === true;
+    const titleEl = document.getElementById('changePasswordTitle');
+    const subtitleEl = document.getElementById('changePasswordSubtitle');
+
+    if (isMandatory) {
+        if (titleEl) titleEl.textContent = 'Bienvenido a NEXA Hub';
+        if (subtitleEl) subtitleEl.textContent = 'Por seguridad, debes cambiar tu contraseña temporal antes de continuar.';
+    } else {
+        if (titleEl) titleEl.textContent = 'Cambiar contraseña';
+        if (subtitleEl) subtitleEl.textContent = 'Define una nueva contraseña para tu cuenta de NEXA Hub.';
     }
 
     form.addEventListener('submit', async function (e) {
