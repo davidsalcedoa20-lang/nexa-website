@@ -206,7 +206,7 @@
                 <section class="admin-section">
 
                     <div class="admin-section-header">
-                        <h2>Todas las tareas</h2>
+                        <h2>Por responsable</h2>
                         <button type="button" class="admin-btn-primary" id="newTaskBtn">
                             <svg viewBox="0 0 24 24" fill="none">
                                 <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
@@ -285,25 +285,9 @@
                         <span>No se pudieron cargar las tareas.<br>Verifica tu conexión con Supabase e intenta de nuevo.</span>
                     </div>
 
-                    <!-- Tabla -->
-                    <div class="admin-table-wrapper" id="tasksTableWrapper" style="display:none;">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Tarea</th>
-                                    <th>Proyecto / Cliente</th>
-                                    <th>Tipo</th>
-                                    <th>Responsable</th>
-                                    <th>Prioridad</th>
-                                    <th>Estado</th>
-                                    <th>Fecha límite</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="tasksTableBody">
-                                <!-- Filas generadas por js/admin/pages/tareasPage.js (datos reales de Supabase) -->
-                            </tbody>
-                        </table>
+                    <!-- Tablero NEXA | CLIENTE -->
+                    <div class="task-board" id="tasksBoard" style="display:none;">
+                        <!-- Generado por js/admin/components/taskBoard.js -->
                     </div>
 
                 </section>

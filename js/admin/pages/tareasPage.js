@@ -16,7 +16,7 @@ import { supabase } from '../../services/supabaseClient.js';
 import { listAllTasksForAdmin, createTask, updateTask, deleteTask, ensureApprovalRecord } from '../../services/taskService.js';
 import { listProjects, getProjectStructure } from '../../services/projectService.js';
 import { listAdmins } from '../../services/profileService.js';
-import { renderTaskTable } from '../components/taskTable.js';
+import { renderTaskBoard } from '../components/taskBoard.js';
 import {
     escapeHtml,
     getProjectClientProfile,
@@ -24,11 +24,10 @@ import {
     resolveTaskAssignment
 } from '../../components/projectUi.js';
 
-const tbody = document.getElementById('tasksTableBody');
+const boardEl = document.getElementById('tasksBoard');
 const emptyState = document.getElementById('tasksEmptyState');
 const loadingState = document.getElementById('tasksLoadingState');
 const errorState = document.getElementById('tasksErrorState');
-const tableWrapper = document.getElementById('tasksTableWrapper');
 const noResultsState = document.getElementById('tasksNoResultsState');
 
 const searchInput = document.getElementById('taskSearchInput');
@@ -52,8 +51,10 @@ function setView(view) {
     if (emptyState) emptyState.style.display = view === 'empty' ? 'flex' : 'none';
     if (errorState) errorState.style.display = view === 'error' ? 'flex' : 'none';
     if (noResultsState) noResultsState.style.display = view === 'no-results' ? 'flex' : 'none';
-    if (tableWrapper) tableWrapper.style.display = (view === 'table' || view === 'no-results') ? 'block' : 'none';
-    if (tableWrapper) tableWrapper.style.opacity = view === 'no-results' ? '0.35' : '1';
+    if (boardEl) {
+        boardEl.style.display = (view === 'board' || view === 'no-results') ? 'grid' : 'none';
+        boardEl.style.opacity = view === 'no-results' ? '0.35' : '1';
+    }
 }
 
 /* ---------------------------------------------------------
@@ -223,12 +224,12 @@ function applyFiltersAndRender() {
     }
     if (!filtered.length) {
         setView('no-results');
-        tbody.innerHTML = '';
+        if (boardEl) boardEl.innerHTML = '';
         return;
     }
 
-    setView('table');
-    renderTaskTable(tbody, filtered, {
+    setView('board');
+    renderTaskBoard(boardEl, filtered, {
         onStatusChange: handleStatusChange,
         onEdit: (task) => openTaskModal(task),
         onDelete: handleDelete
@@ -250,6 +251,7 @@ async function handleStatusChange(task, newStatus, selectEl) {
         await updateTask(task.id, { status: newStatus });
         task.status = newStatus;
         renderStats(allTasksFlat);
+        applyFiltersAndRender();
     } catch (error) {
         alert(`No se pudo actualizar el estado: ${error.message}`);
         selectEl.value = previous;
@@ -467,6 +469,10 @@ el('taskDeleteBtn')?.addEventListener('click', async () => {
     } catch (error) {
         alert(`No se pudo eliminar: ${error.message}`);
     }
+});
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeTaskModal();
 });
 
 init();

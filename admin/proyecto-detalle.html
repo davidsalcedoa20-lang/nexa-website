@@ -346,11 +346,11 @@
         </div>
     </div>
 
-    <!-- ================= MODAL: NUEVO BLOQUE ================= -->
+    <!-- ================= MODAL: NUEVO / EDITAR BLOQUE ================= -->
     <div class="admin-modal-overlay" id="phaseModalOverlay">
         <div class="admin-modal" role="dialog" aria-modal="true">
             <div class="admin-modal-header">
-                <h3>Nuevo Bloque</h3>
+                <h3 id="phaseModalTitle">Nuevo Bloque</h3>
                 <button type="button" class="admin-modal-close" data-close-modal="phaseModalOverlay">
                     <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
@@ -371,17 +371,17 @@
                 <span class="admin-form-error" id="phaseFormError"></span>
                 <div class="admin-modal-actions">
                     <button type="button" class="admin-btn-secondary" data-close-modal="phaseModalOverlay">Cancelar</button>
-                    <button type="submit" class="admin-btn-primary">Crear Bloque</button>
+                    <button type="submit" class="admin-btn-primary" id="phaseFormSubmitBtn">Crear Bloque</button>
                 </div>
             </form>
         </div>
     </div>
 
-    <!-- ================= MODAL: NUEVA SECCIÓN ================= -->
+    <!-- ================= MODAL: NUEVA / EDITAR SECCIÓN ================= -->
     <div class="admin-modal-overlay" id="sectionModalOverlay">
         <div class="admin-modal" role="dialog" aria-modal="true">
             <div class="admin-modal-header">
-                <h3>Nueva Sección</h3>
+                <h3 id="sectionModalTitle">Nueva Sección</h3>
                 <button type="button" class="admin-modal-close" data-close-modal="sectionModalOverlay">
                     <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
@@ -402,7 +402,7 @@
                 <span class="admin-form-error" id="sectionFormError"></span>
                 <div class="admin-modal-actions">
                     <button type="button" class="admin-btn-secondary" data-close-modal="sectionModalOverlay">Cancelar</button>
-                    <button type="submit" class="admin-btn-primary">Crear Sección</button>
+                    <button type="submit" class="admin-btn-primary" id="sectionFormSubmitBtn">Crear Sección</button>
                 </div>
             </form>
         </div>

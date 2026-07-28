@@ -30,6 +30,15 @@ function formatDate(isoString) {
     }
 }
 
+function escapeHtmlSafe(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
 /**
  * Renderiza la tabla de clientes dentro de un <tbody>.
  *
@@ -50,11 +59,20 @@ export function renderClientTable(tbody, clients, handlers) {
 
         return (
             '<tr data-row-index="' + index + '">' +
-                '<td><div class="admin-table-company"><strong>' + client.company + '</strong>' +
-                    (client.city ? '<span>' + client.city + '</span>' : '') +
+                '<td><div class="admin-table-company">' +
+                    '<button type="button" class="admin-inline-name-btn" data-action="edit" data-row-index="' + index + '" title="Editar empresa / workspace">' +
+                        '<strong>' + escapeHtmlSafe(client.company) + '</strong>' +
+                        '<span class="admin-inline-edit-hint">' + ICON_EDIT + '</span>' +
+                    '</button>' +
+                    (client.city ? '<span>' + escapeHtmlSafe(client.city) + '</span>' : '') +
                 '</div></td>' +
-                '<td>' + client.contact + '</td>' +
-                '<td>' + client.email + '</td>' +
+                '<td>' +
+                    '<button type="button" class="admin-inline-name-btn" data-action="edit" data-row-index="' + index + '" title="Editar nombre del cliente">' +
+                        '<span>' + escapeHtmlSafe(client.contact) + '</span>' +
+                        '<span class="admin-inline-edit-hint">' + ICON_EDIT + '</span>' +
+                    '</button>' +
+                '</td>' +
+                '<td>' + escapeHtmlSafe(client.email) + '</td>' +
                 '<td><span class="admin-badge ' + status.className + '">' + status.label + '</span></td>' +
                 '<td>' + client.activeProjects + '</td>' +
                 '<td>' + formatDate(client.createdAt) + '</td>' +

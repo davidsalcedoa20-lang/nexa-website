@@ -7,7 +7,7 @@
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
 import { getProject, getProjectStructure, duplicateProject, updateProject, setProjectStatus, archiveProject } from '../../services/projectService.js';
-import { createPhase, deletePhase, createSection, deleteSection } from '../../services/phaseService.js';
+import { createPhase, updatePhase, deletePhase, createSection, updateSection, deleteSection } from '../../services/phaseService.js';
 import { createStage, updateStage, deleteStage } from '../../services/timelineStageService.js';
 import { createTask, updateTask, deleteTask, ensureApprovalRecord } from '../../services/taskService.js';
 import { listComments, addComment } from '../../services/commentService.js';
@@ -48,8 +48,12 @@ let activeStageIdForPhase = null;
 let activePhaseIdForSection = null;
 let activeSectionIdForTask = null;
 let editingStageId = null;
+let editingPhaseId = null;
+let editingSectionId = null;
 let editingDeliverableId = null;
 let activeTaskId = null;
+
+const ICON_PENCIL = '<svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.1l-1.9-1.9a1.5 1.5 0 0 0-2.1 0L4 16v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 
 function el(id) { return document.getElementById(id); }
 
@@ -407,6 +411,7 @@ function renderPhaseCard(phase, stage) {
                     <div class="pd-block-title">
                         <span class="pd-block-title-dot" style="--stage-color:${escapeHtml(stageColor)}"></span>
                         <strong>${escapeHtml(phase.name)}</strong>
+                        <button type="button" class="admin-icon-btn pd-inline-edit-btn" data-edit-phase="${phase.id}" title="Editar bloque">${ICON_PENCIL}</button>
                         <span class="pd-badge ${PD_STATUS_BADGE_CLASS[phase.status] || 'pd-badge--pending'}">${(PROGRESS_STATUS_LABELS[phase.status] || phase.status)} — ${phase.progress_percent || 0}%</span>
                     </div>
                     ${phase.description ? `<span class="pd-block-desc">${escapeHtml(phase.description)}</span>` : ''}
@@ -436,6 +441,7 @@ function renderSectionGroup(section) {
                 <span class="pd-section-group-name">${escapeHtml(section.name)}</span>
                 ${section.handle ? `<span class="pd-section-group-handle">—@${escapeHtml(section.handle)}</span>` : ''}
                 <div class="pd-section-group-actions">
+                    <button type="button" class="admin-icon-btn" data-edit-section="${section.id}" title="Editar sección">${ICON_PENCIL}</button>
                     <button type="button" class="admin-icon-btn danger" data-delete-section title="Eliminar sección">
                         <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
                     </button>
@@ -479,7 +485,16 @@ function wireBlockEvents() {
     document.querySelectorAll('[data-add-phase-to-stage]').forEach((btn) => {
         btn.addEventListener('click', () => {
             activeStageIdForPhase = btn.getAttribute('data-add-phase-to-stage') || null;
-            openModal('phaseModalOverlay');
+            openPhaseModal(null);
+        });
+    });
+
+    document.querySelectorAll('[data-edit-phase]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const phaseId = btn.getAttribute('data-edit-phase');
+            const phase = (currentStructure?.allPhases || []).find((p) => p.id === phaseId);
+            if (phase) openPhaseModal(phase);
         });
     });
 
@@ -500,7 +515,16 @@ function wireBlockEvents() {
     document.querySelectorAll('[data-add-section]').forEach((btn) => {
         btn.addEventListener('click', () => {
             activePhaseIdForSection = btn.getAttribute('data-add-section');
-            openModal('sectionModalOverlay');
+            openSectionModal(null);
+        });
+    });
+
+    document.querySelectorAll('[data-edit-section]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const sectionId = btn.getAttribute('data-edit-section');
+            const section = findSectionById(sectionId);
+            if (section) openSectionModal(section);
         });
     });
 
@@ -531,6 +555,39 @@ function wireBlockEvents() {
     });
 }
 
+function findSectionById(sectionId) {
+    for (const phase of (currentStructure?.allPhases || [])) {
+        const section = (phase.sections || []).find((s) => s.id === sectionId);
+        if (section) return section;
+    }
+    return null;
+}
+
+function openPhaseModal(phase) {
+    editingPhaseId = phase?.id || null;
+    el('phaseModalTitle').textContent = phase ? 'Editar Bloque' : 'Nuevo Bloque';
+    el('phaseFormSubmitBtn').textContent = phase ? 'Guardar cambios' : 'Crear Bloque';
+    el('phaseName').value = phase?.name || '';
+    el('phaseDuration').value = phase?.duration_days || '';
+    el('phaseDescription').value = phase?.description || '';
+    el('phaseFormError').textContent = '';
+    el('phaseFormError').classList.remove('active');
+    openModal('phaseModalOverlay');
+}
+
+function openSectionModal(section) {
+    editingSectionId = section?.id || null;
+    if (section) activePhaseIdForSection = section.phase_id || activePhaseIdForSection;
+    el('sectionModalTitle').textContent = section ? 'Editar Sección' : 'Nueva Sección';
+    el('sectionFormSubmitBtn').textContent = section ? 'Guardar cambios' : 'Crear Sección';
+    el('sectionName').value = section?.name || '';
+    el('sectionHandle').value = section?.handle || '';
+    el('sectionColor').value = section?.color_hex || '#2D8CFF';
+    el('sectionFormError').textContent = '';
+    el('sectionFormError').classList.remove('active');
+    openModal('sectionModalOverlay');
+}
+
 /* ---------------------------------------------------------
    Tareas agrupadas por responsable (panel inferior)
 --------------------------------------------------------- */
@@ -541,31 +598,47 @@ function renderTasksByResponsible(tasks, project) {
         return;
     }
 
-    const groups = new Map();
+    const nexaGroups = new Map();
+    const clientGroups = new Map();
 
     tasks.forEach((task) => {
         const meta = getTaskResponsibleMeta(task, project);
+        const target = meta.isClient ? clientGroups : nexaGroups;
         const key = meta.assigneeId || (meta.isClient ? 'client' : 'unassigned');
-        if (!groups.has(key)) {
-            groups.set(key, {
-                label: meta.isClient ? `Cliente · ${meta.name}` : meta.name,
-                tasks: []
-            });
+        if (!target.has(key)) {
+            target.set(key, { label: meta.name, tasks: [] });
         }
-        groups.get(key).tasks.push(task);
+        target.get(key).tasks.push(task);
     });
 
-    container.innerHTML = [...groups.values()].map((group) => `
-        <div class="pd-task-responsible-group">
-            <span class="pd-task-responsible-header">${escapeHtml(group.label)}</span>
-            ${group.tasks.map((task) => `
-                <div class="pd-task-checkrow ${['completed', 'finished', 'approved'].includes(task.status) ? 'is-done' : ''}" data-task-id="${task.id}">
-                    <span class="pd-badge ${PD_STATUS_BADGE_CLASS[task.status] || 'pd-badge--pending'}">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
-                    <span class="pd-task-checkrow-title">${escapeHtml(task.title)}</span>
-                </div>
-            `).join('')}
+    const renderColumn = (title, badgeClass, groups) => `
+        <div class="pd-tasks-split-column">
+            <div class="pd-tasks-split-header">
+                <span class="pd-task-type-badge ${badgeClass}">${title}</span>
+                <span class="pd-tasks-split-count">${[...groups.values()].reduce((n, g) => n + g.tasks.length, 0)}</span>
+            </div>
+            <div class="pd-tasks-split-body">
+                ${groups.size ? [...groups.values()].map((group) => `
+                    <div class="pd-task-responsible-group">
+                        <span class="pd-task-responsible-header">${escapeHtml(group.label)}</span>
+                        ${group.tasks.map((task) => `
+                            <div class="pd-task-checkrow ${['completed', 'finished', 'approved'].includes(task.status) ? 'is-done' : ''}" data-task-id="${task.id}">
+                                <span class="pd-badge ${PD_STATUS_BADGE_CLASS[task.status] || 'pd-badge--pending'}">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
+                                <span class="pd-task-checkrow-title">${escapeHtml(task.title)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `).join('') : '<span class="admin-empty-inline">Sin tareas.</span>'}
+            </div>
         </div>
-    `).join('');
+    `;
+
+    container.innerHTML = `
+        <div class="pd-tasks-split">
+            ${renderColumn('NEXA', 'pd-task-type-badge--nexa', nexaGroups)}
+            ${renderColumn('CLIENTE', 'pd-task-type-badge--client', clientGroups)}
+        </div>
+    `;
 
     container.querySelectorAll('[data-task-id]').forEach((row) => {
         row.addEventListener('click', () => openTaskDetailModal(row.dataset.taskId));
@@ -632,7 +705,7 @@ el('stageDeleteBtn')?.addEventListener('click', async () => {
 });
 
 /* ---------------------------------------------------------
-   Modal: Nuevo Bloque
+   Modal: Nuevo / Editar Bloque
 --------------------------------------------------------- */
 el('phaseForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -641,16 +714,25 @@ el('phaseForm')?.addEventListener('submit', async (e) => {
     errorEl.classList.remove('active');
     if (!name) { errorEl.textContent = 'El nombre es obligatorio.'; errorEl.classList.add('active'); return; }
 
+    const payload = {
+        name,
+        duration_days: Number(el('phaseDuration').value) || null,
+        description: el('phaseDescription').value.trim() || null
+    };
+
     try {
-        await createPhase({
-            project_id: projectId,
-            timeline_stage_id: activeStageIdForPhase || null,
-            name,
-            duration_days: Number(el('phaseDuration').value) || null,
-            description: el('phaseDescription').value.trim()
-        });
+        if (editingPhaseId) {
+            await updatePhase(editingPhaseId, payload);
+        } else {
+            await createPhase({
+                project_id: projectId,
+                timeline_stage_id: activeStageIdForPhase || null,
+                ...payload
+            });
+        }
         closeModal('phaseModalOverlay');
         el('phaseForm').reset();
+        editingPhaseId = null;
         await refreshAll();
     } catch (error) {
         errorEl.textContent = error.message;
@@ -659,24 +741,38 @@ el('phaseForm')?.addEventListener('submit', async (e) => {
 });
 
 /* ---------------------------------------------------------
-   Modal: Nueva Sección
+   Modal: Nueva / Editar Sección
 --------------------------------------------------------- */
 el('sectionForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = el('sectionName').value.trim();
     const errorEl = el('sectionFormError');
     errorEl.classList.remove('active');
-    if (!name || !activePhaseIdForSection) { errorEl.textContent = 'El nombre es obligatorio.'; errorEl.classList.add('active'); return; }
+    if (!name) { errorEl.textContent = 'El nombre es obligatorio.'; errorEl.classList.add('active'); return; }
+    if (!editingSectionId && !activePhaseIdForSection) {
+        errorEl.textContent = 'El nombre es obligatorio.';
+        errorEl.classList.add('active');
+        return;
+    }
+
+    const payload = {
+        name,
+        handle: el('sectionHandle').value.trim() || null,
+        color_hex: el('sectionColor').value || null
+    };
 
     try {
-        await createSection({
-            phase_id: activePhaseIdForSection,
-            name,
-            handle: el('sectionHandle').value.trim() || null,
-            color_hex: el('sectionColor').value || null
-        });
+        if (editingSectionId) {
+            await updateSection(editingSectionId, payload);
+        } else {
+            await createSection({
+                phase_id: activePhaseIdForSection,
+                ...payload
+            });
+        }
         closeModal('sectionModalOverlay');
         el('sectionForm').reset();
+        editingSectionId = null;
         await refreshAll();
     } catch (error) {
         errorEl.textContent = error.message;
@@ -1138,6 +1234,15 @@ document.querySelectorAll('[data-project-action]').forEach((btn) => {
 --------------------------------------------------------- */
 function openModal(id) { document.getElementById(id)?.classList.add('active'); }
 function closeModal(id) { document.getElementById(id)?.classList.remove('active'); }
+
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    document.querySelectorAll('.admin-modal-overlay.active').forEach((overlay) => {
+        overlay.classList.remove('active');
+    });
+    editingPhaseId = null;
+    editingSectionId = null;
+});
 function openDrawer(id) { document.getElementById(id)?.classList.add('active'); }
 function closeDrawer(id) { document.getElementById(id)?.classList.remove('active'); }
 
