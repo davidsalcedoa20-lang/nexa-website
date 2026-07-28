@@ -9,7 +9,9 @@
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
 import { listProjects } from '../../services/projectService.js';
-import { formatDate, escapeHtml } from '../../components/projectUi.js';
+import { getNextCalendarEvent } from '../../services/calendarService.js';
+import { CALENDAR_EVENT_TYPE_LABELS, formatDate, formatDateTime, escapeHtml } from '../../components/projectUi.js';
+import { formatEventTime } from '../../components/calendarUi.js';
 
 const grid = document.getElementById('dashProjectsGrid');
 const emptyState = document.getElementById('dashProjectsEmptyState');
@@ -31,6 +33,8 @@ async function loadSummary() {
             .select('id', { count: 'exact', head: true })
             .eq('decision', 'pending');
         document.getElementById('dashPendingApprovalsValue').textContent = String(count || 0);
+
+        await renderNextEvent();
 
         if (!projects.length) {
             emptyState.style.display = 'block';
@@ -57,6 +61,32 @@ async function loadSummary() {
     }
 }
 
+async function renderNextEvent() {
+    const card = document.getElementById('dashNextEventCard');
+    const empty = document.getElementById('dashNextEventEmpty');
+    if (!card) return;
+
+    try {
+        const event = await getNextCalendarEvent();
+        if (!event) {
+            card.style.display = 'none';
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+        if (empty) empty.style.display = 'none';
+        card.style.display = 'flex';
+        document.getElementById('dashNextEventTitle').textContent = event.title;
+        const when = event.all_day
+            ? `Todo el día · ${formatDate(event.start_date)}`
+            : `${formatDateTime(event.start_date)} · ${formatEventTime(event)}`;
+        document.getElementById('dashNextEventMeta').textContent =
+            `${when} · ${event.projects?.name || 'Proyecto'} · ${CALENDAR_EVENT_TYPE_LABELS[event.type] || event.type}`;
+    } catch (error) {
+        console.error('[resumenPage] Error cargando próximo evento:', error.message);
+        card.style.display = 'none';
+    }
+}
+
 let refreshTimer = null;
 function scheduleRefresh() {
     if (refreshTimer) clearTimeout(refreshTimer);
@@ -68,6 +98,7 @@ function subscribeRealtime() {
         .channel('client-resumen-live')
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_tasks' }, scheduleRefresh)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, scheduleRefresh)
         .subscribe();
 }
 

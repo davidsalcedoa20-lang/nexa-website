@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Configuración | NEXA Hub</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/portal.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+
+<!--
+    Configuración del cliente.
+    Perfil + empresa (workspace) + seguridad + cierre de sesión.
+    Correo de solo lectura. Foto vía bucket Storage "avatars".
+-->
+<body class="dash-page" data-auth-guard="client">
+
+    <div class="dash-shell">
+
+        <aside class="dash-sidebar" id="dashSidebar">
+
+            <a href="../index.html" class="dash-logo">
+                <img src="../assets/logo/nexa-logo.png" alt="Nexa Logo">
+            </a>
+
+            <nav class="dash-nav">
+
+                <a href="index.html" class="dash-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                        <rect x="13" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                        <rect x="3" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                        <rect x="13" y="13" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
+                    </svg>
+                    Resumen
+                </a>
+
+                <a href="proyectos.html" class="dash-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M9 18l-5.4 2.2a1 1 0 0 1-1.4-.9V6.6a1 1 0 0 1 .6-.9L9 3m0 15V3m0 15l6 3m-6-18l6 3m0 0l5.4-2.2a1 1 0 0 1 1.4.9v12.7a1 1 0 0 1-.6.9L15 21m0-18v18" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Ruta NEXA
+                </a>
+
+                <a href="tareas.html" class="dash-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M8 12.3l2.5 2.5L16 9.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    Tareas
+                </a>
+
+                <a href="calendario.html" class="dash-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                    Calendario
+                </a>
+
+                <a href="configuracion.html" class="dash-nav-item active">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.7"/>
+                        <path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4M17.7 17.7l-1.4-1.4M7.7 7.7L6.3 6.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+                    </svg>
+                    Configuración
+                </a>
+
+            </nav>
+
+            <a href="../portal/index.html" class="dash-logout" data-logout>
+                <svg viewBox="0 0 24 24" fill="none">
+                    <path d="M15 17l5-5-5-5M20 12H9M12 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                Cerrar sesión
+            </a>
+
+        </aside>
+
+        <div class="dash-overlay" id="dashOverlay"></div>
+
+        <div class="dash-content">
+
+            <div class="dash-topbar">
+                <button class="dash-menu-toggle" id="dashMenuToggle" aria-label="Abrir menú">
+                    <svg viewBox="0 0 24 24" fill="none">
+                        <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                    </svg>
+                </button>
+                <a href="../index.html" class="dash-topbar-logo">
+                    <img src="../assets/logo/nexa-logo.png" alt="Nexa Logo">
+                </a>
+            </div>
+
+            <main class="dash-main-inner">
+
+                <div class="dash-page-title">
+                    <h1>Configuración</h1>
+                    <p>Actualiza tu perfil, empresa y contraseña de acceso.</p>
+                </div>
+
+                <p id="settingsLoading" style="color:#7a7a7a; font-size:13px;">Cargando tu configuración...</p>
+
+                <div id="settingsContent" class="settings-stack" style="display:none;">
+
+                    <section class="settings-card">
+                        <div class="settings-card-header">
+                            <h2>Mi perfil</h2>
+                            <p>Información de contacto de tu espacio en NEXA Hub.</p>
+                        </div>
+
+                        <form id="settingsProfileForm" class="settings-form" novalidate>
+                            <div class="settings-avatar-row">
+                                <div class="settings-avatar">
+                                    <img id="settingsAvatarImg" alt="" style="display:none;">
+                                    <span id="settingsAvatarFallback" class="settings-avatar-fallback">--</span>
+                                </div>
+                                <div class="settings-avatar-actions">
+                                    <button type="button" class="dash-btn-outline" id="settingsAvatarBtn">Cambiar foto</button>
+                                    <input type="file" id="settingsAvatarInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden>
+                                    <span class="settings-hint">JPG, PNG, WEBP o GIF · máx. 2 MB</span>
+                                </div>
+                            </div>
+
+                            <div class="settings-field">
+                                <label for="settingsFullName">Nombre</label>
+                                <input type="text" id="settingsFullName" required placeholder="Tu nombre">
+                            </div>
+                            <div class="settings-field">
+                                <label for="settingsCompany">Empresa</label>
+                                <input type="text" id="settingsCompany" required placeholder="Nombre de tu empresa">
+                            </div>
+                            <div class="settings-field">
+                                <label for="settingsEmail">Correo</label>
+                                <input type="email" id="settingsEmail" disabled>
+                                <span class="settings-hint">El correo no se puede cambiar desde aquí.</span>
+                            </div>
+                            <div class="settings-field">
+                                <label for="settingsPhone">Teléfono</label>
+                                <input type="tel" id="settingsPhone" placeholder="Opcional">
+                            </div>
+
+                            <span class="settings-message" id="settingsProfileMessage"></span>
+                            <button type="submit" class="dash-btn-small" id="settingsProfileSubmit" style="align-self:flex-start; padding:11px 20px; font-size:13px;">Guardar cambios</button>
+                        </form>
+                    </section>
+
+                    <section class="settings-card">
+                        <div class="settings-card-header">
+                            <h2>Seguridad</h2>
+                            <p>Cambia la contraseña de tu Portal de Clientes.</p>
+                        </div>
+                        <form id="settingsPasswordForm" class="settings-form" novalidate>
+                            <div class="settings-field">
+                                <label for="settingsCurrentPassword">Contraseña actual</label>
+                                <input type="password" id="settingsCurrentPassword" autocomplete="current-password" required>
+                            </div>
+                            <div class="settings-field">
+                                <label for="settingsNewPassword">Nueva contraseña</label>
+                                <input type="password" id="settingsNewPassword" autocomplete="new-password" required placeholder="Mínimo 8 caracteres">
+                            </div>
+                            <div class="settings-field">
+                                <label for="settingsConfirmPassword">Confirmar contraseña</label>
+                                <input type="password" id="settingsConfirmPassword" autocomplete="new-password" required>
+                            </div>
+                            <span class="settings-message" id="settingsPasswordMessage"></span>
+                            <button type="submit" class="dash-btn-small" id="settingsPasswordSubmit" style="align-self:flex-start; padding:11px 20px; font-size:13px;">Actualizar contraseña</button>
+                        </form>
+                    </section>
+
+                    <section class="settings-card settings-card--danger">
+                        <div class="settings-card-header">
+                            <h2>Cuenta</h2>
+                            <p>Cierra tu sesión del Portal de Clientes.</p>
+                        </div>
+                        <button type="button" class="dash-btn-outline settings-logout-btn" id="settingsLogoutBtn">Cerrar sesión</button>
+                    </section>
+
+                </div>
+
+            </main>
+
+        </div>
+
+    </div>
+
+    <script src="../js/vendor/supabase-js.min.js"></script>
+    <script src="../js/portal.js"></script>
+    <script type="module" src="../js/dashboard/pages/configuracionPage.js"></script>
+
+</body>
+</html>

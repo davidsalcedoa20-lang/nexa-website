@@ -72,6 +72,30 @@ export const TASK_PRIORITY_LABELS = {
     urgent: 'Urgente'
 };
 
+export const CALENDAR_EVENT_TYPE_LABELS = {
+    meeting: 'Reunión',
+    call: 'Llamada',
+    deadline: 'Fecha límite',
+    milestone: 'Hito',
+    delivery: 'Entrega',
+    other: 'Otro'
+};
+
+export const CALENDAR_EVENT_STATUS_LABELS = {
+    scheduled: 'Programado',
+    completed: 'Completado',
+    cancelled: 'Cancelado'
+};
+
+export const CALENDAR_EVENT_TYPE_COLORS = {
+    meeting: '#2D8CFF',
+    call: '#8C52FF',
+    deadline: '#FF2D95',
+    milestone: '#FFB12D',
+    delivery: '#3CD28C',
+    other: '#9a9a9a'
+};
+
 export const APPROVAL_DECISION_LABELS = {
     pending: 'Pendiente',
     approved: 'Aprobado',

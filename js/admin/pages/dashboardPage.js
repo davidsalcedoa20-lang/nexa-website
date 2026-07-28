@@ -10,7 +10,9 @@
 import { supabase } from '../../services/supabaseClient.js';
 import { getDashboardStats, listRecentClientsWithProject } from '../services/dashboardService.js';
 import { listRecentActivityForAdmin } from '../../services/timelineService.js';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_BADGE_CLASS, TIMELINE_EVENT_ICONS, formatDateTime, escapeHtml } from '../../components/projectUi.js';
+import { getNextCalendarEvent } from '../../services/calendarService.js';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_BADGE_CLASS, TIMELINE_EVENT_ICONS, CALENDAR_EVENT_TYPE_LABELS, formatDateTime, formatDate, escapeHtml } from '../../components/projectUi.js';
+import { formatEventTime } from '../../components/calendarUi.js';
 
 function el(id) { return document.getElementById(id); }
 
@@ -122,16 +124,41 @@ function renderActivity(events) {
 --------------------------------------------------------- */
 async function loadDashboard() {
     try {
-        const [stats, recentClients, activity] = await Promise.all([
+        const [stats, recentClients, activity, nextEvent] = await Promise.all([
             getDashboardStats(),
             listRecentClientsWithProject(5),
-            listRecentActivityForAdmin(8)
+            listRecentActivityForAdmin(8),
+            getNextCalendarEvent().catch(() => null)
         ]);
         renderStats(stats);
         renderRecentClients(recentClients);
         renderActivity(activity);
+        renderNextEvent(nextEvent);
     } catch (error) {
         console.error('[dashboardPage] Error cargando el dashboard:', error.message);
+    }
+}
+
+function renderNextEvent(event) {
+    const card = el('adminNextEventCard');
+    const empty = el('adminNextEventEmpty');
+    if (!card) return;
+
+    if (!event) {
+        card.style.display = 'none';
+        if (empty) empty.style.display = 'block';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+    card.style.display = 'flex';
+    if (el('adminNextEventTitle')) el('adminNextEventTitle').textContent = event.title;
+    const when = event.all_day
+        ? `Todo el día · ${formatDate(event.start_date)}`
+        : `${formatDateTime(event.start_date)} · ${formatEventTime(event)}`;
+    const client = event.workspaces?.profiles?.full_name || event.workspaces?.name || '';
+    if (el('adminNextEventMeta')) {
+        el('adminNextEventMeta').textContent =
+            `${when} · ${event.projects?.name || 'Proyecto'}${client ? ' · ' + client : ''} · ${CALENDAR_EVENT_TYPE_LABELS[event.type] || event.type}`;
     }
 }
 
@@ -148,6 +175,7 @@ function subscribeRealtime() {
         .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleRefresh)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'project_tasks' }, scheduleRefresh)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'calendar_events' }, scheduleRefresh)
         .subscribe();
 }
 
