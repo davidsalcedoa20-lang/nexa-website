@@ -59,6 +59,34 @@ export async function setClientTaskStatus(taskId, status) {
     return data;
 }
 
+/**
+ * Lista TODAS las tareas asignadas al cliente autenticado (task_type =
+ * 'client'), sin importar a cuál de sus proyectos pertenezcan. Uso
+ * exclusivo de la sección "Mis Tareas" del Portal (dashboard/tareas.html).
+ * RLS (project_tasks_select_own) ya garantiza que solo se devuelven
+ * tareas de proyectos del cliente autenticado — no hace falta filtrar
+ * por client_id a mano.
+ */
+export async function listClientTasks() {
+    const { data, error } = await supabase
+        .from('project_tasks')
+        .select(`
+            id, title, description, status, priority, due_date, completed_at,
+            created_at, updated_at, section_id,
+            project_sections!inner (
+                id, name, phase_id,
+                project_phases!inner (
+                    id, name, project_id,
+                    projects!inner ( id, name, color_hex, project_types ( name ) )
+                )
+            )
+        `)
+        .eq('task_type', 'client')
+        .order('due_date', { ascending: true, nullsFirst: true });
+    if (error) throw error;
+    return data;
+}
+
 /** Decisión del cliente sobre una aprobación. */
 export async function decideApproval(approvalId, decision, comment, userId) {
     const { data, error } = await supabase

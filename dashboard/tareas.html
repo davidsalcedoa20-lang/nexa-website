@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Portal de Clientes | NEXA</title>
+    <title>Mis Tareas | NEXA Hub</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/portal.css">
@@ -15,6 +15,17 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 
+<!--
+    NEXA HUB — "Mis Tareas" (cliente)
+    Muestra únicamente las tareas con task_type = 'client' de TODOS
+    los proyectos del cliente autenticado (RLS ya filtra por su
+    propio workspace, ver project_tasks_select_own). El cliente
+    solo puede leer los datos y marcar sus propias tareas como
+    "Completada" (project_tasks_update_own_client_tasks + el
+    trigger restrict_client_task_update solo le permite tocar la
+    columna "status"). Crear/editar/eliminar tareas sigue siendo
+    exclusivo del admin (admin/tareas.html y admin/proyecto-detalle.html).
+-->
 <body class="dash-page" data-auth-guard="client">
 
     <div class="dash-shell">
@@ -28,7 +39,7 @@
 
             <nav class="dash-nav">
 
-                <a href="index.html" class="dash-nav-item active">
+                <a href="index.html" class="dash-nav-item">
                     <svg viewBox="0 0 24 24" fill="none">
                         <rect x="3" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
                         <rect x="13" y="3" width="8" height="8" rx="2" stroke="currentColor" stroke-width="1.8"/>
@@ -45,7 +56,7 @@
                     Ruta NEXA
                 </a>
 
-                <a href="tareas.html" class="dash-nav-item">
+                <a href="tareas.html" class="dash-nav-item active">
                     <svg viewBox="0 0 24 24" fill="none">
                         <rect x="4" y="4" width="16" height="16" rx="3" stroke="currentColor" stroke-width="1.7"/>
                         <path d="M8 12.3l2.5 2.5L16 9.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -99,33 +110,38 @@
             <main class="dash-main-inner">
 
                 <div class="dash-page-title">
-                    <h1>Bienvenido, <span data-user-firstname>...</span>.</h1>
-                    <p>Este es el resumen general de tu espacio de trabajo en NEXA Hub.</p>
+                    <h1>Mis Tareas</h1>
+                    <p>Todas las tareas que tu equipo NEXA te ha asignado en tus proyectos.</p>
                 </div>
 
-                <div class="dash-summary-grid" id="dashSummaryGrid">
+                <div class="dash-summary-grid">
                     <div class="dash-summary-card">
-                        <span>Proyectos activos</span>
-                        <span class="dash-summary-value" id="dashActiveProjectsValue">—</span>
+                        <span>Pendientes</span>
+                        <span class="dash-summary-value" id="taskStatPending">—</span>
                     </div>
                     <div class="dash-summary-card">
-                        <span>Progreso promedio</span>
-                        <span class="dash-summary-value" id="dashAvgProgressValue">—</span>
+                        <span>En revisión</span>
+                        <span class="dash-summary-value" id="taskStatReview">—</span>
                     </div>
                     <div class="dash-summary-card">
-                        <span>Aprobaciones pendientes</span>
-                        <span class="dash-summary-value" id="dashPendingApprovalsValue">—</span>
+                        <span>Completadas</span>
+                        <span class="dash-summary-value" id="taskStatDone">—</span>
                     </div>
                 </div>
 
-                <div>
-                    <div class="dash-page-title" style="margin-bottom:16px;">
-                        <h1 style="font-size:19px;">Tus proyectos</h1>
-                    </div>
-                    <div class="dash-projects-grid" id="dashProjectsGrid"></div>
-                    <div class="dash-empty-inline" id="dashProjectsEmptyState" style="display:none;">
-                        Todavía no tienes proyectos activos.<br>Tu asesor NEXA los verá aparecer aquí en cuanto se creen.
-                    </div>
+                <div class="dash-tabs" id="taskTabs">
+                    <button type="button" class="dash-tab-btn active" data-task-filter="all">Todas</button>
+                    <button type="button" class="dash-tab-btn" data-task-filter="pending">Pendientes</button>
+                    <button type="button" class="dash-tab-btn" data-task-filter="review">En revisión</button>
+                    <button type="button" class="dash-tab-btn" data-task-filter="done">Completadas</button>
+                </div>
+
+                <p id="tasksLoadingState" style="color:#7a7a7a; font-size:13px;">Cargando tus tareas...</p>
+
+                <div class="dash-task-grid" id="tasksGrid" style="grid-template-columns:repeat(auto-fill, minmax(260px, 1fr));"></div>
+
+                <div class="dash-empty-inline" id="tasksEmptyState" style="display:none;">
+                    Todavía no tienes tareas asignadas.<br>Aparecerán aquí en cuanto tu asesor NEXA te asigne alguna.
                 </div>
 
             </main>
@@ -134,9 +150,56 @@
 
     </div>
 
+    <!-- ================= MODAL: DETALLE DE TAREA ================= -->
+    <div class="dash-modal-overlay" id="taskDetailModalOverlay">
+        <div class="dash-modal" role="dialog" aria-modal="true">
+            <div class="dash-modal-header">
+                <h3 id="taskDetailModalTitle">Tarea</h3>
+                <button type="button" class="dash-modal-close" id="taskDetailModalClose">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                </button>
+            </div>
+
+            <span class="dash-badge" id="taskDetailStatusBadge">—</span>
+
+            <p id="taskDetailDescription" style="color:#c9c9c9; font-size:13.5px; line-height:1.7; margin-top:14px;">Sin descripción.</p>
+
+            <div class="dash-meta-row" style="margin-top:6px;">
+                <div class="dash-meta-item">
+                    <span>Proyecto</span>
+                    <strong id="taskDetailProject">—</strong>
+                </div>
+                <div class="dash-meta-item">
+                    <span>Responsable</span>
+                    <strong id="taskDetailResponsible">Tú</strong>
+                </div>
+                <div class="dash-meta-item">
+                    <span>Prioridad</span>
+                    <strong id="taskDetailPriority">—</strong>
+                </div>
+                <div class="dash-meta-item">
+                    <span>Fecha límite</span>
+                    <strong id="taskDetailDueDate">—</strong>
+                </div>
+            </div>
+
+            <p id="taskDetailCompletedWrap" style="display:none; color:#4ADE80; font-size:12.5px; font-weight:600; margin-top:14px;"></p>
+
+            <button type="button" class="dash-task-mark-btn" id="taskDetailCompleteBtn" style="margin-top:16px; padding:10px 16px; font-size:12.5px;">Marcar como completada</button>
+
+            <p class="dash-modal-section-title">Comentarios</p>
+            <div id="taskDetailCommentsList" style="display:flex; flex-direction:column; gap:12px; max-height:220px; overflow-y:auto;"></div>
+
+            <form id="taskDetailCommentForm" class="dash-comment-form" style="margin-top:14px;">
+                <textarea id="taskDetailCommentInput" placeholder="Escribe un comentario para tu asesor NEXA..." rows="2"></textarea>
+                <button type="submit" class="dash-btn-small">Enviar</button>
+            </form>
+        </div>
+    </div>
+
     <script src="../js/vendor/supabase-js.min.js"></script>
     <script src="../js/portal.js"></script>
-    <script type="module" src="../js/dashboard/pages/resumenPage.js"></script>
+    <script type="module" src="../js/dashboard/pages/tareasPage.js"></script>
 
 </body>
 </html>

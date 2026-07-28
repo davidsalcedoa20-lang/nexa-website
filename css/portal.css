@@ -992,6 +992,85 @@ body.dash-page{
 
 .dash-drawer-tabs-actions{ display:flex; align-items:center; gap:10px; margin-top:14px; }
 
+/* ==========================================================
+   6.6 MODAL GENÉRICO (CLIENTE) — "Mis Tareas" y futuros usos
+   ==========================================================
+   Espejo del sistema de modales del admin (.admin-modal-overlay
+   en css/admin.css), con la misma mecánica de apertura/cierre,
+   pero con nombres "dash-" para mantener el prefijo del Portal.
+   ========================================================== */
+.dash-modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    z-index:100;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:rgba(0,0,0,.65);
+    backdrop-filter:blur(6px);
+    opacity:0;
+    transition:opacity .25s ease;
+}
+
+.dash-modal-overlay.active{
+    display:flex;
+    opacity:1;
+}
+
+.dash-modal{
+    width:100%;
+    max-width:560px;
+    max-height:88vh;
+    overflow-y:auto;
+    padding:30px 30px 26px;
+    border-radius:24px;
+    background:#0b0b0e;
+    border:1px solid rgba(255,255,255,.1);
+    box-shadow:0 30px 80px rgba(0,0,0,.55);
+    transform:translateY(14px);
+    transition:transform .28s ease;
+}
+
+.dash-modal-overlay.active .dash-modal{ transform:translateY(0); }
+
+.dash-modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:14px;
+}
+
+.dash-modal-header h3{ color:white; font-size:19px; font-weight:700; }
+
+.dash-modal-close{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:32px;
+    height:32px;
+    border-radius:9px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.03);
+    color:var(--text-soft);
+    cursor:pointer;
+    flex-shrink:0;
+    transition:.2s;
+}
+
+.dash-modal-close svg{ width:15px; height:15px; }
+.dash-modal-close:hover{ color:white; border-color:rgba(255,107,129,.4); }
+
+.dash-modal-section-title{
+    font-size:11.5px;
+    font-weight:700;
+    letter-spacing:.5px;
+    text-transform:uppercase;
+    color:#8a8a8a;
+    margin:22px 0 12px;
+}
+
 @media screen and (max-width:1024px){
     .dash-top-grid{ grid-template-columns:1fr; }
     .dash-footer-grid{ grid-template-columns:1fr 1fr; }

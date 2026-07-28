@@ -1,5 +1,11 @@
 /* ==========================================================
    NEXA HUB — Página: Resumen del cliente (dashboard/index.html)
+   ==========================================================
+   Se refresca solo (Realtime) cuando cambian sus proyectos o
+   tareas — por ejemplo, al marcar una tarea como completada
+   desde "Mis Tareas" (dashboard/tareas.html), el progreso
+   promedio y las aprobaciones pendientes se actualizan aquí
+   sin necesidad de recargar la página.
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
 import { listProjects } from '../../services/projectService.js';
@@ -51,4 +57,19 @@ async function loadSummary() {
     }
 }
 
+let refreshTimer = null;
+function scheduleRefresh() {
+    if (refreshTimer) clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(loadSummary, 500);
+}
+
+function subscribeRealtime() {
+    supabase
+        .channel('client-resumen-live')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'project_tasks' }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'projects' }, scheduleRefresh)
+        .subscribe();
+}
+
 loadSummary();
+subscribeRealtime();
