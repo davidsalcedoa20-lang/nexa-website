@@ -39,6 +39,10 @@ let currentStructure = null;
 let currentDeliverables = [];
 let currentEvents = [];
 
+/** Etapa activa en la línea de tiempo (navegador principal). */
+let selectedStageId = null;
+let stageSwitchTimer = null;
+
 let activeStageIdForPhase = null;
 let activePhaseIdForSection = null;
 let activeSectionIdForTask = null;
@@ -97,10 +101,12 @@ async function refreshAll() {
     currentEvents = await listTimelineEvents(projectId);
     const comments = await listComments(projectId, 'project', projectId);
 
+    ensureSelectedStage(currentStructure.stages, currentStructure.unassignedPhases);
+
     renderHeader(currentProject);
     renderProgressCards(currentProject, currentStructure.stages);
     renderTimeline(currentStructure.stages);
-    renderBlocks(currentStructure.stages, currentStructure.unassignedPhases);
+    renderBlocks(currentStructure.stages, currentStructure.unassignedPhases, { animate: false });
     renderTasksByResponsible(currentStructure.allTasks, currentProject);
     renderDeliverables(currentDeliverables);
     renderActivity(currentEvents);
@@ -184,79 +190,183 @@ function renderProgressCards(project, stages) {
         return;
     }
     list.innerHTML = stages.map((stage, idx) => `
-        <div class="pd-stage-progress-item">
+        <button type="button" class="pd-stage-progress-item ${selectedStageId === stage.id ? 'is-active' : ''}" data-select-stage="${stage.id}">
             <span class="pd-stage-progress-code" style="--stage-color:${escapeHtml(stage.color_hex)}">A${idx + 1}</span>
             <span class="pd-stage-progress-name">${escapeHtml(stage.name)}</span>
             <span class="pd-stage-progress-percent">${stage.progress_percent || 0}%</span>
-        </div>
+        </button>
     `).join('');
+
+    list.querySelectorAll('[data-select-stage]').forEach((btn) => {
+        btn.addEventListener('click', () => selectStage(btn.getAttribute('data-select-stage')));
+    });
 }
 
 /* ---------------------------------------------------------
-   Línea de tiempo (etapas)
+   Línea de tiempo (etapas) — navegador principal del proyecto
 --------------------------------------------------------- */
+function ensureSelectedStage(stages, unassignedPhases) {
+    const stageIds = (stages || []).map((s) => s.id);
+    if (selectedStageId && stageIds.includes(selectedStageId)) return;
+    if (selectedStageId === '__unassigned__' && (unassignedPhases || []).length) return;
+    if (stageIds.length) {
+        selectedStageId = stageIds[0];
+        return;
+    }
+    if ((unassignedPhases || []).length) {
+        selectedStageId = '__unassigned__';
+        return;
+    }
+    selectedStageId = null;
+}
+
+function selectStage(stageId) {
+    if (!stageId || stageId === selectedStageId) return;
+    if (!currentStructure) return;
+
+    selectedStageId = stageId;
+    updateTimelineActiveState();
+    updateProgressActiveState();
+    renderBlocks(currentStructure.stages, currentStructure.unassignedPhases, { animate: true });
+}
+
+function updateTimelineActiveState() {
+    document.querySelectorAll('#pdTimelineTrack .pd-timeline-chip[data-stage-id]').forEach((chip) => {
+        chip.classList.toggle('is-active', chip.getAttribute('data-stage-id') === selectedStageId);
+    });
+}
+
+function updateProgressActiveState() {
+    document.querySelectorAll('#pdStageProgressList [data-select-stage]').forEach((item) => {
+        item.classList.toggle('is-active', item.getAttribute('data-select-stage') === selectedStageId);
+    });
+}
+
 function renderTimeline(stages) {
     const track = el('pdTimelineTrack');
+    const unassigned = currentStructure?.unassignedPhases || [];
+
     track.innerHTML = stages.map((stage, idx) => `
-        <div class="pd-timeline-chip" data-stage-id="${stage.id}" style="--stage-color:${escapeHtml(stage.color_hex)}">
+        <div class="pd-timeline-chip ${selectedStageId === stage.id ? 'is-active' : ''}" data-stage-id="${stage.id}" style="--stage-color:${escapeHtml(stage.color_hex)}" role="button" tabindex="0">
             <div class="pd-timeline-chip-top">
                 <span class="pd-timeline-chip-num">${idx + 1}</span>
                 <span class="pd-timeline-chip-name">${escapeHtml(stage.name)}</span>
+                <button type="button" class="pd-timeline-chip-edit" data-edit-stage="${stage.id}" title="Editar etapa">
+                    <svg viewBox="0 0 24 24" fill="none"><path d="M4 20h4l10.5-10.5a1.5 1.5 0 0 0 0-2.1l-1.9-1.9a1.5 1.5 0 0 0-2.1 0L4 16v4Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+                </button>
             </div>
             <span class="pd-timeline-chip-sub">${stage.progress_percent || 0}% · ${(PROGRESS_STATUS_LABELS[stage.status] || stage.status)}</span>
         </div>
-    `).join('') + `
+    `).join('') + (unassigned.length ? `
+        <div class="pd-timeline-chip ${selectedStageId === '__unassigned__' ? 'is-active' : ''}" data-stage-id="__unassigned__" style="--stage-color:#8a8a8a" role="button" tabindex="0">
+            <div class="pd-timeline-chip-top">
+                <span class="pd-timeline-chip-num">·</span>
+                <span class="pd-timeline-chip-name">Sin etapa</span>
+            </div>
+            <span class="pd-timeline-chip-sub">${unassigned.length} bloque${unassigned.length === 1 ? '' : 's'}</span>
+        </div>
+    ` : '') + `
         <button type="button" class="pd-timeline-add-chip" id="pdAddStageChipBtn">
             <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             Nueva etapa
         </button>
     `;
 
-    track.querySelectorAll('[data-stage-id]').forEach((chip) => {
-        chip.addEventListener('click', () => {
-            const stage = stages.find((s) => s.id === chip.dataset.stageId);
+    track.querySelectorAll('.pd-timeline-chip[data-stage-id]').forEach((chip) => {
+        const activate = () => selectStage(chip.getAttribute('data-stage-id'));
+        chip.addEventListener('click', (e) => {
+            if (e.target.closest('[data-edit-stage]')) return;
+            activate();
+        });
+        chip.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activate();
+            }
+        });
+    });
+
+    track.querySelectorAll('[data-edit-stage]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const stage = stages.find((s) => s.id === btn.getAttribute('data-edit-stage'));
             if (stage) openStageModal(stage);
         });
     });
+
     el('pdAddStageChipBtn')?.addEventListener('click', () => openStageModal(null));
 }
 
 /* ---------------------------------------------------------
-   Bloques / Secciones / Tareas
+   Bloques / Secciones / Tareas — solo la etapa seleccionada
 --------------------------------------------------------- */
-function renderBlocks(stages, unassignedPhases) {
+function renderBlocks(stages, unassignedPhases, { animate = false } = {}) {
     const list = el('pdBlocksList');
     const emptyState = el('pdBlocksEmptyState');
+    if (!list) return;
 
-    const groups = [
-        ...stages.map((stage) => ({ stage, phases: stage.phases })),
-        ...(unassignedPhases.length ? [{ stage: null, phases: unassignedPhases }] : [])
-    ];
+    const paint = () => {
+        ensureSelectedStage(stages, unassignedPhases);
 
-    const totalPhases = groups.reduce((sum, g) => sum + g.phases.length, 0);
-    if (!totalPhases && !stages.length) {
-        list.innerHTML = '';
-        emptyState.style.display = 'block';
+        let stage = null;
+        let phases = [];
+
+        if (selectedStageId === '__unassigned__') {
+            phases = unassignedPhases || [];
+        } else {
+            stage = (stages || []).find((s) => s.id === selectedStageId) || null;
+            phases = stage?.phases || [];
+        }
+
+        if (!phases.length && !(stages || []).length && !(unassignedPhases || []).length) {
+            list.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+        if (emptyState) emptyState.style.display = 'none';
+
+        const stageLabel = stage
+            ? escapeHtml(stage.name)
+            : (selectedStageId === '__unassigned__' ? 'Sin etapa' : '');
+
+        list.innerHTML = `
+            ${stage || selectedStageId === '__unassigned__' ? `
+                <div class="pd-stage-panel-header">
+                    <div>
+                        <span class="pd-stage-panel-eyebrow">Etapa activa</span>
+                        <h3 class="pd-stage-panel-title" ${stage ? `style="--stage-color:${escapeHtml(stage.color_hex)}"` : ''}>${stageLabel}</h3>
+                    </div>
+                    ${stage ? `<span class="pd-badge ${PD_STATUS_BADGE_CLASS[stage.status] || 'pd-badge--pending'}">${PROGRESS_STATUS_LABELS[stage.status] || stage.status} — ${stage.progress_percent || 0}%</span>` : ''}
+                </div>
+            ` : ''}
+            ${phases.map((phase) => renderPhaseCard(phase, stage)).join('') || '<span class="admin-empty-inline">Esta etapa todavía no tiene bloques.</span>'}
+            <button type="button" class="pd-timeline-add-chip" style="align-self:flex-start; padding:10px 18px;" data-add-phase-to-stage="${stage ? stage.id : ''}">
+                <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                Nuevo bloque ${stage ? `en "${escapeHtml(stage.name)}"` : ''}
+            </button>
+        `;
+
+        wireBlockEvents();
+        updateTimelineActiveState();
+        updateProgressActiveState();
+    };
+
+    if (!animate) {
+        paint();
         return;
     }
-    emptyState.style.display = 'none';
 
-    list.innerHTML = groups.map((group) => `
-        ${(group.phases || []).map((phase) => renderPhaseCard(phase, group.stage)).join('')}
-        <button type="button" class="pd-timeline-add-chip" style="align-self:flex-start; padding:10px 18px;" data-add-phase-to-stage="${group.stage ? group.stage.id : ''}">
-            <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Nuevo bloque ${group.stage ? `en "${escapeHtml(group.stage.name)}"` : ''}
-        </button>
-    `).join('');
-
-    if (!stages.length) {
-        list.innerHTML += `<button type="button" class="pd-timeline-add-chip" style="align-self:flex-start; padding:10px 18px;" data-add-phase-to-stage="">
-            <svg viewBox="0 0 24 24" fill="none" style="width:14px;height:14px;"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Nuevo bloque
-        </button>`;
-    }
-
-    wireBlockEvents();
+    if (stageSwitchTimer) clearTimeout(stageSwitchTimer);
+    list.classList.remove('pd-stage-panel--enter');
+    list.classList.add('pd-stage-panel--leave');
+    stageSwitchTimer = setTimeout(() => {
+        paint();
+        list.classList.remove('pd-stage-panel--leave');
+        list.classList.add('pd-stage-panel--enter');
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => list.classList.remove('pd-stage-panel--enter'));
+        });
+    }, 180);
 }
 
 function renderPhaseCard(phase, stage) {
@@ -313,23 +423,35 @@ function renderSectionGroup(section) {
     `;
 }
 
+function getTaskVisualMeta(task) {
+    if (task.task_type === 'client') {
+        return { cardClass: 'is-client', badgeLabel: 'CLIENTE', badgeClass: 'pd-task-type-badge--client' };
+    }
+    if (task.task_type === 'approval') {
+        return { cardClass: 'is-client is-approval', badgeLabel: 'APROBACIÓN', badgeClass: 'pd-task-type-badge--client' };
+    }
+    return { cardClass: 'is-nexa', badgeLabel: 'NEXA', badgeClass: 'pd-task-type-badge--nexa' };
+}
+
 function renderTaskCard(task, idx) {
-    const responsibleName = task.task_type === 'client'
+    const responsibleName = task.task_type === 'client' || task.task_type === 'approval'
         ? (currentProject?.workspaces?.profiles?.full_name || 'Cliente')
         : (task.profiles?.full_name || 'Sin asignar');
+    const visual = getTaskVisualMeta(task);
 
     return `
-        <button type="button" class="pd-task-card" data-task-id="${task.id}">
+        <button type="button" class="pd-task-card ${visual.cardClass}" data-task-id="${task.id}">
             <div class="pd-task-card-top">
                 <span class="pd-task-card-code">1.${idx + 1}</span>
                 <span class="pd-task-card-title">${escapeHtml(task.title)}</span>
+                <span class="pd-task-type-badge ${visual.badgeClass}">${visual.badgeLabel}</span>
             </div>
             <span class="pd-badge ${PD_STATUS_BADGE_CLASS[task.status] || 'pd-badge--pending'}" style="align-self:flex-start;">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
             ${task.description ? `<p class="pd-task-card-desc">${escapeHtml(task.description)}</p>` : ''}
             <div class="pd-task-card-footer">
                 <div class="pd-task-avatar-row">
                     <span class="pd-task-avatar">${getInitials(responsibleName)}</span>
-                    <span class="pd-task-avatar-name">${escapeHtml(responsibleName)}${task.task_type === 'client' ? ' (Cliente)' : ''}</span>
+                    <span class="pd-task-avatar-name">${escapeHtml(responsibleName)}</span>
                 </div>
             </div>
         </button>

@@ -1,24 +1,24 @@
 /* ==========================================================
-   NEXA HUB — Panel Administrativo
+   NEXA HUB ? Panel Administrativo
    ==========================================================
    Hoja de estilos EXCLUSIVA del Panel Administrativo (/admin).
-   No se reutiliza en el sitio público ni en el Portal de
+   No se reutiliza en el sitio p?blico ni en el Portal de
    Clientes (esos usan css/style.css y css/portal.css, que no
-   se modifican aquí).
+   se modifican aqu?).
 
-   Índice:
+   ?ndice:
      1. Base / estructura general
      2. Sidebar
      3. Topbar
-     4. Menú de usuario (dropdown)
+     4. Men? de usuario (dropdown)
      5. Contenido principal / saludo
-     6. Tarjetas de estadísticas
-     7. Secciones (encabezado + botón primario)
-     8. Tabla — Clientes recientes
+     6. Tarjetas de estad?sticas
+     7. Secciones (encabezado + bot?n primario)
+     8. Tabla ? Clientes recientes
      9. Badges de estado
-    10. Tarjeta — Actividad reciente
-    11. Módulo Clientes (tabla, estados, modal)
-    12. Módulo Proyectos (grid, detalle, bloques, tareas, tabs)
+    10. Tarjeta ? Actividad reciente
+    11. M?dulo Clientes (tabla, estados, modal)
+    12. M?dulo Proyectos (grid, detalle, bloques, tareas, tabs)
     13. Responsive
    ========================================================== */
 
@@ -232,7 +232,7 @@ body.admin-page{
 }
 
 /* ==========================================================
-   4. MENÚ DE USUARIO (DROPDOWN)
+   4. MEN? DE USUARIO (DROPDOWN)
    ========================================================== */
 .admin-user{
     position:relative;
@@ -380,7 +380,7 @@ body.admin-page{
 }
 
 /* ==========================================================
-   6. TARJETAS DE ESTADÍSTICAS
+   6. TARJETAS DE ESTAD?STICAS
    ========================================================== */
 .admin-stats-grid{
     display:grid;
@@ -517,7 +517,7 @@ body.admin-page{
 }
 
 /* ==========================================================
-   8. TABLA — CLIENTES RECIENTES
+   8. TABLA ? CLIENTES RECIENTES
    ========================================================== */
 .admin-table-wrapper{
     border-radius:20px;
@@ -665,7 +665,7 @@ body.admin-page{
 }
 
 /* ==========================================================
-   10. TARJETA — ACTIVIDAD RECIENTE
+   10. TARJETA ? ACTIVIDAD RECIENTE
    ========================================================== */
 .admin-activity-card{
     padding:8px 22px;
@@ -726,7 +726,7 @@ body.admin-page{
 }
 
 /* ==========================================================
-   11. MÓDULO CLIENTES (tabla, estados, modal)
+   11. M?DULO CLIENTES (tabla, estados, modal)
    ========================================================== */
 .admin-action-btn--danger:hover{
     color:#FF6B81;
@@ -757,7 +757,7 @@ body.admin-page{
     background:rgba(255,255,255,.06);
 }
 
-/* ---- Estados de carga / vacío / error ---- */
+/* ---- Estados de carga / vac?o / error ---- */
 .admin-state{
     display:none;
     flex-direction:column;
@@ -955,7 +955,7 @@ body.admin-page{
 }
 
 /* ==========================================================
-   12. MÓDULO PROYECTOS (grid, detalle, bloques, tareas, tabs)
+   12. M?DULO PROYECTOS (grid, detalle, bloques, tareas, tabs)
    ========================================================== */
 
 /* ---- Filtros / toolbar ---- */
@@ -1012,7 +1012,7 @@ body.admin-page{
 .admin-select:focus{ outline:none; border-color:var(--blue); }
 
 /* Variante compacta para <select> embebidos dentro de filas de tabla
-   (ej. cambio rápido de estado en admin/tareas.html). */
+   (ej. cambio r?pido de estado en admin/tareas.html). */
 .admin-select--compact{
     padding:6px 10px;
     border-radius:8px;
@@ -1619,7 +1619,7 @@ body.admin-page{
 
 .admin-comment-form textarea:focus{ outline:none; border-color:var(--blue); }
 
-/* ---- Cronología ---- */
+/* ---- Cronolog?a ---- */
 .admin-timeline{
     display:flex;
     flex-direction:column;
@@ -1823,11 +1823,11 @@ body.admin-page{
 }
 
 /* ==========================================================
-   PROYECTO — VISTA "PLANTILLA OFICIAL" (pd- = project detail)
+   PROYECTO ? VISTA "PLANTILLA OFICIAL" (pd- = project detail)
    ==========================================================
-   Rediseño de admin/proyecto-detalle.html para replicar la
+   Redise?o de admin/proyecto-detalle.html para replicar la
    plantilla oficial (imagen de referencia). Reutiliza colores,
-   tipografía y componentes ya definidos arriba (admin-btn-*,
+   tipograf?a y componentes ya definidos arriba (admin-btn-*,
    admin-badge, admin-icon-btn, admin-modal-*, --gradient, etc.)
    ========================================================== */
 
@@ -1845,7 +1845,7 @@ body.admin-page{
 .pd-breadcrumb span{ color:#4a4a4a; }
 .pd-breadcrumb strong{ color:#d8d8d8; font-weight:500; }
 
-/* ----- Header top: título + acciones ----- */
+/* ----- Header top: t?tulo + acciones ----- */
 .pd-header-top{
     display:flex;
     align-items:flex-start;
@@ -1912,7 +1912,7 @@ body.admin-page{
 .pd-more-menu button:hover{ background:rgba(255,255,255,.06); color:white; }
 .pd-more-menu button.danger:hover{ background:rgba(255,90,90,.1); color:#FF6B81; }
 
-/* ----- Descripción + meta row ----- */
+/* ----- Descripci?n + meta row ----- */
 .pd-description{
     color:#b8b8b8;
     font-size:13.5px;
@@ -1985,7 +1985,27 @@ body.admin-page{
 }
 
 .pd-stage-progress-list{ display:flex; flex-direction:column; gap:10px; }
-.pd-stage-progress-item{ display:flex; align-items:center; gap:10px; }
+.pd-stage-progress-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    padding:8px 10px;
+    margin:0;
+    border:1px solid transparent;
+    border-radius:10px;
+    background:transparent;
+    cursor:pointer;
+    font:inherit;
+    text-align:left;
+    color:inherit;
+    transition:background .2s, border-color .2s;
+}
+.pd-stage-progress-item:hover{ background:rgba(255,255,255,.04); }
+.pd-stage-progress-item.is-active{
+    background:rgba(255,255,255,.06);
+    border-color:rgba(255,255,255,.14);
+}
 .pd-stage-progress-code{
     width:24px;
     height:24px;
@@ -2002,7 +2022,7 @@ body.admin-page{
 .pd-stage-progress-name{ flex:1; font-size:12.5px; color:#d8d8d8; }
 .pd-stage-progress-percent{ font-size:12.5px; font-weight:700; color:white; }
 
-/* ----- Sección genérica con header ----- */
+/* ----- Secci?n gen?rica con header ----- */
 .pd-section{ display:flex; flex-direction:column; gap:14px; }
 .pd-section-header{
     display:flex;
@@ -2013,7 +2033,7 @@ body.admin-page{
 .pd-section-header h2{ font-size:15px; font-weight:600; color:white; }
 .pd-small-btn{ padding:8px 16px; font-size:12.5px; }
 
-/* ----- Línea de tiempo (etapas) ----- */
+/* ----- L?nea de tiempo (etapas) ----- */
 .pd-timeline-track{
     display:flex;
     align-items:stretch;
@@ -2036,7 +2056,11 @@ body.admin-page{
     gap:8px;
 }
 .pd-timeline-chip:hover{ transform:translateY(-3px); background:rgba(255,255,255,.05); }
-.pd-timeline-chip.is-active{ background:rgba(255,255,255,.06); border-color:rgba(255,255,255,.2); }
+.pd-timeline-chip.is-active{
+    background:rgba(255,255,255,.07);
+    border-color:color-mix(in srgb, var(--stage-color, #2D8CFF) 55%, rgba(255,255,255,.2));
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--stage-color, #2D8CFF) 35%, transparent);
+}
 .pd-timeline-chip-top{ display:flex; align-items:center; gap:8px; }
 .pd-timeline-chip-num{
     width:22px; height:22px; border-radius:6px;
@@ -2045,8 +2069,24 @@ body.admin-page{
     background:var(--stage-color, #2D8CFF);
     flex-shrink:0;
 }
-.pd-timeline-chip-name{ font-size:13px; font-weight:600; color:white; }
+.pd-timeline-chip-name{ font-size:13px; font-weight:600; color:white; flex:1; min-width:0; }
 .pd-timeline-chip-sub{ font-size:11px; color:#8a8a8a; }
+.pd-timeline-chip-edit{
+    width:26px; height:26px; border-radius:8px;
+    display:inline-flex; align-items:center; justify-content:center;
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.04);
+    color:#9a9a9a;
+    cursor:pointer;
+    flex-shrink:0;
+    opacity:0;
+    transition:opacity .2s, color .2s, border-color .2s, background .2s;
+}
+.pd-timeline-chip:hover .pd-timeline-chip-edit,
+.pd-timeline-chip.is-active .pd-timeline-chip-edit,
+.pd-timeline-chip-edit:focus-visible{ opacity:1; }
+.pd-timeline-chip-edit:hover{ color:white; border-color:rgba(255,255,255,.24); background:rgba(255,255,255,.08); }
+.pd-timeline-chip-edit svg{ width:13px; height:13px; }
 .pd-timeline-add-chip{
     flex:0 0 auto;
     min-width:120px;
@@ -2065,7 +2105,45 @@ body.admin-page{
 .pd-timeline-add-chip:hover{ border-color:rgba(45,140,255,.5); color:white; }
 
 /* ----- Bloques ----- */
-.pd-blocks-list{ display:flex; flex-direction:column; gap:16px; }
+.pd-blocks-list{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    transition:opacity .18s ease, transform .18s ease;
+}
+.pd-blocks-list.pd-stage-panel--leave{
+    opacity:0;
+    transform:translateY(8px);
+    pointer-events:none;
+}
+.pd-blocks-list.pd-stage-panel--enter{
+    opacity:0;
+    transform:translateY(8px);
+}
+.pd-stage-panel-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    margin-bottom:2px;
+}
+.pd-stage-panel-eyebrow{
+    display:block;
+    font-size:10.5px;
+    letter-spacing:.7px;
+    text-transform:uppercase;
+    color:#7a7a7a;
+    margin-bottom:6px;
+}
+.pd-stage-panel-title{
+    margin:0;
+    font-size:18px;
+    font-weight:700;
+    color:white;
+    letter-spacing:-.2px;
+    border-left:3px solid var(--stage-color, #2D8CFF);
+    padding-left:10px;
+}
 .pd-block{
     border-radius:18px;
     background:rgba(255,255,255,.03);
@@ -2129,6 +2207,50 @@ body.admin-page{
     text-align:left;
 }
 .pd-task-card:hover{ transform:translateY(-2px); background:rgba(255,255,255,.05); border-color:rgba(255,255,255,.16); }
+.pd-task-card.is-client{
+    border-color:rgba(45,140,255,.42);
+    background:rgba(45,140,255,.08);
+}
+.pd-task-card.is-client:hover{
+    border-color:rgba(45,140,255,.62);
+    background:rgba(45,140,255,.12);
+}
+.pd-task-card.is-client .pd-task-avatar{
+    background:linear-gradient(135deg, #2D8CFF, #5FA8FF);
+}
+.pd-task-card.is-nexa{
+    border-color:rgba(140,82,255,.45);
+    background:rgba(20,14,36,.72);
+}
+.pd-task-card.is-nexa:hover{
+    border-color:rgba(140,82,255,.7);
+    background:rgba(32,20,56,.85);
+}
+.pd-task-card.is-nexa .pd-task-avatar{
+    background:linear-gradient(135deg, #8C52FF, #B99BFF);
+}
+.pd-task-type-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:2px 7px;
+    border-radius:99px;
+    font-size:9px;
+    font-weight:800;
+    letter-spacing:.45px;
+    text-transform:uppercase;
+    flex-shrink:0;
+    margin-left:auto;
+}
+.pd-task-type-badge--client{
+    background:rgba(45,140,255,.16);
+    border:1px solid rgba(45,140,255,.4);
+    color:#7EB6FF;
+}
+.pd-task-type-badge--nexa{
+    background:rgba(140,82,255,.16);
+    border:1px solid rgba(140,82,255,.4);
+    color:#C4A8FF;
+}
 .pd-task-card-top{ display:flex; align-items:flex-start; gap:6px; }
 .pd-task-card-code{ font-size:11px; color:#6a6a6a; font-weight:700; flex-shrink:0; margin-top:1px; }
 .pd-task-card-title{ font-size:12.8px; font-weight:600; color:white; flex:1; line-height:1.4; }
@@ -2476,7 +2598,7 @@ body.admin-page{
     font-size:14px;
 }
 
-/* Widget Pr�ximo Evento (dashboard) */
+/* Widget Pr?ximo Evento (dashboard) */
 .admin-next-event{
     display:flex;
     flex-direction:column;
@@ -2515,7 +2637,7 @@ body.admin-page{
 
 
 /* ==========================================================
-   SETTINGS / CONFIGURACIÓN
+   SETTINGS / CONFIGURACI?N
    ========================================================== */
 .settings-stack{
     display:flex;

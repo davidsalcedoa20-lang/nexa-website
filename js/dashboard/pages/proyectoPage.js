@@ -36,6 +36,10 @@ let currentUserId = null;
 let currentProject = null;
 let currentStructure = null;
 
+/** Etapa activa en la línea de tiempo (navegador principal). */
+let selectedStageId = null;
+let stageSwitchTimer = null;
+
 function el(id) { return document.getElementById(id); }
 
 const DASH_BADGE_CLASS = {
@@ -75,10 +79,12 @@ async function refreshAll() {
     const comments = await listComments(projectId, 'project', projectId);
     const events = await listTimelineEvents(projectId);
 
+    ensureSelectedStage(currentStructure.stages, currentStructure.unassignedPhases);
+
     renderHeader(currentProject);
     renderStageProgress(currentStructure.stages);
     renderTimelineChips(currentStructure.stages);
-    renderPhases(currentStructure.stages, currentStructure.unassignedPhases);
+    renderPhases(currentStructure.stages, currentStructure.unassignedPhases, { animate: false });
     renderMyTasks(currentStructure.allTasks);
     renderDeliverables(deliverables);
     renderActivityPreview(events);
@@ -119,6 +125,43 @@ function renderHeader(project) {
     el('detailResponsible').textContent = project.responsible?.full_name || 'NEXA';
 }
 
+function ensureSelectedStage(stages, unassignedPhases) {
+    const stageIds = (stages || []).map((s) => s.id);
+    if (selectedStageId && stageIds.includes(selectedStageId)) return;
+    if (selectedStageId === '__unassigned__' && (unassignedPhases || []).length) return;
+    if (stageIds.length) {
+        selectedStageId = stageIds[0];
+        return;
+    }
+    if ((unassignedPhases || []).length) {
+        selectedStageId = '__unassigned__';
+        return;
+    }
+    selectedStageId = null;
+}
+
+function selectStage(stageId) {
+    if (!stageId || stageId === selectedStageId) return;
+    if (!currentStructure) return;
+
+    selectedStageId = stageId;
+    updateTimelineActiveState();
+    updateProgressActiveState();
+    renderPhases(currentStructure.stages, currentStructure.unassignedPhases, { animate: true });
+}
+
+function updateTimelineActiveState() {
+    document.querySelectorAll('#pdTimelineTrack .dash-timeline-chip[data-stage-id]').forEach((chip) => {
+        chip.classList.toggle('is-active', chip.getAttribute('data-stage-id') === selectedStageId);
+    });
+}
+
+function updateProgressActiveState() {
+    document.querySelectorAll('#pdStageProgressList [data-select-stage]').forEach((item) => {
+        item.classList.toggle('is-active', item.getAttribute('data-select-stage') === selectedStageId);
+    });
+}
+
 function renderStageProgress(stages) {
     const list = el('pdStageProgressList');
     if (!stages.length) {
@@ -126,29 +169,55 @@ function renderStageProgress(stages) {
         return;
     }
     list.innerHTML = stages.map((stage, idx) => `
-        <div class="dash-stage-progress-item">
+        <button type="button" class="dash-stage-progress-item ${selectedStageId === stage.id ? 'is-active' : ''}" data-select-stage="${stage.id}">
             <span class="dash-stage-progress-code" style="--stage-color:${escapeHtml(stage.color_hex)}">A${idx + 1}</span>
             <span class="dash-stage-progress-name">${escapeHtml(stage.name)}</span>
             <span class="dash-stage-progress-percent">${stage.progress_percent || 0}%</span>
-        </div>
+        </button>
     `).join('');
+
+    list.querySelectorAll('[data-select-stage]').forEach((btn) => {
+        btn.addEventListener('click', () => selectStage(btn.getAttribute('data-select-stage')));
+    });
 }
 
 function renderTimelineChips(stages) {
     const track = el('pdTimelineTrack');
-    if (!stages.length) {
+    const unassigned = currentStructure?.unassignedPhases || [];
+
+    if (!stages.length && !unassigned.length) {
         track.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin etapas todavía.</span>';
         return;
     }
+
     track.innerHTML = stages.map((stage, idx) => `
-        <div class="dash-timeline-chip" style="--stage-color:${escapeHtml(stage.color_hex)}">
+        <div class="dash-timeline-chip ${selectedStageId === stage.id ? 'is-active' : ''}" data-stage-id="${stage.id}" style="--stage-color:${escapeHtml(stage.color_hex)}" role="button" tabindex="0">
             <div class="dash-timeline-chip-top">
                 <span class="dash-timeline-chip-num">${idx + 1}</span>
                 <span class="dash-timeline-chip-name">${escapeHtml(stage.name)}</span>
             </div>
             <span class="dash-timeline-chip-sub">${stage.progress_percent || 0}% · ${PROGRESS_STATUS_LABELS[stage.status] || stage.status}</span>
         </div>
-    `).join('');
+    `).join('') + (unassigned.length ? `
+        <div class="dash-timeline-chip ${selectedStageId === '__unassigned__' ? 'is-active' : ''}" data-stage-id="__unassigned__" style="--stage-color:#8a8a8a" role="button" tabindex="0">
+            <div class="dash-timeline-chip-top">
+                <span class="dash-timeline-chip-num">·</span>
+                <span class="dash-timeline-chip-name">Sin etapa</span>
+            </div>
+            <span class="dash-timeline-chip-sub">${unassigned.length} bloque${unassigned.length === 1 ? '' : 's'}</span>
+        </div>
+    ` : '');
+
+    track.querySelectorAll('.dash-timeline-chip[data-stage-id]').forEach((chip) => {
+        const activate = () => selectStage(chip.getAttribute('data-stage-id'));
+        chip.addEventListener('click', activate);
+        chip.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                activate();
+            }
+        });
+    });
 }
 
 /* ---------------------------------------------------------
@@ -164,56 +233,117 @@ document.querySelectorAll('.dash-tab-btn').forEach((btn) => {
 });
 
 /* ---------------------------------------------------------
-   Bloques / Secciones / Tareas (solo lectura + acciones propias)
+   Bloques / Secciones / Tareas — solo la etapa seleccionada
 --------------------------------------------------------- */
-function renderPhases(stages, unassignedPhases) {
+function renderPhases(stages, unassignedPhases, { animate = false } = {}) {
     const list = el('phaseList');
     const emptyState = el('phasesEmptyState');
+    if (!list) return;
 
-    const allPhases = [...stages.flatMap((s) => s.phases.map((p) => ({ ...p, stageColor: s.color_hex }))), ...unassignedPhases];
+    const paint = () => {
+        ensureSelectedStage(stages, unassignedPhases);
 
-    if (!allPhases.length) {
-        list.innerHTML = '';
-        emptyState.style.display = 'block';
+        let stage = null;
+        let phases = [];
+
+        if (selectedStageId === '__unassigned__') {
+            phases = (unassignedPhases || []).map((p) => ({ ...p, stageColor: '#8a8a8a' }));
+        } else {
+            stage = (stages || []).find((s) => s.id === selectedStageId) || null;
+            phases = (stage?.phases || []).map((p) => ({ ...p, stageColor: stage.color_hex }));
+        }
+
+        if (!phases.length && !(stages || []).length && !(unassignedPhases || []).length) {
+            list.innerHTML = '';
+            if (emptyState) emptyState.style.display = 'block';
+            return;
+        }
+        if (emptyState) emptyState.style.display = 'none';
+
+        const stageLabel = stage
+            ? escapeHtml(stage.name)
+            : (selectedStageId === '__unassigned__' ? 'Sin etapa' : '');
+
+        list.innerHTML = `
+            ${stage || selectedStageId === '__unassigned__' ? `
+                <div class="dash-stage-panel-header">
+                    <div>
+                        <span class="dash-stage-panel-eyebrow">Etapa activa</span>
+                        <h3 class="dash-stage-panel-title" ${stage ? `style="--stage-color:${escapeHtml(stage.color_hex)}"` : ''}>${stageLabel}</h3>
+                    </div>
+                    ${stage ? `<span class="dash-badge ${DASH_BADGE_CLASS[stage.status] || 'dash-badge--pending'}">${PROGRESS_STATUS_LABELS[stage.status] || stage.status} — ${stage.progress_percent || 0}%</span>` : ''}
+                </div>
+            ` : ''}
+            ${phases.map((phase) => `
+                <div class="dash-block">
+                    <div class="dash-block-header">
+                        <div>
+                            <div class="dash-block-title">
+                                <span class="dash-block-title-dot" style="--stage-color:${escapeHtml(phase.stageColor || '#2D8CFF')}"></span>
+                                <strong>${escapeHtml(phase.name)}</strong>
+                                <span class="dash-badge ${DASH_BADGE_CLASS[phase.status] || 'dash-badge--pending'}">${PROGRESS_STATUS_LABELS[phase.status] || phase.status} — ${phase.progress_percent || 0}%</span>
+                            </div>
+                            ${phase.description ? `<span class="dash-block-desc">${escapeHtml(phase.description)}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="dash-block-body">
+                        ${(phase.sections || []).map((section) => `
+                            <div>
+                                <div class="dash-section-group-header">
+                                    <span class="dash-section-group-dot" style="--section-color:${escapeHtml(section.color_hex || '#2D8CFF')}"></span>
+                                    <span class="dash-section-group-name">${escapeHtml(section.name)}</span>
+                                    ${section.handle ? `<span class="dash-section-group-handle">—@${escapeHtml(section.handle)}</span>` : ''}
+                                </div>
+                                <div class="dash-task-grid">
+                                    ${(section.tasks || []).map((task, idx) => renderTaskCard(task, idx)).join('') || '<span style="color:#7a7a7a; font-size:12px;">Sin tareas.</span>'}
+                                </div>
+                            </div>
+                        `).join('') || '<span class="dash-empty-inline">Este bloque todavía no tiene secciones.</span>'}
+                    </div>
+                </div>
+            `).join('') || '<span class="dash-empty-inline">Esta etapa todavía no tiene bloques.</span>'}
+        `;
+
+        wireTaskActions();
+        updateTimelineActiveState();
+        updateProgressActiveState();
+    };
+
+    if (!animate) {
+        paint();
         return;
     }
-    emptyState.style.display = 'none';
 
-    list.innerHTML = allPhases.map((phase) => `
-        <div class="dash-block">
-            <div class="dash-block-header">
-                <div>
-                    <div class="dash-block-title">
-                        <span class="dash-block-title-dot" style="--stage-color:${escapeHtml(phase.stageColor || '#2D8CFF')}"></span>
-                        <strong>${escapeHtml(phase.name)}</strong>
-                        <span class="dash-badge ${DASH_BADGE_CLASS[phase.status] || 'dash-badge--pending'}">${PROGRESS_STATUS_LABELS[phase.status] || phase.status} — ${phase.progress_percent || 0}%</span>
-                    </div>
-                    ${phase.description ? `<span class="dash-block-desc">${escapeHtml(phase.description)}</span>` : ''}
-                </div>
-            </div>
-            <div class="dash-block-body">
-                ${(phase.sections || []).map((section) => `
-                    <div>
-                        <div class="dash-section-group-header">
-                            <span class="dash-section-group-dot" style="--section-color:${escapeHtml(section.color_hex || '#2D8CFF')}"></span>
-                            <span class="dash-section-group-name">${escapeHtml(section.name)}</span>
-                            ${section.handle ? `<span class="dash-section-group-handle">—@${escapeHtml(section.handle)}</span>` : ''}
-                        </div>
-                        <div class="dash-task-grid">
-                            ${(section.tasks || []).map((task, idx) => renderTaskCard(task, idx)).join('') || '<span style="color:#7a7a7a; font-size:12px;">Sin tareas.</span>'}
-                        </div>
-                    </div>
-                `).join('') || '<span class="dash-empty-inline">Este bloque todavía no tiene secciones.</span>'}
-            </div>
-        </div>
-    `).join('');
+    if (stageSwitchTimer) clearTimeout(stageSwitchTimer);
+    list.classList.remove('dash-stage-panel--enter');
+    list.classList.add('dash-stage-panel--leave');
+    stageSwitchTimer = setTimeout(() => {
+        paint();
+        list.classList.remove('dash-stage-panel--leave');
+        list.classList.add('dash-stage-panel--enter');
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => list.classList.remove('dash-stage-panel--enter'));
+        });
+    }, 180);
+}
 
-    wireTaskActions();
+function getTaskVisualMeta(task) {
+    if (task.task_type === 'client') {
+        return { cardClass: 'is-client', badgeLabel: 'CLIENTE', badgeClass: 'dash-task-type-badge--client' };
+    }
+    if (task.task_type === 'approval') {
+        return { cardClass: 'is-client is-approval', badgeLabel: 'APROBACIÓN', badgeClass: 'dash-task-type-badge--client' };
+    }
+    return { cardClass: 'is-nexa', badgeLabel: 'NEXA', badgeClass: 'dash-task-type-badge--nexa' };
 }
 
 function renderTaskCard(task, idx) {
     const approval = task.approvals?.[0] || task.approvals;
     let actionHtml = '';
+    const visual = getTaskVisualMeta(task);
+    const isClientSide = task.task_type === 'client' || task.task_type === 'approval';
+    const avatarLabel = isClientSide ? 'Tú' : (task.profiles?.full_name || 'NEXA');
+    const nameLabel = isClientSide ? 'Tú' : escapeHtml(task.profiles?.full_name || 'Equipo NEXA');
 
     if (task.task_type === 'client' && !['completed', 'finished', 'approved'].includes(task.status)) {
         actionHtml = `<button type="button" class="dash-task-mark-btn" data-complete-task="${task.id}">Marcar como lista</button>`;
@@ -228,17 +358,18 @@ function renderTaskCard(task, idx) {
     }
 
     return `
-        <div class="dash-task-card">
+        <div class="dash-task-card ${visual.cardClass}">
             <div class="dash-task-card-top">
                 <span class="dash-task-card-code">1.${idx + 1}</span>
                 <span class="dash-task-card-title">${escapeHtml(task.title)}</span>
+                <span class="dash-task-type-badge ${visual.badgeClass}">${visual.badgeLabel}</span>
             </div>
             <span class="dash-badge ${DASH_BADGE_CLASS[task.status] || 'dash-badge--pending'}" style="align-self:flex-start;">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
             ${task.description ? `<p class="dash-task-card-desc">${escapeHtml(task.description)}</p>` : ''}
             <div class="dash-task-card-footer">
                 <div class="dash-task-avatar-row">
-                    <span class="dash-task-avatar">${getInitials(task.task_type === 'client' ? 'Tú' : (task.profiles?.full_name || 'NEXA'))}</span>
-                    <span class="dash-task-avatar-name">${task.task_type === 'client' ? 'Tú' : escapeHtml(task.profiles?.full_name || 'Equipo NEXA')}${task.due_date ? ` · ${formatDate(task.due_date)}` : ''}</span>
+                    <span class="dash-task-avatar">${getInitials(avatarLabel)}</span>
+                    <span class="dash-task-avatar-name">${nameLabel}${task.due_date ? ` · ${formatDate(task.due_date)}` : ''}</span>
                 </div>
             </div>
             ${actionHtml}

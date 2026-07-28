@@ -888,7 +888,18 @@ body.dash-page{
 .dash-progress-big{ display:block; font-size:32px; font-weight:800; color:white; letter-spacing:-1px; margin-bottom:12px; }
 
 .dash-stage-progress-list{ display:flex; flex-direction:column; gap:10px; }
-.dash-stage-progress-item{ display:flex; align-items:center; gap:10px; }
+.dash-stage-progress-item{
+    display:flex; align-items:center; gap:10px;
+    width:100%; padding:8px 10px; margin:0;
+    border:1px solid transparent; border-radius:10px;
+    background:transparent; cursor:pointer; font:inherit; text-align:left; color:inherit;
+    transition:background .2s, border-color .2s;
+}
+.dash-stage-progress-item:hover{ background:rgba(255,255,255,.04); }
+.dash-stage-progress-item.is-active{
+    background:rgba(255,255,255,.06);
+    border-color:rgba(255,255,255,.14);
+}
 .dash-stage-progress-code{
     width:24px; height:24px; border-radius:7px;
     display:flex; align-items:center; justify-content:center;
@@ -904,6 +915,14 @@ body.dash-page{
     background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
     border-top:3px solid var(--stage-color, #2D8CFF);
     display:flex; flex-direction:column; gap:8px;
+    cursor:pointer;
+    transition:transform .25s, border-color .25s, background .25s, box-shadow .25s;
+}
+.dash-timeline-chip:hover{ transform:translateY(-3px); background:rgba(255,255,255,.05); }
+.dash-timeline-chip.is-active{
+    background:rgba(255,255,255,.07);
+    border-color:color-mix(in srgb, var(--stage-color, #2D8CFF) 55%, rgba(255,255,255,.2));
+    box-shadow:0 0 0 1px color-mix(in srgb, var(--stage-color, #2D8CFF) 35%, transparent);
 }
 .dash-timeline-chip-top{ display:flex; align-items:center; gap:8px; }
 .dash-timeline-chip-num{
@@ -912,6 +931,30 @@ body.dash-page{
 }
 .dash-timeline-chip-name{ font-size:13px; font-weight:600; color:white; }
 .dash-timeline-chip-sub{ font-size:11px; color:#8a8a8a; }
+
+#phaseList{
+    transition:opacity .18s ease, transform .18s ease;
+}
+#phaseList.dash-stage-panel--leave{
+    opacity:0;
+    transform:translateY(8px);
+    pointer-events:none;
+}
+#phaseList.dash-stage-panel--enter{
+    opacity:0;
+    transform:translateY(8px);
+}
+.dash-stage-panel-header{
+    display:flex; align-items:flex-start; justify-content:space-between; gap:14px;
+    margin-bottom:14px;
+}
+.dash-stage-panel-eyebrow{
+    display:block; font-size:10.5px; letter-spacing:.7px; text-transform:uppercase; color:#7a7a7a; margin-bottom:6px;
+}
+.dash-stage-panel-title{
+    margin:0; font-size:18px; font-weight:700; color:white; letter-spacing:-.2px;
+    border-left:3px solid var(--stage-color, #2D8CFF); padding-left:10px;
+}
 
 .dash-block{ border-radius:18px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); overflow:hidden; margin-bottom:16px; }
 .dash-block-header{ display:flex; align-items:flex-start; justify-content:space-between; gap:14px; padding:18px 20px; border-bottom:1px solid rgba(255,255,255,.06); }
@@ -931,9 +974,35 @@ body.dash-page{
     display:flex; flex-direction:column; gap:8px; padding:14px; border-radius:12px;
     background:rgba(255,255,255,.025); border:1px solid rgba(255,255,255,.07);
     text-align:left; cursor:default;
+    transition:transform .2s, border-color .2s, background .2s;
 }
-.dash-task-card.is-editable{ cursor:pointer; transition:transform .2s, border-color .2s; }
+.dash-task-card.is-editable{ cursor:pointer; }
 .dash-task-card.is-editable:hover{ transform:translateY(-2px); border-color:rgba(45,140,255,.4); }
+.dash-task-card.is-client{
+    border-color:rgba(45,140,255,.42);
+    background:rgba(45,140,255,.08);
+}
+.dash-task-card.is-nexa{
+    border-color:rgba(140,82,255,.45);
+    background:rgba(20,14,36,.72);
+}
+.dash-task-card.is-client .dash-task-avatar{
+    background:linear-gradient(135deg, #2D8CFF, #5FA8FF);
+}
+.dash-task-card.is-nexa .dash-task-avatar{
+    background:linear-gradient(135deg, #8C52FF, #B99BFF);
+}
+.dash-task-type-badge{
+    display:inline-flex; align-items:center; padding:2px 7px; border-radius:99px;
+    font-size:9px; font-weight:800; letter-spacing:.45px; text-transform:uppercase;
+    flex-shrink:0; margin-left:auto;
+}
+.dash-task-type-badge--client{
+    background:rgba(45,140,255,.16); border:1px solid rgba(45,140,255,.4); color:#7EB6FF;
+}
+.dash-task-type-badge--nexa{
+    background:rgba(140,82,255,.16); border:1px solid rgba(140,82,255,.4); color:#C4A8FF;
+}
 .dash-task-card-top{ display:flex; align-items:flex-start; gap:6px; }
 .dash-task-card-code{ font-size:11px; color:#6a6a6a; font-weight:700; flex-shrink:0; margin-top:1px; }
 .dash-task-card-title{ font-size:12.8px; font-weight:600; color:white; flex:1; line-height:1.4; }
