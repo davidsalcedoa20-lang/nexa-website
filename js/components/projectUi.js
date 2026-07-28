@@ -178,3 +178,104 @@ export function escapeHtml(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;');
 }
+
+/**
+ * Obtiene el perfil del cliente asociado a un proyecto
+ * (workspaces.client_id / profiles anidado).
+ */
+export function getProjectClientProfile(project) {
+    const workspace = project?.workspaces || null;
+    if (!workspace) return null;
+    const profile = workspace.profiles || null;
+    const id = workspace.client_id || profile?.id || null;
+    if (!id) return null;
+    return {
+        id,
+        full_name: profile?.full_name || 'Cliente',
+        email: profile?.email || null,
+        role: 'client'
+    };
+}
+
+/**
+ * Construye las opciones del selector "Responsable":
+ * cliente del proyecto + todos los administradores (desde DB).
+ */
+export function buildResponsibleOptions({ client = null, admins = [] } = {}) {
+    const options = [];
+    if (client?.id) {
+        options.push({
+            id: client.id,
+            label: client.full_name || 'Cliente',
+            kind: 'client'
+        });
+    }
+    (admins || []).forEach((admin) => {
+        if (!admin?.id) return;
+        if (client?.id && admin.id === client.id) return;
+        options.push({
+            id: admin.id,
+            label: admin.full_name || admin.email || 'Administrador',
+            kind: 'admin'
+        });
+    });
+    return options;
+}
+
+export function populateResponsibleSelect(select, { client = null, admins = [], emptyLabel = 'Selecciona un responsable', selectedId = '' } = {}) {
+    if (!select) return;
+    const options = buildResponsibleOptions({ client, admins });
+    select.innerHTML = `<option value="">${escapeHtml(emptyLabel)}</option>` +
+        options.map((opt) => {
+            const suffix = opt.kind === 'client' ? ' (Cliente)' : '';
+            return `<option value="${opt.id}">${escapeHtml(opt.label)}${suffix}</option>`;
+        }).join('');
+    if (selectedId) select.value = selectedId;
+}
+
+/**
+ * Deriva task_type + assignee_id a partir del responsable elegido.
+ * Si el responsable es el cliente del proyecto -> client|approval.
+ * Si es un admin -> nexa.
+ */
+export function resolveTaskAssignment(assigneeId, clientId, { isApproval = false } = {}) {
+    if (!assigneeId) {
+        return { assignee_id: null, task_type: 'nexa' };
+    }
+    if (clientId && assigneeId === clientId) {
+        return {
+            assignee_id: assigneeId,
+            task_type: isApproval ? 'approval' : 'client'
+        };
+    }
+    return { assignee_id: assigneeId, task_type: 'nexa' };
+}
+
+/**
+ * Metadatos visuales del responsable de una tarea (nombre + si es cliente).
+ * Escalable: usa assignee_id / profiles, no nombres fijos.
+ */
+export function getTaskResponsibleMeta(task, project = null) {
+    const client = getProjectClientProfile(project);
+    const clientId = client?.id || null;
+    const assignee = task?.profiles || null;
+    const assigneeId = task?.assignee_id || assignee?.id || null;
+
+    const isClientByType = task?.task_type === 'client' || task?.task_type === 'approval';
+    const isClientByAssignee = !!(assigneeId && clientId && assigneeId === clientId);
+    const isClient = isClientByType || isClientByAssignee || assignee?.role === 'client';
+    const isApproval = task?.task_type === 'approval';
+
+    let name = assignee?.full_name || null;
+    if (!name && isClient) name = client?.full_name || 'Cliente';
+    if (!name) name = 'Sin asignar';
+
+    return {
+        name,
+        isClient,
+        isApproval,
+        assigneeId,
+        badgeLabel: isApproval ? 'APROBACIÓN' : (isClient ? 'CLIENTE' : 'NEXA'),
+        cardClass: isClient ? (isApproval ? 'is-client is-approval' : 'is-client') : 'is-nexa'
+    };
+}

@@ -13,11 +13,16 @@
    ya usa admin/proyecto-detalle.html).
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
-import { listAllTasksForAdmin, createTask, updateTask, deleteTask } from '../../services/taskService.js';
+import { listAllTasksForAdmin, createTask, updateTask, deleteTask, ensureApprovalRecord } from '../../services/taskService.js';
 import { listProjects, getProjectStructure } from '../../services/projectService.js';
 import { listAdmins } from '../../services/profileService.js';
 import { renderTaskTable } from '../components/taskTable.js';
-import { escapeHtml } from '../../components/projectUi.js';
+import {
+    escapeHtml,
+    getProjectClientProfile,
+    populateResponsibleSelect,
+    resolveTaskAssignment
+} from '../../components/projectUi.js';
 
 const tbody = document.getElementById('tasksTableBody');
 const emptyState = document.getElementById('tasksEmptyState');
@@ -105,7 +110,7 @@ async function init() {
         admins = adminList;
 
         populateFilterOptions();
-        populateAssigneeSelect();
+        refreshTaskResponsibleSelect();
         populateProjectSelect();
         renderStats(allTasksFlat);
         applyFiltersAndRender();
@@ -266,11 +271,38 @@ async function handleDelete(task) {
 /* ---------------------------------------------------------
    Modal: Nueva / Editar Tarea
 --------------------------------------------------------- */
-function populateAssigneeSelect() {
+function getClientForModal(task = null, projectId = null) {
+    if (task?.clientId) {
+        return { id: task.clientId, full_name: task.clientName || 'Cliente' };
+    }
+    const project = allProjects.find((p) => p.id === (projectId || el('taskProjectSelect')?.value));
+    return getProjectClientProfile(project);
+}
+
+function refreshTaskResponsibleSelect({ task = null, projectId = null, selectedId = '' } = {}) {
+    const client = getClientForModal(task, projectId);
+    const preferredId = selectedId
+        || task?.assignee_id
+        || ((task?.task_type === 'client' || task?.task_type === 'approval') ? client?.id : '')
+        || '';
+
+    populateResponsibleSelect(el('taskAssignee'), {
+        client,
+        admins,
+        emptyLabel: 'Selecciona un responsable',
+        selectedId: preferredId
+    });
+    syncApprovalVisibility(client);
+}
+
+function syncApprovalVisibility(client = null) {
+    const field = el('taskApprovalField');
     const select = el('taskAssignee');
-    if (!select) return;
-    select.innerHTML = '<option value="">Sin asignar</option>' +
-        admins.map((a) => `<option value="${a.id}">${escapeHtml(a.full_name || a.email)}</option>`).join('');
+    if (!field || !select) return;
+    const resolvedClient = client || getClientForModal(editingTaskId ? allTasksFlat.find((t) => t.id === editingTaskId) : null);
+    const isClient = !!(resolvedClient?.id && select.value === resolvedClient.id);
+    field.style.display = isClient ? 'flex' : 'none';
+    if (!isClient && el('taskRequiresApproval')) el('taskRequiresApproval').checked = false;
 }
 
 function populateProjectSelect() {
@@ -319,15 +351,12 @@ function populateSectionSelect(phaseId) {
         : '<option value="">Este bloque no tiene secciones todavía</option>';
 }
 
-el('taskProjectSelect')?.addEventListener('change', (e) => populatePhaseSelect(e.target.value));
+el('taskProjectSelect')?.addEventListener('change', (e) => {
+    populatePhaseSelect(e.target.value);
+    refreshTaskResponsibleSelect({ projectId: e.target.value });
+});
 el('taskPhaseSelect')?.addEventListener('change', (e) => populateSectionSelect(e.target.value));
-
-function toggleAssigneeField() {
-    const type = el('taskType').value;
-    const field = el('taskAssignee').closest('.admin-field');
-    if (field) field.style.display = type === 'nexa' ? 'flex' : 'none';
-}
-el('taskType')?.addEventListener('change', toggleAssigneeField);
+el('taskAssignee')?.addEventListener('change', () => syncApprovalVisibility());
 
 function openTaskModal(task) {
     editingTaskId = task?.id || null;
@@ -352,13 +381,13 @@ function openTaskModal(task) {
     }
 
     el('taskTitle').value = task?.title || '';
-    el('taskType').value = task?.task_type || 'nexa';
-    el('taskAssignee').value = task?.assignee_id || '';
     el('taskPriority').value = task?.priority || 'medium';
     el('taskStatusSelect').value = task?.status || 'pending';
     el('taskDueDate').value = task?.due_date || '';
     el('taskDescription').value = task?.description || '';
-    toggleAssigneeField();
+    if (el('taskRequiresApproval')) el('taskRequiresApproval').checked = task?.task_type === 'approval';
+
+    refreshTaskResponsibleSelect({ task, projectId: task?.projectId || null });
 
     el('taskFormError').textContent = '';
     el('taskFormError').classList.remove('active');
@@ -390,13 +419,21 @@ el('taskForm')?.addEventListener('submit', async (e) => {
     const title = el('taskTitle').value.trim();
     if (!title) { errorEl.textContent = 'El título es obligatorio.'; errorEl.classList.add('active'); return; }
 
-    const taskType = el('taskType').value;
+    const assigneeId = el('taskAssignee').value;
+    if (!assigneeId) { errorEl.textContent = 'Selecciona un responsable.'; errorEl.classList.add('active'); return; }
+
+    const editingTask = editingTaskId ? allTasksFlat.find((t) => t.id === editingTaskId) : null;
+    const client = getClientForModal(editingTask, el('taskProjectSelect')?.value);
+    const assignment = resolveTaskAssignment(assigneeId, client?.id, {
+        isApproval: !!el('taskRequiresApproval')?.checked
+    });
+
     const payload = {
         title,
         description: el('taskDescription').value.trim() || null,
-        task_type: taskType,
+        task_type: assignment.task_type,
         priority: el('taskPriority').value,
-        assignee_id: taskType === 'nexa' ? (el('taskAssignee').value || null) : null,
+        assignee_id: assignment.assignee_id,
         due_date: el('taskDueDate').value || null,
         status: el('taskStatusSelect').value
     };
@@ -404,6 +441,9 @@ el('taskForm')?.addEventListener('submit', async (e) => {
     try {
         if (editingTaskId) {
             await updateTask(editingTaskId, payload);
+            if (assignment.task_type === 'approval' && editingTask?.task_type !== 'approval') {
+                await ensureApprovalRecord(editingTaskId);
+            }
         } else {
             const sectionId = el('taskSectionSelect').value;
             if (!sectionId) { errorEl.textContent = 'Selecciona proyecto, bloque y sección.'; errorEl.classList.add('active'); return; }

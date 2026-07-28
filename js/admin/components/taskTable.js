@@ -6,15 +6,9 @@
    un <select> de estado con edición inline. Toda la lógica de
    Supabase vive en taskService.js / tareasPage.js.
    ========================================================== */
-import { PROGRESS_STATUS_LABELS, TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, formatDate, escapeHtml, getInitials } from '../../components/projectUi.js';
+import { PROGRESS_STATUS_LABELS, TASK_PRIORITY_LABELS, formatDate, escapeHtml, getInitials } from '../../components/projectUi.js';
 
 const STATUS_OPTIONS = ['pending', 'in_progress', 'waiting_approval', 'completed', 'blocked', 'finished'];
-
-const TYPE_BADGE_CLASS = {
-    client: 'admin-badge--paused',
-    nexa: 'admin-badge--progress',
-    approval: 'admin-badge--pending'
-};
 
 const PRIORITY_BADGE_CLASS = {
     low: 'admin-badge--pending',
@@ -52,9 +46,11 @@ export function renderTaskTable(tbody, tasks, handlers) {
 
     tbody.innerHTML = tasks.map((task, index) => {
         const overdue = isOverdue(task);
-        const responsibleLabel = task.task_type === 'client'
-            ? (task.clientName || 'Cliente')
-            : (task.profiles?.full_name || 'Sin asignar');
+        const responsibleLabel = task.profiles?.full_name
+            || ((task.task_type === 'client' || task.task_type === 'approval') ? (task.clientName || 'Cliente') : null)
+            || 'Sin asignar';
+        const isClientTask = task.task_type === 'client' || task.task_type === 'approval'
+            || (task.assignee_id && task.clientId && task.assignee_id === task.clientId);
 
         return `
             <tr data-row-index="${index}">
@@ -70,7 +66,7 @@ export function renderTaskTable(tbody, tasks, handlers) {
                         ${task.clientName ? `<span>${escapeHtml(task.clientName)}</span>` : ''}
                     </div>
                 </td>
-                <td><span class="admin-badge ${TYPE_BADGE_CLASS[task.task_type] || 'admin-badge--pending'}">${TASK_TYPE_LABELS[task.task_type] || task.task_type}</span></td>
+                <td><span class="admin-badge ${isClientTask ? 'admin-badge--paused' : 'admin-badge--progress'}">${escapeHtml(isClientTask ? (task.task_type === 'approval' ? 'Aprobación' : 'Cliente') : 'NEXA')}</span></td>
                 <td>
                     <div class="admin-table-company">
                         <span>${getInitials(responsibleLabel)} · ${escapeHtml(responsibleLabel)}</span>

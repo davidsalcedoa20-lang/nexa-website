@@ -23,7 +23,8 @@ import { listProjectDeliverables, decideDeliverable } from '../../services/deliv
 import {
     PROGRESS_STATUS_LABELS,
     APPROVAL_DECISION_LABELS, DELIVERABLE_STATUS_LABELS, TIMELINE_EVENT_ICONS,
-    formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining
+    formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining,
+    getTaskResponsibleMeta
 } from '../../components/projectUi.js';
 
 const params = new URLSearchParams(window.location.search);
@@ -327,23 +328,14 @@ function renderPhases(stages, unassignedPhases, { animate = false } = {}) {
     }, 180);
 }
 
-function getTaskVisualMeta(task) {
-    if (task.task_type === 'client') {
-        return { cardClass: 'is-client', badgeLabel: 'CLIENTE', badgeClass: 'dash-task-type-badge--client' };
-    }
-    if (task.task_type === 'approval') {
-        return { cardClass: 'is-client is-approval', badgeLabel: 'APROBACIÓN', badgeClass: 'dash-task-type-badge--client' };
-    }
-    return { cardClass: 'is-nexa', badgeLabel: 'NEXA', badgeClass: 'dash-task-type-badge--nexa' };
-}
-
 function renderTaskCard(task, idx) {
     const approval = task.approvals?.[0] || task.approvals;
     let actionHtml = '';
-    const visual = getTaskVisualMeta(task);
-    const isClientSide = task.task_type === 'client' || task.task_type === 'approval';
-    const avatarLabel = isClientSide ? 'Tú' : (task.profiles?.full_name || 'NEXA');
-    const nameLabel = isClientSide ? 'Tú' : escapeHtml(task.profiles?.full_name || 'Equipo NEXA');
+    const meta = getTaskResponsibleMeta(task, currentProject);
+    const badgeClass = meta.isClient ? 'dash-task-type-badge--client' : 'dash-task-type-badge--nexa';
+    const displayName = meta.isClient && currentUserId && meta.assigneeId === currentUserId
+        ? 'Tú'
+        : meta.name;
 
     if (task.task_type === 'client' && !['completed', 'finished', 'approved'].includes(task.status)) {
         actionHtml = `<button type="button" class="dash-task-mark-btn" data-complete-task="${task.id}">Marcar como lista</button>`;
@@ -358,18 +350,18 @@ function renderTaskCard(task, idx) {
     }
 
     return `
-        <div class="dash-task-card ${visual.cardClass}">
+        <div class="dash-task-card ${meta.cardClass}">
             <div class="dash-task-card-top">
                 <span class="dash-task-card-code">1.${idx + 1}</span>
                 <span class="dash-task-card-title">${escapeHtml(task.title)}</span>
-                <span class="dash-task-type-badge ${visual.badgeClass}">${visual.badgeLabel}</span>
+                <span class="dash-task-type-badge ${badgeClass}">${meta.badgeLabel}</span>
             </div>
             <span class="dash-badge ${DASH_BADGE_CLASS[task.status] || 'dash-badge--pending'}" style="align-self:flex-start;">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
             ${task.description ? `<p class="dash-task-card-desc">${escapeHtml(task.description)}</p>` : ''}
             <div class="dash-task-card-footer">
                 <div class="dash-task-avatar-row">
-                    <span class="dash-task-avatar">${getInitials(avatarLabel)}</span>
-                    <span class="dash-task-avatar-name">${nameLabel}${task.due_date ? ` · ${formatDate(task.due_date)}` : ''}</span>
+                    <span class="dash-task-avatar">${getInitials(displayName)}</span>
+                    <span class="dash-task-avatar-name">${escapeHtml(displayName)}${task.due_date ? ` · ${formatDate(task.due_date)}` : ''}</span>
                 </div>
             </div>
             ${actionHtml}

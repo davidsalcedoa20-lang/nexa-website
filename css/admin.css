@@ -725,6 +725,51 @@ body.admin-page{
     margin-top:3px;
 }
 
+.admin-my-tasks{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.admin-my-task-row{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:12px 14px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    text-decoration:none;
+    color:inherit;
+    transition:background .2s, border-color .2s, transform .2s;
+}
+.admin-my-task-row:hover{
+    background:rgba(255,255,255,.05);
+    border-color:rgba(140,82,255,.35);
+    transform:translateY(-1px);
+}
+.admin-my-task-avatar{
+    width:32px; height:32px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:700; color:white; flex-shrink:0;
+    background:linear-gradient(135deg, #8C52FF, #B99BFF);
+}
+.admin-my-task-body{
+    flex:1; min-width:0; display:flex; flex-direction:column; gap:2px;
+}
+.admin-my-task-body strong{
+    font-size:13px; color:white; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.admin-my-task-body span{
+    font-size:11.5px; color:#8a8a8a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+
+.admin-field--checkbox{ margin-top:2px; }
+.admin-checkbox-label{
+    display:flex; align-items:center; gap:10px;
+    font-size:13px; color:#d0d0d0; cursor:pointer;
+}
+.admin-checkbox-label input{ width:16px; height:16px; accent-color:#8C52FF; }
+
 /* ==========================================================
    11. M?DULO CLIENTES (tabla, estados, modal)
    ========================================================== */

@@ -9,7 +9,7 @@ import { supabase } from '../../services/supabaseClient.js';
 import { getProject, getProjectStructure, duplicateProject, updateProject, setProjectStatus, archiveProject } from '../../services/projectService.js';
 import { createPhase, deletePhase, createSection, deleteSection } from '../../services/phaseService.js';
 import { createStage, updateStage, deleteStage } from '../../services/timelineStageService.js';
-import { createTask, updateTask, deleteTask } from '../../services/taskService.js';
+import { createTask, updateTask, deleteTask, ensureApprovalRecord } from '../../services/taskService.js';
 import { listComments, addComment } from '../../services/commentService.js';
 import { listTimelineEvents } from '../../services/timelineService.js';
 import { listProjectDeliverables, createDeliverable, updateDeliverable, deleteDeliverable } from '../../services/deliverableService.js';
@@ -17,7 +17,8 @@ import { listAdmins } from '../../services/profileService.js';
 import {
     PROJECT_STATUS_LABELS, PROGRESS_STATUS_LABELS, PD_STATUS_BADGE_CLASS,
     TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, DELIVERABLE_STATUS_LABELS, TIMELINE_EVENT_ICONS,
-    formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining
+    formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining,
+    getProjectClientProfile, populateResponsibleSelect, resolveTaskAssignment, getTaskResponsibleMeta
 } from '../../components/projectUi.js';
 
 // Valores reales del enum public.progress_status (project_tasks.status).
@@ -66,11 +67,10 @@ async function init() {
 
     try {
         admins = await listAdmins();
-        populateSelect(el('taskAssignee'), admins, 'Sin asignar');
         populateSelect(el('stageResponsible'), admins, 'Sin asignar');
-        populateSelect(el('taskDetailAssignee'), admins, 'Sin asignar');
         populateSelect(el('editProjectResponsible'), admins, 'Sin asignar');
         populateTaskStatusSelect(el('taskDetailStatus'));
+        refreshResponsibleSelectors();
 
         await refreshAll();
         loadingEl.style.display = 'none';
@@ -79,6 +79,34 @@ async function init() {
         console.error('[proyectoDetallePage] Error cargando proyecto:', error.message);
         loadingEl.innerHTML = `<span>No se pudo cargar el proyecto: ${escapeHtml(error.message)}</span>`;
     }
+}
+
+function refreshResponsibleSelectors(selectedId = '') {
+    const client = getProjectClientProfile(currentProject);
+    populateResponsibleSelect(el('taskAssignee'), {
+        client,
+        admins,
+        emptyLabel: 'Selecciona un responsable',
+        selectedId
+    });
+    populateResponsibleSelect(el('taskDetailAssignee'), {
+        client,
+        admins,
+        emptyLabel: 'Selecciona un responsable',
+        selectedId
+    });
+    syncApprovalFieldVisibility('taskAssignee', 'taskApprovalField', 'taskRequiresApproval');
+    syncApprovalFieldVisibility('taskDetailAssignee', 'taskDetailApprovalField', 'taskDetailRequiresApproval');
+}
+
+function syncApprovalFieldVisibility(assigneeSelectId, fieldId, checkboxId) {
+    const select = el(assigneeSelectId);
+    const field = el(fieldId);
+    if (!select || !field) return;
+    const client = getProjectClientProfile(currentProject);
+    const isClient = !!(client?.id && select.value === client.id);
+    field.style.display = isClient ? 'flex' : 'none';
+    if (!isClient && el(checkboxId)) el(checkboxId).checked = false;
 }
 
 function populateSelect(select, items, emptyLabel) {
@@ -102,6 +130,7 @@ async function refreshAll() {
     const comments = await listComments(projectId, 'project', projectId);
 
     ensureSelectedStage(currentStructure.stages, currentStructure.unassignedPhases);
+    refreshResponsibleSelectors();
 
     renderHeader(currentProject);
     renderProgressCards(currentProject, currentStructure.stages);
@@ -423,35 +452,23 @@ function renderSectionGroup(section) {
     `;
 }
 
-function getTaskVisualMeta(task) {
-    if (task.task_type === 'client') {
-        return { cardClass: 'is-client', badgeLabel: 'CLIENTE', badgeClass: 'pd-task-type-badge--client' };
-    }
-    if (task.task_type === 'approval') {
-        return { cardClass: 'is-client is-approval', badgeLabel: 'APROBACIÓN', badgeClass: 'pd-task-type-badge--client' };
-    }
-    return { cardClass: 'is-nexa', badgeLabel: 'NEXA', badgeClass: 'pd-task-type-badge--nexa' };
-}
-
 function renderTaskCard(task, idx) {
-    const responsibleName = task.task_type === 'client' || task.task_type === 'approval'
-        ? (currentProject?.workspaces?.profiles?.full_name || 'Cliente')
-        : (task.profiles?.full_name || 'Sin asignar');
-    const visual = getTaskVisualMeta(task);
+    const meta = getTaskResponsibleMeta(task, currentProject);
+    const badgeClass = meta.isClient ? 'pd-task-type-badge--client' : 'pd-task-type-badge--nexa';
 
     return `
-        <button type="button" class="pd-task-card ${visual.cardClass}" data-task-id="${task.id}">
+        <button type="button" class="pd-task-card ${meta.cardClass}" data-task-id="${task.id}">
             <div class="pd-task-card-top">
                 <span class="pd-task-card-code">1.${idx + 1}</span>
                 <span class="pd-task-card-title">${escapeHtml(task.title)}</span>
-                <span class="pd-task-type-badge ${visual.badgeClass}">${visual.badgeLabel}</span>
+                <span class="pd-task-type-badge ${badgeClass}">${meta.badgeLabel}</span>
             </div>
             <span class="pd-badge ${PD_STATUS_BADGE_CLASS[task.status] || 'pd-badge--pending'}" style="align-self:flex-start;">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
             ${task.description ? `<p class="pd-task-card-desc">${escapeHtml(task.description)}</p>` : ''}
             <div class="pd-task-card-footer">
                 <div class="pd-task-avatar-row">
-                    <span class="pd-task-avatar">${getInitials(responsibleName)}</span>
-                    <span class="pd-task-avatar-name">${escapeHtml(responsibleName)}</span>
+                    <span class="pd-task-avatar">${getInitials(meta.name)}</span>
+                    <span class="pd-task-avatar-name">${escapeHtml(meta.name)}</span>
                 </div>
             </div>
         </button>
@@ -503,6 +520,8 @@ function wireBlockEvents() {
     document.querySelectorAll('[data-add-task]').forEach((btn) => {
         btn.addEventListener('click', () => {
             activeSectionIdForTask = btn.getAttribute('data-add-task');
+            refreshResponsibleSelectors();
+            if (el('taskRequiresApproval')) el('taskRequiresApproval').checked = false;
             openModal('taskModalOverlay');
         });
     });
@@ -522,22 +541,17 @@ function renderTasksByResponsible(tasks, project) {
         return;
     }
 
-    const clientName = project.workspaces?.profiles?.full_name || 'Cliente';
     const groups = new Map();
 
     tasks.forEach((task) => {
-        let key, label;
-        if (task.task_type === 'client' || task.task_type === 'approval') {
-            key = 'client';
-            label = `Tareas del cliente (${clientName})`;
-        } else if (task.assignee_id) {
-            key = task.assignee_id;
-            label = `Tareas de ${task.profiles?.full_name || 'equipo'}`;
-        } else {
-            key = 'nexa';
-            label = 'Tareas de NEXA (equipo)';
+        const meta = getTaskResponsibleMeta(task, project);
+        const key = meta.assigneeId || (meta.isClient ? 'client' : 'unassigned');
+        if (!groups.has(key)) {
+            groups.set(key, {
+                label: meta.isClient ? `Cliente · ${meta.name}` : meta.name,
+                tasks: []
+            });
         }
-        if (!groups.has(key)) groups.set(key, { label, tasks: [] });
         groups.get(key).tasks.push(task);
     });
 
@@ -673,9 +687,12 @@ el('sectionForm')?.addEventListener('submit', async (e) => {
 /* ---------------------------------------------------------
    Modal: Nueva Tarea
 --------------------------------------------------------- */
-el('taskType')?.addEventListener('change', () => {
-    const isNexa = el('taskType').value === 'nexa';
-    el('taskAssigneeField').style.display = isNexa ? 'flex' : 'none';
+el('taskAssignee')?.addEventListener('change', () => {
+    syncApprovalFieldVisibility('taskAssignee', 'taskApprovalField', 'taskRequiresApproval');
+});
+
+el('taskDetailAssignee')?.addEventListener('change', () => {
+    syncApprovalFieldVisibility('taskDetailAssignee', 'taskDetailApprovalField', 'taskDetailRequiresApproval');
 });
 
 el('taskForm')?.addEventListener('submit', async (e) => {
@@ -685,20 +702,28 @@ el('taskForm')?.addEventListener('submit', async (e) => {
     errorEl.classList.remove('active');
     if (!title || !activeSectionIdForTask) { errorEl.textContent = 'El título es obligatorio.'; errorEl.classList.add('active'); return; }
 
+    const assigneeId = el('taskAssignee').value;
+    if (!assigneeId) { errorEl.textContent = 'Selecciona un responsable.'; errorEl.classList.add('active'); return; }
+
+    const client = getProjectClientProfile(currentProject);
+    const assignment = resolveTaskAssignment(assigneeId, client?.id, {
+        isApproval: !!el('taskRequiresApproval')?.checked
+    });
+
     try {
         await createTask({
             section_id: activeSectionIdForTask,
             title,
             description: el('taskDescription').value.trim(),
-            task_type: el('taskType').value,
+            task_type: assignment.task_type,
             priority: el('taskPriority').value,
-            assignee_id: el('taskType').value === 'nexa' ? (el('taskAssignee').value || null) : null,
+            assignee_id: assignment.assignee_id,
             due_date: el('taskDueDate').value || null,
             created_by: currentUserId
         });
         closeModal('taskModalOverlay');
         el('taskForm').reset();
-        el('taskAssigneeField').style.display = 'flex';
+        refreshResponsibleSelectors();
         await refreshAll();
     } catch (error) {
         errorEl.textContent = error.message;
@@ -718,13 +743,23 @@ async function openTaskDetailModal(taskId) {
     if (!task) return;
     activeTaskId = taskId;
 
+    const client = getProjectClientProfile(currentProject);
+    const selectedAssignee = task.assignee_id
+        || ((task.task_type === 'client' || task.task_type === 'approval') ? client?.id : '')
+        || '';
+
+    refreshResponsibleSelectors(selectedAssignee);
+
     el('taskDetailTitle').textContent = task.title;
     el('taskDetailTitleInput').value = task.title;
     el('taskDetailDescription').value = task.description || '';
     el('taskDetailStatus').value = task.status;
     el('taskDetailPriority').value = task.priority;
-    el('taskDetailAssignee').value = task.assignee_id || '';
-    el('taskDetailAssignee').closest('.admin-field').style.display = task.task_type === 'nexa' ? 'flex' : 'none';
+    el('taskDetailAssignee').value = selectedAssignee;
+    if (el('taskDetailRequiresApproval')) {
+        el('taskDetailRequiresApproval').checked = task.task_type === 'approval';
+    }
+    syncApprovalFieldVisibility('taskDetailAssignee', 'taskDetailApprovalField', 'taskDetailRequiresApproval');
     el('taskDetailDueDate').value = task.due_date || '';
     el('taskDetailFormError').textContent = '';
     el('taskDetailFormError').classList.remove('active');
@@ -765,14 +800,29 @@ el('taskDetailForm')?.addEventListener('submit', async (e) => {
     if (!title) { errorEl.textContent = 'El título es obligatorio.'; errorEl.classList.add('active'); return; }
 
     try {
+        const assigneeId = el('taskDetailAssignee').value;
+        if (!assigneeId) { errorEl.textContent = 'Selecciona un responsable.'; errorEl.classList.add('active'); return; }
+
+        const client = getProjectClientProfile(currentProject);
+        const previousType = findTaskById(activeTaskId)?.task_type;
+        const assignment = resolveTaskAssignment(assigneeId, client?.id, {
+            isApproval: !!el('taskDetailRequiresApproval')?.checked
+        });
+
         await updateTask(activeTaskId, {
             title,
             description: el('taskDetailDescription').value.trim() || null,
             status: el('taskDetailStatus').value,
             priority: el('taskDetailPriority').value,
-            assignee_id: el('taskDetailAssignee').value || null,
+            assignee_id: assignment.assignee_id,
+            task_type: assignment.task_type,
             due_date: el('taskDetailDueDate').value || null
         });
+
+        if (assignment.task_type === 'approval' && previousType !== 'approval') {
+            await ensureApprovalRecord(activeTaskId);
+        }
+
         closeModal('taskDetailModalOverlay');
         await refreshAll();
     } catch (error) {

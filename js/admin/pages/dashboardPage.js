@@ -11,10 +11,17 @@ import { supabase } from '../../services/supabaseClient.js';
 import { getDashboardStats, listRecentClientsWithProject } from '../services/dashboardService.js';
 import { listRecentActivityForAdmin } from '../../services/timelineService.js';
 import { getNextCalendarEvent } from '../../services/calendarService.js';
-import { PROJECT_STATUS_LABELS, PROJECT_STATUS_BADGE_CLASS, TIMELINE_EVENT_ICONS, CALENDAR_EVENT_TYPE_LABELS, formatDateTime, formatDate, escapeHtml } from '../../components/projectUi.js';
+import { listTasksAssignedToUser } from '../../services/taskService.js';
+import {
+    PROJECT_STATUS_LABELS, PROJECT_STATUS_BADGE_CLASS, TIMELINE_EVENT_ICONS,
+    CALENDAR_EVENT_TYPE_LABELS, PROGRESS_STATUS_LABELS, PD_STATUS_BADGE_CLASS,
+    formatDateTime, formatDate, escapeHtml, getInitials
+} from '../../components/projectUi.js';
 import { formatEventTime } from '../../components/calendarUi.js';
 
 function el(id) { return document.getElementById(id); }
+
+let currentUserId = null;
 
 /* ---------------------------------------------------------
    Estadísticas
@@ -120,20 +127,62 @@ function renderActivity(events) {
 }
 
 /* ---------------------------------------------------------
+   Mis tareas (solo las del admin autenticado)
+--------------------------------------------------------- */
+function renderMyTasks(tasks) {
+    const list = el('adminMyTasksList');
+    const empty = el('adminMyTasksEmpty');
+    if (!list) return;
+
+    if (!tasks.length) {
+        list.innerHTML = '';
+        if (empty) empty.style.display = 'block';
+        return;
+    }
+    if (empty) empty.style.display = 'none';
+
+    list.innerHTML = tasks.map((task) => {
+        const section = task.project_sections || {};
+        const phase = section.project_phases || {};
+        const project = phase.projects || {};
+        const clientName = project.workspaces?.profiles?.full_name || project.workspaces?.name || '';
+        const href = project.id ? `proyecto-detalle.html?id=${project.id}` : 'tareas.html';
+
+        return `
+            <a class="admin-my-task-row" href="${href}">
+                <span class="admin-my-task-avatar">${getInitials(task.profiles?.full_name || 'YO')}</span>
+                <span class="admin-my-task-body">
+                    <strong>${escapeHtml(task.title)}</strong>
+                    <span>${escapeHtml(project.name || 'Proyecto')}${clientName ? ` · ${escapeHtml(clientName)}` : ''}${task.due_date ? ` · vence ${formatDate(task.due_date)}` : ''}</span>
+                </span>
+                <span class="pd-badge ${PD_STATUS_BADGE_CLASS[task.status] || 'pd-badge--pending'}">${PROGRESS_STATUS_LABELS[task.status] || task.status}</span>
+            </a>
+        `;
+    }).join('');
+}
+
+/* ---------------------------------------------------------
    Carga + Realtime
 --------------------------------------------------------- */
 async function loadDashboard() {
     try {
-        const [stats, recentClients, activity, nextEvent] = await Promise.all([
+        if (!currentUserId) {
+            const { data: authData } = await supabase.auth.getUser();
+            currentUserId = authData?.user?.id || null;
+        }
+
+        const [stats, recentClients, activity, nextEvent, myTasks] = await Promise.all([
             getDashboardStats(),
             listRecentClientsWithProject(5),
             listRecentActivityForAdmin(8),
-            getNextCalendarEvent().catch(() => null)
+            getNextCalendarEvent().catch(() => null),
+            currentUserId ? listTasksAssignedToUser(currentUserId).catch(() => []) : Promise.resolve([])
         ]);
         renderStats(stats);
         renderRecentClients(recentClients);
         renderActivity(activity);
         renderNextEvent(nextEvent);
+        renderMyTasks(myTasks);
     } catch (error) {
         console.error('[dashboardPage] Error cargando el dashboard:', error.message);
     }

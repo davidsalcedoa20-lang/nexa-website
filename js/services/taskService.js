@@ -47,6 +47,65 @@ export async function deleteTask(taskId) {
     if (error) throw error;
 }
 
+/** Crea el registro de aprobación si la tarea pasa a task_type = approval. */
+export async function ensureApprovalRecord(taskId) {
+    const { data: existing, error: existingError } = await supabase
+        .from('approvals')
+        .select('id')
+        .eq('task_id', taskId)
+        .maybeSingle();
+    if (existingError) throw existingError;
+    if (existing) return existing;
+
+    const { data, error } = await supabase
+        .from('approvals')
+        .insert({ task_id: taskId })
+        .select()
+        .single();
+    if (error) throw error;
+    return data;
+}
+
+/**
+ * Tareas asignadas a un usuario concreto (assignee_id).
+ * Usado por "Mis tareas" del Dashboard admin: cada administrador
+ * solo ve las que le corresponden a él.
+ */
+export async function listTasksAssignedToUser(userId, { excludeDone = true } = {}) {
+    if (!userId) return [];
+
+    let query = supabase
+        .from('project_tasks')
+        .select(`
+            id, title, description, task_type, status, priority,
+            assignee_id, due_date, created_at, updated_at, section_id,
+            profiles:assignee_id ( id, full_name, role ),
+            project_sections!inner (
+                id, name,
+                project_phases!inner (
+                    id, name, project_id,
+                    projects!inner (
+                        id, name, color_hex, archived_at,
+                        workspaces (
+                            id, name, client_id,
+                            profiles:client_id ( id, full_name )
+                        )
+                    )
+                )
+            )
+        `)
+        .eq('assignee_id', userId)
+        .order('due_date', { ascending: true, nullsFirst: false });
+
+    if (excludeDone) {
+        query = query.not('status', 'in', '("completed","finished","approved","cancelled")');
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+}
+
 /** El cliente marca su propia tarea (task_type = client) como completada/en proceso. */
 export async function setClientTaskStatus(taskId, status) {
     const { data, error } = await supabase

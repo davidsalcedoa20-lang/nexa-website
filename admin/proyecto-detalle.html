@@ -423,16 +423,16 @@
                     <input type="text" id="taskTitle" placeholder="Ej. Diseñar portada del sitio">
                 </div>
                 <div class="admin-field">
-                    <label for="taskType">Asignar a</label>
-                    <select id="taskType">
-                        <option value="nexa">Equipo NEXA</option>
-                        <option value="client">Cliente</option>
-                        <option value="approval">Aprobación (Cliente)</option>
+                    <label for="taskAssignee">Responsable</label>
+                    <select id="taskAssignee" required>
+                        <option value="">Selecciona un responsable</option>
                     </select>
                 </div>
-                <div class="admin-field" id="taskAssigneeField">
-                    <label for="taskAssignee">Responsable</label>
-                    <select id="taskAssignee"><option value="">Sin asignar</option></select>
+                <div class="admin-field admin-field--checkbox" id="taskApprovalField" style="display:none;">
+                    <label class="admin-checkbox-label" for="taskRequiresApproval">
+                        <input type="checkbox" id="taskRequiresApproval">
+                        <span>Requiere aprobación del cliente</span>
+                    </label>
                 </div>
                 <div class="admin-field">
                     <label for="taskPriority">Prioridad</label>
@@ -494,7 +494,15 @@
                     </div>
                     <div class="admin-field">
                         <label for="taskDetailAssignee">Responsable</label>
-                        <select id="taskDetailAssignee"><option value="">Sin asignar</option></select>
+                        <select id="taskDetailAssignee">
+                            <option value="">Selecciona un responsable</option>
+                        </select>
+                    </div>
+                    <div class="admin-field admin-field--checkbox" id="taskDetailApprovalField" style="display:none;">
+                        <label class="admin-checkbox-label" for="taskDetailRequiresApproval">
+                            <input type="checkbox" id="taskDetailRequiresApproval">
+                            <span>Requiere aprobación</span>
+                        </label>
                     </div>
                     <div class="admin-field">
                         <label for="taskDetailDueDate">Fecha límite</label>

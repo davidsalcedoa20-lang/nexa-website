@@ -86,12 +86,16 @@ export async function getProjectStructure(projectId) {
     if (sectionIds.length) {
         const { data, error } = await supabase
             .from('project_tasks')
-            .select('*, approvals ( id, decision, decided_at, decision_comment ), profiles:assignee_id ( id, full_name )')
+            .select('*, approvals ( id, decision, decided_at, decision_comment ), profiles:assignee_id ( id, full_name, role )')
             .in('section_id', sectionIds)
             .order('order_index', { ascending: true });
         if (error) throw error;
         tasks = data;
     }
+
+    // RLS de profiles impide que un cliente lea el perfil de un admin.
+    // get_public_profiles expone solo id/full_name/avatar_url/role.
+    tasks = await enrichTaskAssignees(tasks);
 
     const phasesWithChildren = phases.map((phase) => ({
         ...phase,
@@ -111,6 +115,23 @@ export async function getProjectStructure(projectId) {
     const unassignedPhases = phasesWithChildren.filter((p) => !p.timeline_stage_id);
 
     return { stages: stagesWithPhases, unassignedPhases, allTasks: tasks, allPhases: phasesWithChildren };
+}
+
+async function enrichTaskAssignees(tasks) {
+    const assigneeIds = [...new Set((tasks || []).map((t) => t.assignee_id).filter(Boolean))];
+    if (!assigneeIds.length) return tasks || [];
+
+    const { data: profiles, error } = await supabase.rpc('get_public_profiles', { profile_ids: assigneeIds });
+    if (error) {
+        console.warn('[projectService] No se pudieron resolver nombres de responsables:', error.message);
+        return tasks;
+    }
+
+    const profileMap = new Map((profiles || []).map((p) => [p.id, p]));
+    return tasks.map((task) => ({
+        ...task,
+        profiles: profileMap.get(task.assignee_id) || task.profiles || null
+    }));
 }
 
 /**
