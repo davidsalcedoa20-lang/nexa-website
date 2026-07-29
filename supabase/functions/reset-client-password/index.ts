@@ -90,8 +90,20 @@ Deno.serve(async (req) => {
             .eq('id', caller.id)
             .maybeSingle();
 
-        if (!callerProfile || callerProfile.role !== 'admin') {
+        if (!callerProfile || !['admin', 'owner'].includes(callerProfile.role)) {
             return json({ error: 'Solo un administrador puede regenerar contraseñas de clientes.' }, 403);
+        }
+
+        if (callerProfile.role !== 'owner') {
+            const { data: perm } = await adminClient
+                .from('user_permissions')
+                .select('permission_key')
+                .eq('user_id', caller.id)
+                .eq('permission_key', 'clients.edit')
+                .maybeSingle();
+            if (!perm) {
+                return json({ error: 'No tienes permiso para editar clientes.' }, 403);
+            }
         }
 
         const body = await req.json().catch(() => ({}));

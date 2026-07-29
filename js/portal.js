@@ -177,7 +177,7 @@ if (portalLoginForm) {
             return;
         }
 
-        if (profile.role === 'admin') {
+        if (profile.role === 'admin' || profile.role === 'owner') {
             window.location.href = '../admin/index.html';
             return;
         }
@@ -258,7 +258,9 @@ async function initChangePasswordPage(form) {
     // Este flujo es solo para clientes (los admins no tienen esta pantalla;
     // si alguno llega aquí por error, se lo manda de vuelta a su panel).
     if (!profile || profile.role !== 'client') {
-        window.location.href = profile && profile.role === 'admin' ? '../admin/index.html' : 'index.html';
+        window.location.href = profile && (profile.role === 'admin' || profile.role === 'owner')
+            ? '../admin/index.html'
+            : 'index.html';
         return;
     }
 
@@ -351,12 +353,26 @@ async function initAuthGuard(requiredRole) {
     }
 
     const profile = await fetchOrCreateProfile(supabase, user);
-    const isValid = profile && profile.is_active !== false && profile.role === requiredRole;
+    const isStaff = profile && (profile.role === 'admin' || profile.role === 'owner');
+    const isValid = profile && profile.is_active !== false && (
+        requiredRole === 'admin' ? isStaff : profile.role === requiredRole
+    );
 
     if (!isValid) {
         await supabase.auth.signOut();
         window.location.href = '../portal/index.html';
         return;
+    }
+
+    // Capa de permisos del panel admin (owner siempre pasa).
+    if (requiredRole === 'admin') {
+        try {
+            const guard = await import('./admin/permissionsGuard.js');
+            const allowed = await guard.requirePagePermission(null, { redirectTo: 'index.html' });
+            if (!allowed) return;
+        } catch (err) {
+            console.warn('[NEXA HUB] No se pudo aplicar la capa de permisos:', err?.message || err);
+        }
     }
 
     // Si el cliente todavía tiene pendiente cambiar su contraseña temporal

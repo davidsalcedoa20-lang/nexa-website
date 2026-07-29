@@ -329,7 +329,7 @@ Deno.serve(async (req) => {
             profile: { id: string; role: string; full_name: string; email: string };
             db: ReturnType<typeof adminDb>;
         };
-        const isAdmin = profile.role === 'admin';
+        const isAdmin = profile.role === 'admin' || profile.role === 'owner';
 
         if (action === 'configStatus') {
             return json({
