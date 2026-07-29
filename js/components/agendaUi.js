@@ -4,10 +4,10 @@
 import { escapeHtml, getInitials } from './projectUi.js';
 
 export const AGENDA_PRIORITY_LABELS = {
-    critical: 'Crítica',
-    high: 'Alta',
-    medium: 'Media',
-    low: 'Baja'
+    critical: 'Urgente',
+    high: 'Importante',
+    medium: 'Programada',
+    low: 'Programada'
 };
 
 export const AGENDA_PRIORITY_ORDER = ['critical', 'high', 'medium', 'low'];
@@ -19,9 +19,22 @@ export const AGENDA_STATUS_LABELS = {
     completed: 'Completada'
 };
 
+/** Etiqueta visual de tarjeta: Completada gana sobre prioridad. */
+export function getAgendaCardTone(task) {
+    if (task.status === 'completed') {
+        return { key: 'done', label: 'Completada' };
+    }
+    if (task.priority === 'critical') return { key: 'urgent', label: 'Urgente' };
+    if (task.priority === 'high') return { key: 'important', label: 'Importante' };
+    return { key: 'scheduled', label: 'Programada' };
+}
+
 export const WEEKDAY_LABELS = [
     'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
 ];
+
+/** Solo Lunes–Viernes (vista Workspace). */
+export const WORKWEEK_LABELS = WEEKDAY_LABELS.slice(0, 5);
 
 /** Lunes de la semana que contiene `date` (local). */
 export function startOfWeek(date = new Date()) {
@@ -88,18 +101,29 @@ export function sortAgendaTasks(tasks) {
 export function computeAgendaStats(tasks) {
     const today = toISODate(new Date());
     const todayTasks = tasks.filter((t) => t.task_date === today);
-    const openToday = todayTasks.filter((t) => t.status !== 'completed');
-    const urgent = openToday.filter((t) => t.priority === 'critical' || t.priority === 'high');
-    const inProgress = tasks.filter((t) => t.status === 'in_progress');
+    const open = tasks.filter((t) => t.status !== 'completed');
+    const urgent = open.filter((t) => t.priority === 'critical');
+    const important = open.filter((t) => t.priority === 'high');
+    const scheduled = open.filter((t) => t.priority === 'medium' || t.priority === 'low');
     const completed = tasks.filter((t) => t.status === 'completed');
-    const remainingMinutes = openToday.reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
+    const remainingMinutes = todayTasks
+        .filter((t) => t.status !== 'completed')
+        .reduce((sum, t) => sum + (t.estimated_minutes || 0), 0);
+
+    const focusDone = todayTasks.filter((t) => t.status === 'completed').length;
+    const focusTotal = todayTasks.length;
+    const focusPercent = focusTotal ? Math.round((focusDone / focusTotal) * 100) : 0;
 
     return {
         todayCount: todayTasks.length,
         urgentCount: urgent.length,
-        inProgressCount: inProgress.length,
+        importantCount: important.length,
+        scheduledCount: scheduled.length,
         completedCount: completed.length,
-        remainingMinutes
+        remainingMinutes,
+        focusDone,
+        focusTotal,
+        focusPercent
     };
 }
 

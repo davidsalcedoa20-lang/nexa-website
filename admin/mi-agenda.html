@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Mi Agenda | NEXA Hub</title>
+    <title>Workspace | NEXA Hub</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/admin.css">
@@ -74,7 +74,7 @@
                         <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
                         <path d="M8 14h3M13 14h3M8 17h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                     </svg>
-                    Mi Agenda
+                    Workspace
                 </a>
 
                 <a href="calendario.html" class="admin-nav-item">
@@ -94,6 +94,21 @@
                 </a>
 
             </nav>
+
+            <!-- Enfoque del día: solo en Workspace -->
+            <div class="ws-focus-card" id="wsFocusCard">
+                <span class="ws-focus-label">Enfoque del día</span>
+                <div class="ws-focus-ring" aria-hidden="true">
+                    <svg viewBox="0 0 96 96">
+                        <circle class="ws-focus-track" cx="48" cy="48" r="38"></circle>
+                        <circle class="ws-focus-progress" id="wsFocusProgress" cx="48" cy="48" r="38"
+                            stroke-dasharray="238.76" stroke-dashoffset="238.76"></circle>
+                    </svg>
+                    <strong id="wsFocusPercent">0%</strong>
+                </div>
+                <span class="ws-focus-sub">Tareas completadas</span>
+                <strong class="ws-focus-count" id="wsFocusCount">0 de 0</strong>
+            </div>
 
             <button type="button" class="admin-logout" data-logout>
                 <svg viewBox="0 0 24 24" fill="none">
@@ -153,11 +168,16 @@
             <main class="admin-main agenda-page">
 
                 <div class="admin-section-header agenda-page-header">
-                    <div>
-                        <h1>Mi Agenda</h1>
-                        <p>Tu espacio personal de productividad. Solo tú ves estas tareas.</p>
+                    <div class="ws-title-block">
+                        <span class="ws-title-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="4" width="16" height="16" rx="4" stroke="currentColor" stroke-width="1.7"/><path d="M8 12.2l2.6 2.6L16.4 9.2" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </span>
+                        <div>
+                            <h1>Workspace</h1>
+                            <p>Organiza tu trabajo personal y mantén el control de tu productividad diaria.</p>
+                        </div>
                     </div>
-                    <button type="button" class="admin-btn-primary" id="agendaNewTaskBtn">
+                    <button type="button" class="admin-btn-primary ws-new-btn" id="agendaNewTaskBtn">
                         <svg viewBox="0 0 24 24" fill="none">
                             <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
                         </svg>
@@ -165,36 +185,41 @@
                     </button>
                 </div>
 
-                <!-- Resumen -->
-                <div class="agenda-stats" id="agendaStats">
-                    <div class="agenda-stat">
-                        <span class="agenda-stat-label">Hoy</span>
-                        <strong id="agendaStatToday">0</strong>
-                        <span class="agenda-stat-hint">tareas</span>
-                    </div>
-                    <div class="agenda-stat">
-                        <span class="agenda-stat-label">Urgentes</span>
+                <div class="ws-stats" id="agendaStats">
+                    <article class="ws-stat ws-stat--urgent">
+                        <div class="ws-stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M12 9v4m0 4h.01M10.3 4.3 2.6 18a1.6 1.6 0 0 0 1.4 2.4h16a1.6 1.6 0 0 0 1.4-2.4L13.7 4.3a1.6 1.6 0 0 0-2.8 0Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+                        </div>
                         <strong id="agendaStatUrgent">0</strong>
-                    </div>
-                    <div class="agenda-stat">
-                        <span class="agenda-stat-label">En progreso</span>
-                        <strong id="agendaStatProgress">0</strong>
-                    </div>
-                    <div class="agenda-stat">
-                        <span class="agenda-stat-label">Completadas</span>
+                        <span>Urgentes</span>
+                    </article>
+                    <article class="ws-stat ws-stat--important">
+                        <div class="ws-stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none"><path d="M5 4h10l4 4v12H5V4Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><path d="M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                        </div>
+                        <strong id="agendaStatImportant">0</strong>
+                        <span>Importantes</span>
+                    </article>
+                    <article class="ws-stat ws-stat--scheduled">
+                        <div class="ws-stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+                        </div>
+                        <strong id="agendaStatScheduled">0</strong>
+                        <span>Programadas</span>
+                    </article>
+                    <article class="ws-stat ws-stat--done">
+                        <div class="ws-stat-icon">
+                            <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8.5" stroke="currentColor" stroke-width="1.7"/><path d="M8.2 12.2l2.5 2.5 5-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </div>
                         <strong id="agendaStatDone">0</strong>
-                    </div>
-                    <div class="agenda-stat agenda-stat--wide">
-                        <span class="agenda-stat-label">Tiempo estimado restante</span>
-                        <strong id="agendaStatRemaining">0m</strong>
-                    </div>
+                        <span>Completadas</span>
+                    </article>
                 </div>
 
-                <!-- Tabs + week nav -->
                 <div class="agenda-toolbar">
                     <div class="agenda-tabs" role="tablist">
-                        <button type="button" class="agenda-tab is-active" data-agenda-tab="week" role="tab">Semana</button>
-                        <button type="button" class="agenda-tab" data-agenda-tab="today" role="tab">Hoy</button>
+                        <button type="button" class="agenda-tab is-active" data-agenda-tab="week" role="tab">Vista por días</button>
+                        <button type="button" class="agenda-tab" data-agenda-tab="today" role="tab">Vista de lista</button>
                     </div>
                     <div class="agenda-week-nav" id="agendaWeekNav">
                         <button type="button" class="admin-icon-btn" id="agendaPrevWeek" title="Semana anterior">
@@ -204,32 +229,33 @@
                         <button type="button" class="admin-icon-btn" id="agendaNextWeek" title="Semana siguiente">
                             <svg viewBox="0 0 24 24" fill="none"><path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         </button>
-                        <button type="button" class="admin-btn-secondary" id="agendaThisWeekBtn">Esta semana</button>
+                        <button type="button" class="admin-btn-secondary" id="agendaThisWeekBtn">Hoy</button>
                     </div>
                 </div>
 
-                <p class="agenda-loading" id="agendaLoading">Cargando agenda...</p>
+                <p class="agenda-loading" id="agendaLoading">Cargando workspace...</p>
 
-                <!-- Vista Semana -->
-                <section class="agenda-week-board" id="agendaWeekView" aria-label="Vista semanal"></section>
+                <section class="agenda-week-board" id="agendaWeekView" aria-label="Vista por días"></section>
 
-                <!-- Vista Hoy -->
-                <section class="agenda-today" id="agendaTodayView" style="display:none;" aria-label="Vista de hoy">
-                    <div class="agenda-today-progress-card">
-                        <div class="agenda-today-progress-top">
-                            <span>Progreso del día</span>
-                            <strong id="agendaTodayPercent">0%</strong>
-                        </div>
-                        <div class="agenda-today-bar">
-                            <div class="agenda-today-bar-fill" id="agendaTodayBar" style="width:0%"></div>
-                        </div>
-                        <div class="agenda-today-meta">
-                            <span>Tiempo restante: <strong id="agendaTodayRemaining">0m</strong></span>
-                            <span>Tareas: <strong id="agendaTodayCount">0</strong></span>
-                        </div>
-                    </div>
+                <section class="agenda-today" id="agendaTodayView" style="display:none;" aria-label="Vista de lista">
                     <div class="agenda-today-list" id="agendaTodayList"></div>
                 </section>
+
+                <div class="ws-footer">
+                    <div class="ws-legend">
+                        <div class="ws-legend-item"><span class="ws-dot ws-dot--urgent"></span><div><strong>Urgente</strong><span>Requiere atención inmediata</span></div></div>
+                        <div class="ws-legend-item"><span class="ws-dot ws-dot--important"></span><div><strong>Importante</strong><span>Alta prioridad</span></div></div>
+                        <div class="ws-legend-item"><span class="ws-dot ws-dot--scheduled"></span><div><strong>Programada</strong><span>Planificada</span></div></div>
+                        <div class="ws-legend-item"><span class="ws-dot ws-dot--done"></span><div><strong>Completada</strong><span>Tarea finalizada</span></div></div>
+                    </div>
+                    <aside class="ws-tip">
+                        <div class="ws-tip-head">
+                            <span class="ws-tip-icon">★</span>
+                            <strong>Consejo</strong>
+                        </div>
+                        <p id="wsTipText">Enfócate en completar tus tareas urgentes primero para mantener tu productividad al máximo.</p>
+                    </aside>
+                </div>
 
             </main>
 
@@ -277,10 +303,10 @@
                     <div class="admin-field">
                         <label for="agendaTaskPriority">Prioridad</label>
                         <select id="agendaTaskPriority">
-                            <option value="critical">Crítica</option>
-                            <option value="high">Alta</option>
-                            <option value="medium" selected>Media</option>
-                            <option value="low">Baja</option>
+                            <option value="critical">Urgente</option>
+                            <option value="high">Importante</option>
+                            <option value="medium" selected>Programada</option>
+                            <option value="low">Programada (baja)</option>
                         </select>
                     </div>
                     <div class="admin-field">

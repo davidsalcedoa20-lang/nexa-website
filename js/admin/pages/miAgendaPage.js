@@ -17,16 +17,15 @@ import { listProjects } from '../../services/projectService.js';
 import {
     AGENDA_PRIORITY_LABELS,
     AGENDA_STATUS_LABELS,
-    WEEKDAY_LABELS,
+    WORKWEEK_LABELS,
     startOfWeek,
     addDays,
     toISODate,
     formatAgendaTime,
     formatMinutes,
-    formatRemainingMinutes,
     sortAgendaTasks,
     computeAgendaStats,
-    computeDayProgress,
+    getAgendaCardTone,
     showAgendaToast,
     escapeHtml
 } from '../../components/agendaUi.js';
@@ -124,63 +123,78 @@ function renderAll() {
 
 function renderStats() {
     const stats = computeAgendaStats(tasks);
-    el('agendaStatToday').textContent = String(stats.todayCount);
-    el('agendaStatUrgent').textContent = String(stats.urgentCount);
-    el('agendaStatProgress').textContent = String(stats.inProgressCount);
-    el('agendaStatDone').textContent = String(stats.completedCount);
-    el('agendaStatRemaining').textContent = formatRemainingMinutes(stats.remainingMinutes);
+    if (el('agendaStatUrgent')) el('agendaStatUrgent').textContent = String(stats.urgentCount);
+    if (el('agendaStatImportant')) el('agendaStatImportant').textContent = String(stats.importantCount);
+    if (el('agendaStatScheduled')) el('agendaStatScheduled').textContent = String(stats.scheduledCount);
+    if (el('agendaStatDone')) el('agendaStatDone').textContent = String(stats.completedCount);
+    renderFocusCard(stats);
+}
+
+function renderFocusCard(stats) {
+    const percent = stats.focusPercent || 0;
+    const circumference = 238.76;
+    const offset = circumference - (percent / 100) * circumference;
+    if (el('wsFocusPercent')) el('wsFocusPercent').textContent = `${percent}%`;
+    if (el('wsFocusCount')) el('wsFocusCount').textContent = `${stats.focusDone} de ${stats.focusTotal}`;
+    if (el('wsFocusProgress')) el('wsFocusProgress').style.strokeDashoffset = String(offset);
 }
 
 function renderWeekLabel() {
-    const end = addDays(weekStart, 6);
-    const opts = { day: 'numeric', month: 'short' };
+    const end = addDays(weekStart, 4);
+    const opts = { day: 'numeric', month: 'long' };
     el('agendaWeekLabel').textContent =
-        `${weekStart.toLocaleDateString('es-CO', opts)} — ${end.toLocaleDateString('es-CO', { ...opts, year: 'numeric' })}`;
+        `${weekStart.toLocaleDateString('es-CO', opts)} – ${end.toLocaleDateString('es-CO', { ...opts, year: 'numeric' })}`;
 }
 
 function renderWeekBoard() {
     const board = el('agendaWeekView');
     const todayIso = toISODate(new Date());
 
-    board.innerHTML = WEEKDAY_LABELS.map((label, index) => {
+    board.innerHTML = WORKWEEK_LABELS.map((label, index) => {
         const dayDate = addDays(weekStart, index);
         const iso = toISODate(dayDate);
         const dayTasks = sortAgendaTasks(tasks.filter((t) => t.task_date === iso));
         const isToday = iso === todayIso;
+        const dateLabel = dayDate.toLocaleDateString('es-CO', { day: 'numeric', month: 'short' });
 
         return `
             <div class="agenda-day-col ${isToday ? 'is-today' : ''}" data-date="${iso}">
                 <div class="agenda-day-header">
-                    <strong>${label}</strong>
-                    <span>${dayDate.getDate()}</span>
+                    <div>
+                        <strong>${label}</strong>
+                        <span class="agenda-day-date">${dateLabel}</span>
+                    </div>
+                    <span class="agenda-day-count">${dayTasks.length}</span>
                 </div>
                 <div class="agenda-day-list" data-drop-date="${iso}">
                     ${dayTasks.map((task) => renderCard(task)).join('') || '<span class="agenda-day-empty">Sin tareas</span>'}
                 </div>
+                <button type="button" class="agenda-add-day-btn" data-add-day="${iso}">+ Agregar tarea</button>
             </div>
         `;
     }).join('');
 
     wireDragAndDrop();
     wireCardMenus();
+    wireAddDayButtons();
+}
+
+function wireAddDayButtons() {
+    document.querySelectorAll('[data-add-day]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            openTaskModal(null, btn.getAttribute('data-add-day'));
+        });
+    });
 }
 
 function renderTodayView() {
     const todayIso = toISODate(new Date());
     const todayTasks = sortAgendaTasks(tasks.filter((t) => t.task_date === todayIso));
-    const progress = computeDayProgress(todayTasks);
-
-    el('agendaTodayPercent').textContent = `${progress.percent}%`;
-    el('agendaTodayBar').style.width = `${progress.percent}%`;
-    el('agendaTodayRemaining').textContent = formatRemainingMinutes(progress.remainingMinutes);
-    el('agendaTodayCount').textContent = String(progress.total);
-
     const list = el('agendaTodayList');
     if (!todayTasks.length) {
         list.innerHTML = '<p class="admin-empty-inline">No tienes tareas para hoy. ¡Buen momento para planificar!</p>';
         return;
     }
-
     list.innerHTML = todayTasks.map((task) => renderCard(task, { large: true })).join('');
     wireCardMenus();
 }
@@ -189,32 +203,30 @@ function renderCard(task, { large = false } = {}) {
     const projectName = task.projects?.name || '';
     const tags = (task.tags || []).filter(Boolean);
     const shortDesc = (task.description || '').trim();
-    const desc = shortDesc.length > 90 ? `${shortDesc.slice(0, 90)}…` : shortDesc;
-    const done = task.status === 'completed';
+    const desc = shortDesc.length > 100 ? `${shortDesc.slice(0, 100)}…` : shortDesc;
+    const tone = getAgendaCardTone(task);
+    const timeLabel = task.task_time ? formatAgendaTime(task.task_time) : '';
 
     return `
-        <article class="agenda-card priority-${task.priority} status-${task.status} ${large ? 'is-large' : ''} ${done ? 'is-done' : ''}"
+        <article class="agenda-card tone-${tone.key} ${large ? 'is-large' : ''}"
             draggable="true"
             data-task-id="${task.id}"
             data-date="${task.task_date}">
             <div class="agenda-card-top">
-                <span class="agenda-priority-dot" title="${AGENDA_PRIORITY_LABELS[task.priority]}"></span>
-                <strong class="agenda-card-title">${escapeHtml(task.title)}</strong>
-                <button type="button" class="agenda-card-menu-btn" data-open-menu="${task.id}" aria-label="Menú">⋯</button>
+                <span class="agenda-tone-label">${tone.label}</span>
+                <div class="agenda-card-top-right">
+                    ${timeLabel ? `<span class="agenda-card-time">${timeLabel}</span>` : ''}
+                    ${tone.key === 'done' ? '<span class="agenda-check">✓</span>' : ''}
+                    <button type="button" class="agenda-card-menu-btn" data-open-menu="${task.id}" aria-label="Menú">⋯</button>
+                </div>
             </div>
-            ${projectName ? `<span class="agenda-card-project">${escapeHtml(projectName)}</span>` : ''}
-            <div class="agenda-card-meta">
-                ${task.task_time ? `<span>${formatAgendaTime(task.task_time)}</span>` : ''}
-                ${task.estimated_minutes ? `<span>${formatMinutes(task.estimated_minutes)}</span>` : ''}
-                <span class="agenda-card-priority-label">${AGENDA_PRIORITY_LABELS[task.priority]}</span>
+            <strong class="agenda-card-title">${escapeHtml(task.title)}</strong>
+            ${projectName ? `<span class="agenda-card-project"><svg viewBox="0 0 24 24" fill="none"><path d="M3 7l9-4 9 4-9 4-9-4Z" stroke="currentColor" stroke-width="1.6"/><path d="M3 12l9 4 9-4" stroke="currentColor" stroke-width="1.6"/></svg>${escapeHtml(projectName)}</span>` : ''}
+            <div class="agenda-card-footer">
+                <span class="agenda-status-pill status-${task.status}">${AGENDA_STATUS_LABELS[task.status]}</span>
+                ${task.estimated_minutes ? `<span class="agenda-card-mins">${formatMinutes(task.estimated_minutes)}</span>` : ''}
             </div>
             ${tags.length ? `<div class="agenda-card-tags">${tags.map((t) => `<span>${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-            <div class="agenda-card-footer">
-                <span class="agenda-status-pill status-${task.status}">
-                    ${done ? '<span class="agenda-check">✓</span>' : ''}
-                    ${AGENDA_STATUS_LABELS[task.status]}
-                </span>
-            </div>
             ${desc ? `<p class="agenda-card-desc">${escapeHtml(desc)}</p>` : ''}
         </article>
     `;
@@ -388,7 +400,7 @@ el('agendaCardMenu')?.addEventListener('click', async (e) => {
 /* ---------------------------------------------------------
    Modal CRUD
 --------------------------------------------------------- */
-function openTaskModal(task = null) {
+function openTaskModal(task = null, presetDate = null) {
     editingTaskId = task?.id || null;
     el('agendaTaskModalTitle').textContent = task ? 'Editar tarea' : 'Nueva tarea';
     el('agendaTaskSubmitBtn').textContent = task ? 'Guardar cambios' : 'Crear tarea';
@@ -397,7 +409,7 @@ function openTaskModal(task = null) {
     el('agendaTaskTitle').value = task?.title || '';
     el('agendaTaskDescription').value = task?.description || '';
     el('agendaTaskProject').value = task?.project_id || '';
-    el('agendaTaskDate').value = task?.task_date || toISODate(new Date());
+    el('agendaTaskDate').value = task?.task_date || presetDate || toISODate(new Date());
     el('agendaTaskTime').value = task?.task_time ? String(task.task_time).slice(0, 5) : '';
     el('agendaTaskMinutes').value = task?.estimated_minutes || '';
     el('agendaTaskPriority').value = task?.priority || 'medium';
@@ -485,6 +497,16 @@ el('agendaTaskDeleteBtn')?.addEventListener('click', async () => {
    UI chrome
 --------------------------------------------------------- */
 function wireUi() {
+    const tips = [
+        'Enfócate en completar tus tareas urgentes primero para mantener tu productividad al máximo.',
+        'Agrupa las tareas similares el mismo día para reducir el cambio de contexto.',
+        'Si una tarea toma más de 90 minutos, divídela en bloques más pequeños.',
+        'Revisa tu Workspace cada mañana y reprograma lo que ya no es prioritario.'
+    ];
+    if (el('wsTipText')) {
+        el('wsTipText').textContent = tips[Math.floor(Math.random() * tips.length)];
+    }
+
     el('agendaNewTaskBtn')?.addEventListener('click', () => openTaskModal(null));
 
     document.querySelectorAll('[data-agenda-tab]').forEach((btn) => {
