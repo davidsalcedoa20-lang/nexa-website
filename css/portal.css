@@ -1596,3 +1596,148 @@ body.dash-page{
     color:#8a8a8a;
     font-size:11.5px;
 }
+/* ==========================================================
+   GOOGLE DRIVE — Documentos del proyecto (portal cliente)
+   ========================================================== */
+.pd-drive-root{ margin:18px 0; }
+.pd-drive-card{
+    padding:20px; border-radius:18px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+}
+.pd-drive-card-header{ display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.pd-drive-card-title{ display:flex; align-items:center; gap:12px; }
+.pd-drive-card-title h3{ margin:0; font-size:15px; color:#fff; }
+.pd-drive-card-subtitle{ margin:2px 0 0; font-size:12px; color:#8a8a8a; }
+.pd-drive-gicon{ width:28px; height:28px; }
+.pd-drive-status-badge{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:5px 11px; border-radius:999px; font-size:12px; font-weight:600;
+}
+.pd-drive-status-dot{ width:7px; height:7px; border-radius:50%; background:currentColor; }
+.pd-drive-status-badge.is-connected{ color:#7DDBA8; background:rgba(80,200,140,.14); border:1px solid rgba(80,200,140,.35); }
+.pd-drive-status-badge.is-disconnected{ color:#9a9a9a; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1); }
+.pd-drive-empty-state p{ margin:0 0 8px; color:#9a9a9a; font-size:13.5px; }
+.pd-drive-hint{ margin:0; font-size:12px; color:#7a7a7a; }
+.pd-drive-folder-name{ display:block; color:#fff; margin-bottom:4px; }
+.pd-drive-folder-path{ margin:0; font-size:12.5px; color:#8a8a8a; }
+.pd-drive-folder-chips{ display:flex; gap:10px; overflow-x:auto; margin:12px 0; }
+.pd-drive-chip{
+    display:flex; align-items:center; gap:10px; min-width:150px;
+    padding:10px 12px; border-radius:14px; background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08); color:inherit; font:inherit; cursor:pointer;
+}
+.pd-drive-chip strong{ display:block; color:#fff; font-size:13px; }
+.pd-drive-chip small{ color:#8a8a8a; font-size:11px; }
+.pd-drive-card-actions{ display:flex; flex-wrap:wrap; gap:8px; }
+.pd-drive-file-ico{ width:34px; height:34px; border-radius:10px; display:inline-flex; align-items:center; justify-content:center; }
+.pd-drive-file-ico svg{ width:16px; height:16px; }
+.pd-drive-file-ico--folder{ color:#B99CFF; background:rgba(140,82,255,.16); }
+.pd-drive-empty{ color:#8a8a8a; text-align:center; }
+.pd-drive-skeleton{ display:flex; gap:8px; }
+.pd-drive-skel-chip{ min-width:150px; height:58px; border-radius:12px; background:rgba(255,255,255,.06); }
+
+/* Aliases para componentes Drive compartidos (usan clases admin-*) */
+.admin-modal-overlay{
+    position:fixed; inset:0; z-index:100;
+    display:none; align-items:center; justify-content:center;
+    padding:20px; background:rgba(0,0,0,.65); backdrop-filter:blur(6px);
+}
+.admin-modal-overlay.active{ display:flex; }
+.admin-modal{
+    width:min(720px, 94vw); max-height:min(90vh, 900px); overflow:auto;
+    border-radius:20px; background:#141416;
+    border:1px solid rgba(255,255,255,.1);
+    box-shadow:0 24px 60px rgba(0,0,0,.5);
+}
+.admin-modal-header{
+    display:flex; align-items:flex-start; justify-content:space-between;
+    gap:12px; padding:18px 22px 12px;
+}
+.admin-modal-header h3{ margin:0; color:#fff; font-size:17px; }
+.admin-modal-close{
+    width:36px; height:36px; border-radius:10px;
+    border:1px solid rgba(255,255,255,.1); background:transparent; color:#9a9a9a; cursor:pointer;
+    display:inline-flex; align-items:center; justify-content:center;
+}
+.admin-modal-close svg{ width:15px; height:15px; }
+.admin-modal-actions{
+    display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end;
+    padding:12px 22px 20px;
+}
+.admin-btn-primary,
+.admin-btn-secondary{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    min-height:40px; padding:0 14px; border-radius:12px;
+    font:inherit; font-size:13px; font-weight:600; cursor:pointer; text-decoration:none;
+}
+.admin-btn-primary{
+    border:0; color:#fff;
+    background:linear-gradient(135deg, #8C52FF, #2D8CFF);
+}
+.admin-btn-secondary{
+    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04); color:#e8e8e8;
+}
+.admin-icon-btn{
+    width:38px; height:38px; border-radius:11px;
+    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03);
+    color:#cfcfcf; display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+}
+.admin-icon-btn svg{ width:16px; height:16px; }
+.admin-form-error{ display:none; color:#FF8A9A; font-size:12.5px; padding:0 22px 12px; }
+.admin-form-error.active{ display:block; }
+
+.pd-drive-modal{ max-width:720px; width:min(720px, 94vw); }
+.pd-drive-browser-modal{ max-width:980px; width:min(980px, 96vw); }
+.pd-drive-modal-title{ display:flex; gap:12px; align-items:flex-start; }
+.pd-drive-modal-sub{ margin:4px 0 0; font-size:12.5px; color:#8a8a8a; }
+.pd-drive-browser-toolbar,
+.pd-drive-selector-toolbar{ display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:0 22px 12px; }
+.pd-drive-search{
+    flex:1; min-width:160px; height:40px; border-radius:12px;
+    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04);
+    color:#fff; padding:0 12px; font:inherit; font-size:13px;
+}
+.pd-drive-filters{ display:flex; flex-wrap:wrap; gap:6px; }
+.pd-drive-filter{
+    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03);
+    color:#9a9a9a; border-radius:999px; padding:6px 11px; font:inherit; font-size:12px; cursor:pointer;
+}
+.pd-drive-filter.is-active{ color:#fff; border-color:rgba(140,82,255,.4); background:rgba(140,82,255,.14); }
+.pd-drive-browser-table-wrap{ padding:0 22px 18px; }
+.pd-drive-browser-head, .pd-drive-browser-row{
+    display:grid; grid-template-columns:minmax(160px,2fr) .8fr .7fr .9fr .9fr auto;
+    gap:10px; align-items:center;
+}
+.pd-drive-browser-head{ padding:0 8px 8px; font-size:11px; text-transform:uppercase; color:#6a6a6a; }
+.pd-drive-browser-list{ max-height:min(52vh,480px); overflow:auto; display:flex; flex-direction:column; gap:8px; }
+.pd-drive-browser-row{
+    padding:10px 8px; border-radius:12px; border:1px solid rgba(255,255,255,.06);
+    background:rgba(255,255,255,.025); font-size:12.5px; color:#b8b8b8;
+}
+.pd-drive-browser-name{
+    display:flex; align-items:center; gap:10px; border:0; background:transparent;
+    color:#fff; font:inherit; font-weight:600; text-align:left; cursor:pointer; min-width:0;
+}
+.pd-drive-browser-actions{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+.pd-drive-mini-btn{
+    display:inline-flex; padding:5px 8px; border-radius:8px;
+    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.04);
+    color:#cfcfcf; font:inherit; font-size:11.5px; text-decoration:none; cursor:pointer;
+}
+.pd-drive-preview-body{ padding:0 22px 8px; }
+.pd-drive-preview-hero{
+    min-height:160px; display:flex; align-items:center; justify-content:center;
+    border-radius:14px; border:1px solid rgba(255,255,255,.07); background:rgba(255,255,255,.03); margin-bottom:14px;
+}
+.pd-drive-preview-meta{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 10px; }
+.pd-drive-preview-meta dt{ font-size:11px; color:#6a6a6a; text-transform:uppercase; }
+.pd-drive-preview-meta dd{ margin:0; color:#fff; font-weight:600; }
+.pd-drive-file-ico--image{ color:#6EB0FF; background:rgba(45,140,255,.14); }
+.pd-drive-file-ico--video{ color:#FF8A9A; background:rgba(255,90,110,.14); }
+.pd-drive-file-ico--pdf{ color:#FFB074; background:rgba(255,159,90,.14); }
+.pd-drive-file-ico--doc{ color:#7DDBA8; background:rgba(80,200,140,.14); }
+@media screen and (max-width:768px){
+    .pd-drive-browser-head{ display:none; }
+    .pd-drive-browser-row{ grid-template-columns:1fr; }
+}

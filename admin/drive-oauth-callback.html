@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conectando Google Drive… | NEXA Hub</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body.pd-drive-oauth-page {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0b0b0d;
+            color: #fff;
+            font-family: Poppins, system-ui, sans-serif;
+            padding: 24px;
+        }
+        .pd-drive-oauth-box {
+            max-width: 420px;
+            text-align: center;
+            padding: 28px;
+            border-radius: 18px;
+            background: rgba(255,255,255,.04);
+            border: 1px solid rgba(255,255,255,.08);
+        }
+        .pd-drive-oauth-box p { color: rgba(255,255,255,.6); font-size: 14px; line-height: 1.6; margin: 0; }
+        .pd-drive-oauth-box .error { color: #FF8A9A; }
+    </style>
+</head>
+<body class="pd-drive-oauth-page" data-auth-guard="admin">
+    <div class="pd-drive-oauth-box">
+        <h1 style="font-size:18px;margin:0 0 10px;">Google Drive</h1>
+        <p id="oauthStatus">Completando la autorización…</p>
+    </div>
+
+    <script src="../js/vendor/supabase-js.min.js"></script>
+    <script src="../js/portal.js"></script>
+    <script type="module">
+        import { exchangeGoogleOAuthCode } from '../js/services/driveApiService.js';
+
+        const statusEl = document.getElementById('oauthStatus');
+        const params = new URLSearchParams(window.location.search);
+        const code = params.get('code');
+        const state = params.get('state');
+        const oauthError = params.get('error');
+
+        try {
+            if (oauthError) throw new Error(`Google rechazó la autorización: ${oauthError}`);
+            if (!code || !state) throw new Error('Callback incompleto. Vuelve al proyecto e intenta conectar de nuevo.');
+
+            const result = await exchangeGoogleOAuthCode({ code, state });
+            statusEl.textContent = 'Cuenta conectada. Redirigiendo…';
+            const fallback = result.projectId
+                ? `proyecto-detalle.html?id=${encodeURIComponent(result.projectId)}&drive=connected`
+                : 'proyectos.html?drive=connected';
+            window.location.replace(result.returnUrl || fallback);
+        } catch (error) {
+            statusEl.className = 'error';
+            statusEl.textContent = error.message || 'No se pudo completar la conexión.';
+        }
+    </script>
+</body>
+</html>

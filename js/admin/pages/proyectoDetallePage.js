@@ -20,6 +20,7 @@ import {
     formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining,
     getProjectClientProfile, populateResponsibleSelect, resolveTaskAssignment, getTaskResponsibleMeta
 } from '../../components/projectUi.js';
+import { mountProjectDriveCard } from '../../components/drive/ProjectDriveCard.js';
 
 const TEAM_ACCENT_COLORS = ['#5B9DFF', '#35D0C8', '#B388FF', '#FF9F5A', '#FF6B9D', '#7CDB6A'];
 let pendingLogoFile = null;
@@ -142,6 +143,13 @@ async function refreshAll() {
 
     renderHeader(currentProject);
     renderAssignedTeam(currentStructure.allTasks);
+    mountProjectDriveCard(el('pdDriveRoot'), {
+        project: currentProject,
+        mode: 'admin',
+        onProjectChange: (updated) => {
+            currentProject = { ...currentProject, ...updated };
+        }
+    });
     renderProgressCards(currentProject, currentStructure.stages);
     renderTimeline(currentStructure.stages);
     renderBlocks(currentStructure.stages, currentStructure.unassignedPhases, { animate: false });

@@ -26,6 +26,7 @@ import {
     formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining,
     getTaskResponsibleMeta
 } from '../../components/projectUi.js';
+import { mountProjectDriveCard } from '../../components/drive/ProjectDriveCard.js';
 
 const params = new URLSearchParams(window.location.search);
 const projectId = params.get('id');
@@ -83,6 +84,13 @@ async function refreshAll() {
     ensureSelectedStage(currentStructure.stages, currentStructure.unassignedPhases);
 
     renderHeader(currentProject);
+    mountProjectDriveCard(document.getElementById('pdDriveRoot'), {
+        project: currentProject,
+        mode: 'client',
+        onProjectChange: (updated) => {
+            currentProject = { ...currentProject, ...updated };
+        }
+    });
     renderStageProgress(currentStructure.stages);
     renderTimelineChips(currentStructure.stages);
     renderPhases(currentStructure.stages, currentStructure.unassignedPhases, { animate: false });

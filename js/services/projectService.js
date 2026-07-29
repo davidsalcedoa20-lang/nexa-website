@@ -8,6 +8,8 @@ const LIST_SELECT = `
     progress_percent, client_progress_percent, nexa_progress_percent,
     color_hex, secondary_color_hex, archived_at, created_at, workspace_id, project_type_id, responsible_id,
     logo_url, cover_subtitle, client_display_name, services,
+    drive_folder_id, drive_folder_name, drive_folder_url, drive_connected,
+    drive_connected_by, drive_connected_at, drive_files_count, drive_folders_count, drive_last_synced_at,
     project_types ( id, name, slug, color_hex ),
     workspaces ( id, name, client_id, profiles:client_id ( id, full_name, email ) ),
     responsible:responsible_id ( id, full_name )

@@ -3624,3 +3624,369 @@ body.admin-page{
     .ws-stats{ grid-template-columns:1fr; }
     .ws-title-block{ flex-direction:column; }
 }
+/* ==========================================================
+   GOOGLE DRIVE — Documentos del proyecto
+   ========================================================== */
+.pd-drive-root{ margin-top:18px; animation:pdCoverIn .45s ease .04s both; }
+.pd-drive-card{
+    padding:20px;
+    border-radius:18px;
+    background:linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    box-shadow:0 16px 36px rgba(0,0,0,.2);
+}
+.pd-drive-card-header{
+    display:flex;
+    align-items:flex-start;
+    justify-content:space-between;
+    gap:14px;
+    flex-wrap:wrap;
+    margin-bottom:14px;
+}
+.pd-drive-card-title{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    min-width:0;
+}
+.pd-drive-card-title h3{
+    margin:0;
+    font-size:15px;
+    font-weight:650;
+    color:#fff;
+}
+.pd-drive-card-subtitle{
+    margin:2px 0 0;
+    font-size:12px;
+    color:rgba(255,255,255,.45);
+}
+.pd-drive-gicon{ width:28px; height:28px; flex-shrink:0; }
+.pd-drive-status-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    padding:5px 11px;
+    border-radius:999px;
+    font-size:12px;
+    font-weight:600;
+}
+.pd-drive-status-dot{
+    width:7px; height:7px; border-radius:50%;
+    background:currentColor;
+}
+.pd-drive-status-badge.is-connected{
+    color:#7DDBA8;
+    background:rgba(80,200,140,.14);
+    border:1px solid rgba(80,200,140,.35);
+}
+.pd-drive-status-badge.is-disconnected{
+    color:rgba(255,255,255,.55);
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.1);
+}
+.pd-drive-empty-state{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    padding:8px 0 2px;
+}
+.pd-drive-empty-state > p{
+    margin:0;
+    color:rgba(255,255,255,.55);
+    font-size:13.5px;
+}
+.pd-drive-hint{
+    margin:0;
+    font-size:12px;
+    color:rgba(255,255,255,.4);
+    line-height:1.5;
+}
+.pd-drive-card-meta{ margin-bottom:14px; }
+.pd-drive-folder-name{
+    display:block;
+    font-size:14.5px;
+    color:#fff;
+    margin-bottom:4px;
+}
+.pd-drive-folder-path{
+    margin:0;
+    font-size:12.5px;
+    color:rgba(255,255,255,.45);
+    line-height:1.5;
+}
+.pd-drive-folder-chips{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+    padding-bottom:8px;
+    margin-bottom:14px;
+    scrollbar-width:thin;
+}
+.pd-drive-chip{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    min-width:150px;
+    padding:10px 12px;
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.08);
+    color:inherit;
+    font:inherit;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color .2s, background .2s, transform .2s;
+}
+.pd-drive-chip:hover{
+    background:rgba(255,255,255,.05);
+    border-color:rgba(140,82,255,.35);
+    transform:translateY(-1px);
+}
+.pd-drive-chip strong{
+    display:block;
+    font-size:13px;
+    color:#fff;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    max-width:140px;
+}
+.pd-drive-chip small{
+    display:block;
+    font-size:11px;
+    color:rgba(255,255,255,.4);
+}
+.pd-drive-card-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px;
+    align-items:center;
+}
+.pd-drive-more-wrap{ position:relative; }
+.pd-drive-more-menu{
+    position:absolute;
+    top:calc(100% + 8px);
+    right:0;
+    min-width:210px;
+    padding:8px;
+    border-radius:14px;
+    background:#141416;
+    border:1px solid rgba(255,255,255,.1);
+    box-shadow:0 18px 40px rgba(0,0,0,.45);
+    z-index:30;
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+}
+.pd-drive-more-menu[hidden]{ display:none !important; }
+.pd-drive-more-menu button{
+    border:0; background:transparent; color:#d8d8d8;
+    font:inherit; font-size:13px; text-align:left;
+    padding:10px 12px; border-radius:9px; cursor:pointer;
+}
+.pd-drive-more-menu button:hover{ background:rgba(255,255,255,.06); color:#fff; }
+.pd-drive-more-menu button.danger:hover{ background:rgba(255,90,90,.1); color:#FF6B81; }
+
+.pd-drive-file-ico{
+    width:34px; height:34px; border-radius:10px;
+    display:inline-flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.pd-drive-file-ico svg{ width:16px; height:16px; }
+.pd-drive-file-ico--folder{ color:#B99CFF; background:rgba(140,82,255,.16); }
+.pd-drive-file-ico--image{ color:#6EB0FF; background:rgba(45,140,255,.14); }
+.pd-drive-file-ico--video{ color:#FF8A9A; background:rgba(255,90,110,.14); }
+.pd-drive-file-ico--pdf{ color:#FFB074; background:rgba(255,159,90,.14); }
+.pd-drive-file-ico--doc{ color:#7DDBA8; background:rgba(80,200,140,.14); }
+
+.pd-drive-modal{ max-width:720px; width:min(720px, 94vw); }
+.pd-drive-browser-modal{ max-width:980px; width:min(980px, 96vw); }
+.pd-drive-modal-title{
+    display:flex; align-items:flex-start; gap:12px; min-width:0;
+}
+.pd-drive-modal-title h3{ margin:0; font-size:16px; }
+.pd-drive-modal-sub{
+    margin:4px 0 0;
+    font-size:12.5px;
+    color:rgba(255,255,255,.45);
+}
+.pd-drive-selector-toolbar,
+.pd-drive-browser-toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    padding:0 22px 12px;
+}
+.pd-drive-selector-path{ font-size:13px; color:rgba(255,255,255,.7); font-weight:600; }
+.pd-drive-selector-list,
+.pd-drive-browser-list{
+    max-height:min(52vh, 480px);
+    overflow:auto;
+    padding:0 22px 18px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.pd-drive-selector-item{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    width:100%;
+    padding:10px 12px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.07);
+    background:rgba(255,255,255,.03);
+    color:inherit;
+    font:inherit;
+    text-align:left;
+    cursor:pointer;
+    transition:border-color .2s, background .2s;
+}
+.pd-drive-selector-item:hover,
+.pd-drive-selector-item.is-selected{
+    border-color:rgba(140,82,255,.4);
+    background:rgba(140,82,255,.08);
+}
+.pd-drive-selector-item-body{ flex:1; min-width:0; }
+.pd-drive-selector-item-body strong{
+    display:block; color:#fff; font-size:13.5px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.pd-drive-selector-item-body small{ color:rgba(255,255,255,.4); font-size:11.5px; }
+.pd-drive-selector-enter{
+    width:28px; height:28px; border-radius:8px;
+    display:inline-flex; align-items:center; justify-content:center;
+    color:rgba(255,255,255,.55); background:rgba(255,255,255,.05);
+}
+.pd-drive-search{
+    flex:1;
+    min-width:180px;
+    height:40px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.04);
+    color:#fff;
+    padding:0 12px;
+    font:inherit;
+    font-size:13px;
+}
+.pd-drive-search:focus{
+    outline:none;
+    border-color:rgba(140,82,255,.5);
+    box-shadow:0 0 0 3px rgba(140,82,255,.12);
+}
+.pd-drive-filters{ display:flex; flex-wrap:wrap; gap:6px; }
+.pd-drive-filter{
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.03);
+    color:rgba(255,255,255,.65);
+    border-radius:999px;
+    padding:6px 11px;
+    font:inherit;
+    font-size:12px;
+    cursor:pointer;
+    transition:background .2s, border-color .2s, color .2s;
+}
+.pd-drive-filter.is-active,
+.pd-drive-filter:hover{
+    color:#fff;
+    border-color:rgba(140,82,255,.4);
+    background:rgba(140,82,255,.14);
+}
+.pd-drive-browser-table-wrap{ padding:0 22px 18px; }
+.pd-drive-browser-head,
+.pd-drive-browser-row{
+    display:grid;
+    grid-template-columns:minmax(180px, 2fr) .8fr .7fr .9fr .9fr auto;
+    gap:10px;
+    align-items:center;
+}
+.pd-drive-browser-head{
+    padding:0 8px 8px;
+    font-size:11px;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.35);
+}
+.pd-drive-browser-row{
+    padding:10px 8px;
+    border-radius:12px;
+    border:1px solid rgba(255,255,255,.06);
+    background:rgba(255,255,255,.025);
+    font-size:12.5px;
+    color:rgba(255,255,255,.7);
+}
+.pd-drive-browser-row:hover{
+    border-color:rgba(255,255,255,.12);
+    background:rgba(255,255,255,.04);
+}
+.pd-drive-browser-name{
+    display:flex; align-items:center; gap:10px;
+    border:0; background:transparent; color:#fff;
+    font:inherit; font-weight:600; text-align:left; cursor:pointer; min-width:0;
+}
+.pd-drive-browser-name span{
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.pd-drive-browser-actions{ display:flex; flex-wrap:wrap; gap:6px; justify-content:flex-end; }
+.pd-drive-mini-btn{
+    display:inline-flex; align-items:center;
+    padding:5px 8px; border-radius:8px;
+    border:1px solid rgba(255,255,255,.1);
+    background:rgba(255,255,255,.04);
+    color:rgba(255,255,255,.75);
+    font:inherit; font-size:11.5px; text-decoration:none; cursor:pointer;
+}
+.pd-drive-mini-btn:hover{ color:#fff; border-color:rgba(140,82,255,.35); }
+.pd-drive-empty{
+    margin:12px 0;
+    text-align:center;
+    color:rgba(255,255,255,.4);
+    font-size:13px;
+}
+.pd-drive-skeleton{ display:flex; flex-direction:column; gap:8px; width:100%; }
+.pd-drive-skeleton--chips{ flex-direction:row; }
+.pd-drive-skel-row,
+.pd-drive-skel-chip{
+    height:48px;
+    border-radius:12px;
+    background:linear-gradient(90deg, rgba(255,255,255,.04), rgba(255,255,255,.08), rgba(255,255,255,.04));
+    background-size:200% 100%;
+    animation:pdDriveSkel 1.2s ease infinite;
+}
+.pd-drive-skel-chip{ min-width:150px; height:58px; }
+@keyframes pdDriveSkel{
+    0%{ background-position:100% 0; }
+    100%{ background-position:-100% 0; }
+}
+.pd-drive-preview-body{ padding:0 22px 8px; }
+.pd-drive-preview-hero{
+    display:flex; align-items:center; justify-content:center;
+    min-height:160px; border-radius:14px;
+    background:rgba(255,255,255,.03);
+    border:1px solid rgba(255,255,255,.07);
+    margin-bottom:14px; overflow:hidden;
+}
+.pd-drive-preview-thumb{ max-width:100%; max-height:220px; object-fit:contain; }
+.pd-drive-preview-meta{
+    display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:0 0 10px;
+}
+.pd-drive-preview-meta dt{
+    font-size:11px; text-transform:uppercase; letter-spacing:.04em;
+    color:rgba(255,255,255,.35); margin-bottom:3px;
+}
+.pd-drive-preview-meta dd{ margin:0; color:#fff; font-size:13px; font-weight:600; }
+.pd-drive-preview-note{ margin:0; font-size:12.5px; color:rgba(255,255,255,.45); }
+.pd-drive-preview-actions{ flex-wrap:wrap; }
+
+@media screen and (max-width:768px){
+    .pd-drive-browser-head{ display:none; }
+    .pd-drive-browser-row{
+        grid-template-columns:1fr;
+        gap:8px;
+    }
+    .pd-drive-browser-actions{ justify-content:flex-start; }
+    .pd-drive-preview-meta{ grid-template-columns:1fr; }
+}
