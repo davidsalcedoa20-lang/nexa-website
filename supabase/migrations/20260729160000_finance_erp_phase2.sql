@@ -1,29 +1,78 @@
 -- ==========================================================
 -- NEXA HUB — ERP Financiero (Fase 2 · Contabilidad operativa)
 -- ==========================================================
--- Extiende Fase 1: IVA, descripción, comprobantes, adjuntos,
--- soft delete, auditoría, catálogos ampliados. RLS por admin_id.
+-- Extiende Fase 1. Idempotente: segura ante re-ejecución.
 -- ==========================================================
 
 -- ----------------------------------------------------------
--- Columnas operativas en ingresos / gastos
+-- Columnas operativas (una a una, IF NOT EXISTS)
 -- ----------------------------------------------------------
 alter table public.finance_incomes
-    add column if not exists description text,
-    add column if not exists tax_amount numeric(18, 2) not null default 0
-        check (tax_amount >= 0),
-    add column if not exists voucher_number text,
-    add column if not exists created_by uuid references public.profiles (id) on delete set null,
+    add column if not exists description text;
+
+alter table public.finance_incomes
+    add column if not exists tax_amount numeric(18, 2);
+
+alter table public.finance_incomes
+    add column if not exists voucher_number text;
+
+alter table public.finance_incomes
+    add column if not exists created_by uuid references public.profiles (id) on delete set null;
+
+alter table public.finance_incomes
     add column if not exists deleted_at timestamptz;
 
+update public.finance_incomes
+set tax_amount = 0
+where tax_amount is null;
+
+alter table public.finance_incomes
+    alter column tax_amount set default 0;
+
+alter table public.finance_incomes
+    alter column tax_amount set not null;
+
+do $$ begin
+    alter table public.finance_incomes
+        add constraint finance_incomes_tax_amount_nonneg check (tax_amount >= 0);
+exception
+    when duplicate_object then null;
+end $$;
+
 alter table public.finance_expenses
-    add column if not exists description text,
-    add column if not exists tax_amount numeric(18, 2) not null default 0
-        check (tax_amount >= 0),
-    add column if not exists invoice_number text,
-    add column if not exists project_id uuid references public.projects (id) on delete set null,
-    add column if not exists created_by uuid references public.profiles (id) on delete set null,
+    add column if not exists description text;
+
+alter table public.finance_expenses
+    add column if not exists tax_amount numeric(18, 2);
+
+alter table public.finance_expenses
+    add column if not exists invoice_number text;
+
+alter table public.finance_expenses
+    add column if not exists project_id uuid references public.projects (id) on delete set null;
+
+alter table public.finance_expenses
+    add column if not exists created_by uuid references public.profiles (id) on delete set null;
+
+alter table public.finance_expenses
     add column if not exists deleted_at timestamptz;
+
+update public.finance_expenses
+set tax_amount = 0
+where tax_amount is null;
+
+alter table public.finance_expenses
+    alter column tax_amount set default 0;
+
+alter table public.finance_expenses
+    alter column tax_amount set not null;
+
+do $$ begin
+    alter table public.finance_expenses
+        add constraint finance_expenses_tax_amount_nonneg check (tax_amount >= 0);
+exception
+    when duplicate_object then null;
+end $$;
 
 create index if not exists finance_incomes_admin_alive_idx
     on public.finance_incomes (admin_id, entry_date desc)
@@ -38,7 +87,7 @@ create index if not exists finance_expenses_project_idx
     where deleted_at is null;
 
 -- ----------------------------------------------------------
--- Adjuntos (PDF / imagen)
+-- Adjuntos
 -- ----------------------------------------------------------
 create table if not exists public.finance_attachments (
     id uuid primary key default gen_random_uuid(),
@@ -84,7 +133,7 @@ create policy finance_attachments_delete_own on public.finance_attachments
     for delete using (public.is_admin() and admin_id = auth.uid());
 
 -- ----------------------------------------------------------
--- Auditoría básica
+-- Auditoría
 -- ----------------------------------------------------------
 create table if not exists public.finance_audit_log (
     id uuid primary key default gen_random_uuid(),
@@ -112,7 +161,7 @@ create policy finance_audit_log_insert_own on public.finance_audit_log
     for insert with check (public.is_admin() and admin_id = auth.uid());
 
 -- ----------------------------------------------------------
--- Soft-delete: ocultar eliminados en SELECT (políticas)
+-- Soft-delete en SELECT de ingresos/gastos
 -- ----------------------------------------------------------
 drop policy if exists finance_incomes_select_own on public.finance_incomes;
 create policy finance_incomes_select_own on public.finance_incomes
@@ -131,7 +180,7 @@ create policy finance_expenses_select_own on public.finance_expenses
     );
 
 -- ----------------------------------------------------------
--- Storage bucket privado para adjuntos financieros
+-- Storage bucket + políticas
 -- ----------------------------------------------------------
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
@@ -150,7 +199,6 @@ drop policy if exists finance_attachments_storage_insert on storage.objects;
 drop policy if exists finance_attachments_storage_update on storage.objects;
 drop policy if exists finance_attachments_storage_delete on storage.objects;
 
--- Ruta: {admin_id}/{entry_type}/{entry_id}/{filename}
 create policy finance_attachments_storage_select on storage.objects
     for select to authenticated
     using (
@@ -184,7 +232,7 @@ create policy finance_attachments_storage_delete on storage.objects
     );
 
 -- ----------------------------------------------------------
--- Catálogos ampliados (idempotente)
+-- Catálogos ampliados
 -- ----------------------------------------------------------
 create or replace function public.seed_finance_defaults(p_admin_id uuid)
 returns void
@@ -243,11 +291,13 @@ begin
 end;
 $$;
 
--- Re-sembrar catálogos para admins que ya tenían settings
 do $$
 declare
     r record;
 begin
+    if to_regclass('public.finance_settings') is null then
+        return;
+    end if;
     for r in select admin_id from public.finance_settings
     loop
         perform public.seed_finance_defaults(r.admin_id);

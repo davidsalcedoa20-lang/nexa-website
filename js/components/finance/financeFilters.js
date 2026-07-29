@@ -87,6 +87,8 @@ export function renderGlobalSearchBar() {
     `;
 }
 
+let finGlobalSearchDocListenerBound = false;
+
 export function wireGlobalSearch(searchFn) {
     const input = document.getElementById('finGlobalSearch');
     const box = document.getElementById('finGlobalResults');
@@ -96,14 +98,17 @@ export function wireGlobalSearch(searchFn) {
     input.addEventListener('input', () => {
         clearTimeout(timer);
         timer = setTimeout(async () => {
-            const q = input.value.trim();
+            const liveBox = document.getElementById('finGlobalResults');
+            const liveInput = document.getElementById('finGlobalSearch');
+            if (!liveBox || !liveInput) return;
+            const q = liveInput.value.trim();
             if (!q) {
-                box.hidden = true;
-                box.innerHTML = '';
+                liveBox.hidden = true;
+                liveBox.innerHTML = '';
                 return;
             }
-            box.hidden = false;
-            box.innerHTML = '<p class="fin-muted">Buscando…</p>';
+            liveBox.hidden = false;
+            liveBox.innerHTML = '<p class="fin-muted">Buscando…</p>';
             try {
                 const result = await searchFn(q);
                 const blocks = [];
@@ -127,16 +132,21 @@ export function wireGlobalSearch(searchFn) {
                         <span>${escapeHtml(c.company)}</span>
                     `).join('')}</div>`);
                 }
-                box.innerHTML = blocks.length ? blocks.join('') : '<p class="fin-muted">Sin resultados.</p>';
+                liveBox.innerHTML = blocks.length ? blocks.join('') : '<p class="fin-muted">Sin resultados.</p>';
             } catch (error) {
-                box.innerHTML = `<p class="fin-error">${escapeHtml(error.message)}</p>`;
+                liveBox.innerHTML = `<p class="fin-error">${escapeHtml(error.message)}</p>`;
             }
         }, 300);
     });
 
-    document.addEventListener('click', (e) => {
-        if (!e.target.closest('.fin-global-search')) {
-            box.hidden = true;
-        }
-    });
+    if (!finGlobalSearchDocListenerBound) {
+        finGlobalSearchDocListenerBound = true;
+        document.addEventListener('click', (e) => {
+            const liveBox = document.getElementById('finGlobalResults');
+            if (!liveBox) return;
+            if (!e.target.closest('.fin-global-search')) {
+                liveBox.hidden = true;
+            }
+        });
+    }
 }

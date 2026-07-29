@@ -2,43 +2,43 @@
 -- NEXA HUB — ERP Financiero (Fase 1 · Arquitectura)
 -- ==========================================================
 -- Contabilidad PRIVADA por administrador (admin_id = auth.uid()).
--- Ningún admin ve la de otro. Clientes sin acceso (solo is_admin()).
--- Preparado para facturación, bancos, impuestos, IA, etc.
+-- Idempotente: segura ante re-ejecución en Supabase/PostgreSQL.
 -- ==========================================================
 
-create type public.finance_entry_status as enum (
-    'draft',
-    'pending',
-    'confirmed',
-    'paid',
-    'cancelled'
-);
+-- ----------------------------------------------------------
+-- ENUMs (no fallar si ya existen)
+-- ----------------------------------------------------------
+do $$ begin
+    create type public.finance_entry_status as enum (
+        'draft', 'pending', 'confirmed', 'paid', 'cancelled'
+    );
+exception when duplicate_object then null;
+end $$;
 
-create type public.finance_category_kind as enum (
-    'income',
-    'expense',
-    'both'
-);
+do $$ begin
+    create type public.finance_category_kind as enum (
+        'income', 'expense', 'both'
+    );
+exception when duplicate_object then null;
+end $$;
 
-create type public.finance_account_type as enum (
-    'cash',
-    'bank',
-    'card',
-    'wallet',
-    'other'
-);
+do $$ begin
+    create type public.finance_account_type as enum (
+        'cash', 'bank', 'card', 'wallet', 'other'
+    );
+exception when duplicate_object then null;
+end $$;
 
 -- ----------------------------------------------------------
--- Preferencias del ERP (1 fila por administrador)
+-- Tablas
 -- ----------------------------------------------------------
-create table public.finance_settings (
+create table if not exists public.finance_settings (
     admin_id uuid primary key references public.profiles (id) on delete cascade,
     currency text not null default 'COP',
     locale text not null default 'es-CO',
     number_format text not null default 'es-CO',
     fiscal_year_start_month smallint not null default 1
         check (fiscal_year_start_month between 1 and 12),
-    -- Layout modular del dashboard: [{ key, visible, order, size }]
     dashboard_layout jsonb not null default '[]'::jsonb,
     created_at timestamptz not null default now(),
     updated_at timestamptz not null default now()
@@ -47,10 +47,7 @@ create table public.finance_settings (
 comment on table public.finance_settings is
     'Configuración financiera privada de cada administrador.';
 
--- ----------------------------------------------------------
--- Catálogos
--- ----------------------------------------------------------
-create table public.finance_categories (
+create table if not exists public.finance_categories (
     id uuid primary key default gen_random_uuid(),
     admin_id uuid not null references public.profiles (id) on delete cascade,
     kind public.finance_category_kind not null default 'both',
@@ -64,7 +61,7 @@ create table public.finance_categories (
     unique (admin_id, name, kind)
 );
 
-create table public.finance_payment_methods (
+create table if not exists public.finance_payment_methods (
     id uuid primary key default gen_random_uuid(),
     admin_id uuid not null references public.profiles (id) on delete cascade,
     name text not null,
@@ -75,7 +72,7 @@ create table public.finance_payment_methods (
     unique (admin_id, name)
 );
 
-create table public.finance_tags (
+create table if not exists public.finance_tags (
     id uuid primary key default gen_random_uuid(),
     admin_id uuid not null references public.profiles (id) on delete cascade,
     name text not null,
@@ -84,8 +81,7 @@ create table public.finance_tags (
     unique (admin_id, name)
 );
 
--- Cuentas / cajas (base para bancos y conciliación futura)
-create table public.finance_accounts (
+create table if not exists public.finance_accounts (
     id uuid primary key default gen_random_uuid(),
     admin_id uuid not null references public.profiles (id) on delete cascade,
     name text not null,
@@ -94,7 +90,6 @@ create table public.finance_accounts (
     opening_balance numeric(18, 2) not null default 0,
     is_active boolean not null default true,
     position integer not null default 0,
-    -- Campos futuros (bancos / integración)
     bank_name text,
     account_number_masked text,
     external_ref text,
@@ -103,10 +98,7 @@ create table public.finance_accounts (
     unique (admin_id, name)
 );
 
--- ----------------------------------------------------------
--- Movimientos
--- ----------------------------------------------------------
-create table public.finance_incomes (
+create table if not exists public.finance_incomes (
     id uuid primary key default gen_random_uuid(),
     admin_id uuid not null references public.profiles (id) on delete cascade,
     entry_date date not null default (timezone('utc', now()))::date,
@@ -121,7 +113,6 @@ create table public.finance_incomes (
     status public.finance_entry_status not null default 'confirmed',
     notes text,
     tags text[] not null default '{}',
-    -- Escalabilidad: facturación / DIAN / IA
     invoice_ref text,
     external_ref text,
     metadata jsonb not null default '{}'::jsonb,
@@ -129,7 +120,7 @@ create table public.finance_incomes (
     updated_at timestamptz not null default now()
 );
 
-create table public.finance_expenses (
+create table if not exists public.finance_expenses (
     id uuid primary key default gen_random_uuid(),
     admin_id uuid not null references public.profiles (id) on delete cascade,
     entry_date date not null default (timezone('utc', now()))::date,
@@ -153,37 +144,48 @@ create table public.finance_expenses (
 -- ----------------------------------------------------------
 -- Índices
 -- ----------------------------------------------------------
-create index finance_categories_admin_idx on public.finance_categories (admin_id);
-create index finance_payment_methods_admin_idx on public.finance_payment_methods (admin_id);
-create index finance_tags_admin_idx on public.finance_tags (admin_id);
-create index finance_accounts_admin_idx on public.finance_accounts (admin_id);
+create index if not exists finance_categories_admin_idx on public.finance_categories (admin_id);
+create index if not exists finance_payment_methods_admin_idx on public.finance_payment_methods (admin_id);
+create index if not exists finance_tags_admin_idx on public.finance_tags (admin_id);
+create index if not exists finance_accounts_admin_idx on public.finance_accounts (admin_id);
 
-create index finance_incomes_admin_date_idx on public.finance_incomes (admin_id, entry_date desc);
-create index finance_incomes_admin_status_idx on public.finance_incomes (admin_id, status);
-create index finance_incomes_project_idx on public.finance_incomes (project_id);
-create index finance_incomes_client_idx on public.finance_incomes (client_workspace_id);
+create index if not exists finance_incomes_admin_date_idx on public.finance_incomes (admin_id, entry_date desc);
+create index if not exists finance_incomes_admin_status_idx on public.finance_incomes (admin_id, status);
+create index if not exists finance_incomes_project_idx on public.finance_incomes (project_id);
+create index if not exists finance_incomes_client_idx on public.finance_incomes (client_workspace_id);
 
-create index finance_expenses_admin_date_idx on public.finance_expenses (admin_id, entry_date desc);
-create index finance_expenses_admin_status_idx on public.finance_expenses (admin_id, status);
+create index if not exists finance_expenses_admin_date_idx on public.finance_expenses (admin_id, entry_date desc);
+create index if not exists finance_expenses_admin_status_idx on public.finance_expenses (admin_id, status);
 
 -- ----------------------------------------------------------
--- updated_at
+-- Triggers updated_at
 -- ----------------------------------------------------------
+drop trigger if exists set_updated_at on public.finance_settings;
 create trigger set_updated_at before update on public.finance_settings
     for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.finance_categories;
 create trigger set_updated_at before update on public.finance_categories
     for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.finance_payment_methods;
 create trigger set_updated_at before update on public.finance_payment_methods
     for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.finance_accounts;
 create trigger set_updated_at before update on public.finance_accounts
     for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.finance_incomes;
 create trigger set_updated_at before update on public.finance_incomes
     for each row execute function public.set_updated_at();
+
+drop trigger if exists set_updated_at on public.finance_expenses;
 create trigger set_updated_at before update on public.finance_expenses
     for each row execute function public.set_updated_at();
 
 -- ----------------------------------------------------------
--- Bootstrap de defaults al crear settings
+-- Bootstrap de defaults
 -- ----------------------------------------------------------
 create or replace function public.seed_finance_defaults(p_admin_id uuid)
 returns void
@@ -239,12 +241,13 @@ begin
 end;
 $$;
 
+drop trigger if exists finance_settings_after_insert on public.finance_settings;
 create trigger finance_settings_after_insert
     after insert on public.finance_settings
     for each row execute function public.trg_finance_settings_seed();
 
 -- ----------------------------------------------------------
--- RLS — solo el dueño (admin/owner) ve sus filas
+-- RLS + políticas (drop + create)
 -- ----------------------------------------------------------
 alter table public.finance_settings enable row level security;
 alter table public.finance_categories enable row level security;
@@ -254,7 +257,6 @@ alter table public.finance_accounts enable row level security;
 alter table public.finance_incomes enable row level security;
 alter table public.finance_expenses enable row level security;
 
--- Helper policies pattern: is_admin() AND admin_id = auth.uid()
 do $$
 declare
     t text;
@@ -269,6 +271,11 @@ begin
         'finance_expenses'
     ]
     loop
+        execute format('drop policy if exists %I on public.%I', t || '_select_own', t);
+        execute format('drop policy if exists %I on public.%I', t || '_insert_own', t);
+        execute format('drop policy if exists %I on public.%I', t || '_update_own', t);
+        execute format('drop policy if exists %I on public.%I', t || '_delete_own', t);
+
         execute format('
             create policy %I on public.%I for select
                 using (public.is_admin() and admin_id = auth.uid());
@@ -289,16 +296,20 @@ begin
 end;
 $$;
 
--- Realtime (opcional, útil para dashboards colaborativos futuros)
+-- Realtime
 do $$
 begin
     begin
         alter publication supabase_realtime add table public.finance_incomes;
-    exception when duplicate_object then null;
+    exception
+        when duplicate_object then null;
+        when undefined_object then null;
     end;
     begin
         alter publication supabase_realtime add table public.finance_expenses;
-    exception when duplicate_object then null;
+    exception
+        when duplicate_object then null;
+        when undefined_object then null;
     end;
 end;
 $$;

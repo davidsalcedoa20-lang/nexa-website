@@ -5,7 +5,7 @@ import {
     ensureFinanceSettings,
     getMonthSummary,
     saveDashboardLayout
-} from '../../services/financeService.js';
+} from '../../../services/financeService.js';
 import {
     getSelectedMonth,
     setSelectedMonth,
@@ -13,13 +13,13 @@ import {
     renderFinancePageHeader,
     wireMonthSelector,
     ensureHelpDrawer
-} from '../../components/finance/financeShell.js';
+} from '../../../components/finance/financeShell.js';
 import {
     normalizeLayout,
     renderDashboardGrid,
     wireDashboardGrid
-} from '../../components/finance/financeDashboardGrid.js';
-import { formatMonthLabel } from '../../components/finance/financeFormat.js';
+} from '../../../components/finance/financeDashboardGrid.js';
+import { formatMonthLabel } from '../../../components/finance/financeFormat.js';
 
 const root = document.getElementById('finRoot');
 
