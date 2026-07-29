@@ -247,15 +247,9 @@ function openAdminModal(mode, user = null) {
 
             <section class="perm-module">
                 <h3>Rol</h3>
-                <div class="perm-access-modes">
-                    <label class="perm-radio is-locked">
-                        <input type="radio" name="adminRole" value="owner" disabled>
-                        <span>Propietario <small>(solo Jaime David · no seleccionable)</small></span>
-                    </label>
-                    <label class="perm-radio">
-                        <input type="radio" name="adminRole" value="admin" checked disabled>
-                        <span>Administrador</span>
-                    </label>
+                <div class="perm-role-readonly">
+                    <span class="perm-role-badge">Administrador</span>
+                    <span class="admin-field-hint">Fijo · no editable</span>
                 </div>
             </section>
 
@@ -410,15 +404,20 @@ async function openEditor(userId) {
                         : `<span class="perm-card-avatar-fallback">${escapeHtml(getInitials(user.full_name || user.email))}</span>`}
                 </div>
                 <div>
-                    <h2>${escapeHtml(user.full_name || 'Usuario')}</h2>
-                    <p>${escapeHtml(user.email || '')} · ${escapeHtml(ROLE_LABELS[user.role] || user.role)}
+                    <h2>
+                        ${escapeHtml(user.full_name || 'Usuario')}
+                        ${isOwnerUser
+                            ? '<span class="perm-role-badge is-owner">👑 Propietario</span>'
+                            : '<span class="perm-role-badge">Administrador</span>'}
+                    </h2>
+                    <p>${escapeHtml(user.email || '')}
                         ${user.is_active === false ? ' · <strong>Inactivo</strong>' : ''}</p>
                 </div>
             </div>
         </div>
         ${isOwnerUser ? `
             <div class="perm-owner-banner">
-                Este usuario es el <strong>Propietario</strong>. Tiene acceso absoluto. No se puede eliminar, desactivar ni cambiar su rol/permisos.
+                Este usuario es el <strong>Propietario</strong>. Tiene acceso absoluto. No se puede eliminar, desactivar ni cambiar su rol.
             </div>
         ` : ''}
         <div class="perm-editor-toolbar">

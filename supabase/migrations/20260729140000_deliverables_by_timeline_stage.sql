@@ -19,22 +19,26 @@ comment on column public.project_deliverables.timeline_stage_id is
 
 -- 1) Desde el bloque (phase) ya vinculado
 update public.project_deliverables d
-set timeline_stage_id = ph.timeline_stage_id
-from public.project_phases ph
-where d.phase_id = ph.id
-  and d.timeline_stage_id is null
-  and ph.timeline_stage_id is not null;
+set timeline_stage_id = (
+    select ph.timeline_stage_id
+    from public.project_phases ph
+    where ph.id = d.phase_id
+      and ph.timeline_stage_id is not null
+    limit 1
+)
+where d.timeline_stage_id is null
+  and d.phase_id is not null;
 
 -- 2) Restantes: primera etapa del mismo proyecto
+--    (subconsulta correlacionada; evita FROM LATERAL + alias del UPDATE)
 update public.project_deliverables d
-set timeline_stage_id = s.id
-from lateral (
+set timeline_stage_id = (
     select ts.id
     from public.project_timeline_stages ts
     where ts.project_id = d.project_id
     order by ts.order_index, ts.created_at
     limit 1
-) s
+)
 where d.timeline_stage_id is null;
 
 -- Progreso de etapa = % tareas completadas SOLO de esa etapa

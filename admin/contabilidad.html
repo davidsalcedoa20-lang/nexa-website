@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Usuarios y Permisos | NEXA Hub</title>
+    <title>Contabilidad | NEXA Hub</title>
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/finance.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -15,7 +16,7 @@
         <aside class="admin-sidebar" id="adminSidebar">
             <a href="index.html" class="admin-logo">
                 <img src="../assets/logo/nexa-logo.png" alt="Nexa Logo">
-                <span class="admin-logo-tag">HUB · ADMIN</span>
+                <span class="admin-logo-tag">HUB Â· ADMIN</span>
             </a>
             <nav class="admin-nav">
                 <a href="index.html" class="admin-nav-item">
@@ -38,7 +39,7 @@
                     <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><path d="M8 14h3M13 14h3M8 17h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
                     Workspace
                 </a>
-                <a href="contabilidad.html" class="admin-nav-item">
+                <a href="contabilidad.html" class="admin-nav-item active">
                     <svg viewBox="0 0 24 24" fill="none">
                         <rect x="3" y="6" width="18" height="13" rx="2" stroke="currentColor" stroke-width="1.7"/>
                         <path d="M7 10h2M11 10h6M7 14h4M13 14h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
@@ -49,26 +50,25 @@
                     <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
                     Calendario
                 </a>
-
-                <a href="usuarios-permisos.html" class="admin-nav-item active">
-                    <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="14.5" y="7" width="6.5" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/><path d="M16.2 9.5h3.2M16.2 12h3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <a href="usuarios-permisos.html" class="admin-nav-item">
+                    <svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/><rect x="14.5" y="7" width="6.5" height="8" rx="1.5" stroke="currentColor" stroke-width="1.6"/></svg>
                     Usuarios y Permisos
                 </a>
                 <a href="configuracion.html" class="admin-nav-item">
                     <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M12 3.5v2M12 18.5v2M20.5 12h-2M5.5 12h-2M17.7 6.3l-1.4 1.4M7.7 16.3l-1.4 1.4M17.7 17.7l-1.4-1.4M7.7 7.7L6.3 6.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-                    Configuración
+                    ConfiguraciÃ³n
                 </a>
             </nav>
             <button type="button" class="admin-logout" data-logout>
                 <svg viewBox="0 0 24 24" fill="none"><path d="M15 17l5-5-5-5M20 12H9M12 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                Cerrar sesión
+                Cerrar sesiÃ³n
             </button>
         </aside>
         <div class="admin-overlay" id="adminOverlay"></div>
         <div class="admin-content">
             <header class="admin-topbar">
                 <div class="admin-topbar-left">
-                    <button class="admin-menu-toggle" id="adminMenuToggle" aria-label="Abrir menú">
+                    <button class="admin-menu-toggle" id="adminMenuToggle" aria-label="Abrir menÃº">
                         <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                     </button>
                     <a href="../index.html" class="admin-topbar-logo">
@@ -85,81 +85,17 @@
                         </div>
                         <svg class="admin-user-caret" viewBox="0 0 24 24" fill="none"><path d="M6 9l6 6 6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
                         <div class="admin-user-menu" id="adminUserMenu">
-                            <a href="configuracion.html" class="admin-user-menu-item">
-                                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M5 20c0-3.5 3-6 7-6s7 2.5 7 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-                                Mi perfil
-                            </a>
-                            <button type="button" class="admin-user-menu-item admin-user-menu-logout" data-logout>
-                                <svg viewBox="0 0 24 24" fill="none"><path d="M15 17l5-5-5-5M20 12H9M12 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                                Cerrar sesión
-                            </button>
+                            <a href="configuracion.html" class="admin-user-menu-item">Mi perfil</a>
+                            <button type="button" class="admin-user-menu-item admin-user-menu-logout" data-logout>Cerrar sesiÃ³n</button>
                         </div>
                     </div>
                 </div>
             </header>
-
-            <main class="admin-main">
-                <div class="admin-greeting perm-greeting">
-                    <div>
-                        <h1>Usuarios y Permisos</h1>
-                        <p>Administra el acceso de cada administrador a módulos y proyectos.</p>
-                    </div>
-                    <button type="button" class="admin-btn-primary" id="newAdminBtn" hidden>
-                        <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
-                        Nuevo administrador
-                    </button>
-                </div>
-
-                <p id="permLoading" style="color:#7a7a7a; font-size:13px;">Cargando usuarios…</p>
-
-                <div id="permListView" style="display:none;">
-                    <div class="perm-users-grid" id="permUsersList"></div>
-                </div>
-
-                <div id="permEditor" style="display:none;"></div>
-            </main>
+            <main class="admin-main fin-main" id="finRoot"></main>
         </div>
     </div>
-
-    <div class="admin-modal-overlay" id="adminUserModalOverlay">
-        <div class="admin-modal perm-admin-modal" role="dialog" aria-modal="true">
-            <div class="admin-modal-header">
-                <h3 id="adminUserModalTitle">Nuevo administrador</h3>
-                <button type="button" class="admin-modal-close" id="adminUserModalClose" aria-label="Cerrar">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </button>
-            </div>
-            <div id="adminUserModalBody" class="perm-admin-modal-body"></div>
-        </div>
-    </div>
-
-    <div class="admin-modal-overlay" id="passwordRevealModalOverlay">
-        <div class="admin-modal" role="dialog" aria-modal="true">
-            <div class="admin-modal-header">
-                <h3>Contraseña temporal</h3>
-                <button type="button" class="admin-modal-close" id="passwordRevealClose" aria-label="Cerrar">
-                    <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-                </button>
-            </div>
-            <p id="passwordRevealMessage" style="color:#dedede; font-size:13.5px; line-height:1.7; margin:0 0 18px;"></p>
-            <div class="admin-field" style="margin-bottom:22px;">
-                <label for="passwordRevealValue">Contraseña</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="passwordRevealValue" readonly style="flex:1;">
-                    <button type="button" class="admin-btn-secondary" id="passwordRevealCopyBtn">Copiar</button>
-                </div>
-                <span class="admin-field-hint">Por seguridad, no podrás volver a ver esta contraseña después de cerrar esta ventana.</span>
-            </div>
-            <div class="admin-modal-actions">
-                <button type="button" class="admin-btn-primary" id="passwordRevealDoneBtn">Entendido</button>
-            </div>
-        </div>
-    </div>
-
     <script src="../js/vendor/supabase-js.min.js"></script>
     <script src="../js/portal.js"></script>
-    <script src="../js/admin.js"></script>
-    <script type="module" src="../js/admin/pages/usuariosPermisosPage.js"></script>
+    <script type="module" src="../js/admin/pages/finance/contabilidadDashboardPage.js"></script>
 </body>
 </html>
-
