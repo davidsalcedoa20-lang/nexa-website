@@ -164,27 +164,22 @@
                 </div>
 
                 <div class="pd-header-top">
-                    <div>
-                        <div class="pd-title-row">
-                            <h1 class="pd-title" id="pdTitle">Cargando...</h1>
-                            <button type="button" class="admin-icon-btn pd-title-edit-btn" id="pdEditProjectBtn2" title="Editar proyecto">
-                                <svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </button>
-                        </div>
-                    </div>
                     <div class="pd-header-actions">
                         <button type="button" class="admin-icon-btn" id="pdCommentsBtn" title="Comentarios del proyecto">
                             <svg viewBox="0 0 24 24" fill="none"><path d="M21 11.5a8.5 8.5 0 0 1-8.5 8.5H4l2-4a8.5 8.5 0 1 1 15-4.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
                         </button>
                         <button type="button" class="admin-btn-secondary" id="detailDuplicateBtn">Duplicar</button>
+                        <button type="button" class="admin-btn-secondary" id="pdEditProjectBtn" title="Editar portada del proyecto">Editar portada</button>
                         <div class="pd-menu-wrap">
                             <button type="button" class="admin-icon-btn" id="pdMoreMenuBtn" title="Más opciones">
                                 <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="6" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="18" r="1.6" fill="currentColor"/></svg>
                             </button>
                             <div class="pd-more-menu" id="pdMoreMenu">
-                                <button type="button" data-project-action="in_progress">Marcar en curso</button>
+                                <button type="button" data-project-action="not_started">Marcar pendiente</button>
+                                <button type="button" data-project-action="in_progress">Marcar en desarrollo</button>
+                                <button type="button" data-project-action="in_review">Marcar en revisión</button>
                                 <button type="button" data-project-action="paused">Pausar proyecto</button>
-                                <button type="button" data-project-action="completed">Marcar como completado</button>
+                                <button type="button" data-project-action="completed">Marcar finalizado</button>
                                 <button type="button" data-project-action="cancelled">Cancelar proyecto</button>
                                 <button type="button" data-project-action="archive" class="danger">Archivar proyecto</button>
                             </div>
@@ -196,19 +191,76 @@
                     </div>
                 </div>
 
-                <p class="pd-description" id="pdDescription">Sin descripción.</p>
-
-                <div class="pd-meta-row">
-                    <div class="pd-meta-item"><span>Cliente</span><strong id="pdMetaClient">—</strong></div>
-                    <div class="pd-meta-item"><span>Modalidad</span><strong id="pdMetaModality">—</strong></div>
-                    <div class="pd-meta-item"><span>Inicio</span><strong id="pdMetaStart">—</strong></div>
-                    <div class="pd-meta-item"><span>Entrega estimada</span><strong id="pdMetaEnd">—</strong></div>
-                    <button type="button" class="admin-btn-secondary pd-edit-project-btn" id="pdEditProjectBtn">Editar proyecto</button>
-                </div>
-
                 <div class="pd-top-grid">
                     <div class="pd-top-main">
-                        <!-- placeholder: espacio reservado por si se agrega contenido adicional a la izquierda -->
+                        <section class="pd-cover" id="pdCover" aria-label="Portada del proyecto">
+                            <div class="pd-cover-main">
+                                <div class="pd-cover-logo-wrap" id="pdCoverLogoWrap">
+                                    <img class="pd-cover-logo" id="pdCoverLogo" alt="Logo del proyecto" hidden>
+                                    <span class="pd-cover-logo-fallback" id="pdCoverLogoFallback">N</span>
+                                </div>
+                                <div class="pd-cover-body">
+                                    <div class="pd-cover-title-row">
+                                        <h1 class="pd-cover-title" id="pdCoverTitle">Cargando...</h1>
+                                        <button type="button" class="admin-icon-btn pd-cover-edit-btn" id="pdEditProjectBtn2" title="Editar portada">
+                                            <svg viewBox="0 0 24 24" fill="none"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                        </button>
+                                    </div>
+                                    <div class="pd-cover-subtitle-row">
+                                        <p class="pd-cover-subtitle" id="pdCoverSubtitle"></p>
+                                        <span class="pd-cover-status" id="pdCoverStatus"><span class="pd-cover-status-dot"></span><span id="pdCoverStatusLabel">—</span></span>
+                                    </div>
+                                    <p class="pd-cover-description" id="pdCoverDescription"></p>
+                                </div>
+                            </div>
+                            <div class="pd-cover-meta" id="pdCoverMeta">
+                                <div class="pd-cover-meta-card">
+                                    <span class="pd-cover-meta-icon pd-cover-meta-icon--blue" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="15" rx="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M8 3.5v3M16 3.5v3M3.5 10h17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                                    </span>
+                                    <div>
+                                        <span class="pd-cover-meta-label">Fecha de inicio</span>
+                                        <strong class="pd-cover-meta-value" id="pdCoverStart">—</strong>
+                                    </div>
+                                </div>
+                                <div class="pd-cover-meta-card">
+                                    <span class="pd-cover-meta-icon pd-cover-meta-icon--purple" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v4.5l3 1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                                    </span>
+                                    <div>
+                                        <span class="pd-cover-meta-label">Entrega estimada</span>
+                                        <strong class="pd-cover-meta-value" id="pdCoverEnd">—</strong>
+                                    </div>
+                                </div>
+                                <div class="pd-cover-meta-card">
+                                    <span class="pd-cover-meta-icon pd-cover-meta-icon--green" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="8" r="3.2" stroke="currentColor" stroke-width="1.6"/><path d="M5 19c0-3.3 3-5.5 7-5.5s7 2.2 7 5.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                                    </span>
+                                    <div>
+                                        <span class="pd-cover-meta-label">Cliente</span>
+                                        <strong class="pd-cover-meta-value" id="pdCoverClient">—</strong>
+                                    </div>
+                                </div>
+                                <div class="pd-cover-meta-card pd-cover-meta-card--services">
+                                    <span class="pd-cover-meta-icon pd-cover-meta-icon--orange" aria-hidden="true">
+                                        <svg viewBox="0 0 24 24" fill="none"><path d="M12 3.5 4.5 8v8L12 20.5 19.5 16V8L12 3.5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M12 12 4.8 7.6M12 12l7.2-4.4M12 12v8.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                                    </span>
+                                    <div>
+                                        <span class="pd-cover-meta-label">Servicios contratados</span>
+                                        <div class="pd-cover-chips" id="pdCoverServices"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section class="pd-team" id="pdTeam" aria-label="Equipo asignado">
+                            <div class="pd-team-header">
+                                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M16 11a3.5 3.5 0 1 0-3.5-3.5A3.5 3.5 0 0 0 16 11ZM8 12a3 3 0 1 0-3-3 3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="1.6"/><path d="M3.5 19c.4-2.6 2.5-4 4.5-4M12.5 19c.3-3 2.8-5 5.5-5s5.2 2 5.5 5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+                                <h2>Equipo asignado</h2>
+                            </div>
+                            <div class="pd-team-list" id="pdTeamList"></div>
+                            <p class="pd-team-empty" id="pdTeamEmpty" hidden>Aún no hay administradores con tareas en este proyecto.</p>
+                        </section>
                     </div>
                     <div class="pd-top-side">
                         <div class="pd-progress-card">
@@ -604,19 +656,58 @@
     <div class="admin-modal-overlay" id="editProjectModalOverlay">
         <div class="admin-modal" role="dialog" aria-modal="true">
             <div class="admin-modal-header">
-                <h3>Editar Proyecto</h3>
+                <h3>Editar portada del proyecto</h3>
                 <button type="button" class="admin-modal-close" data-close-modal="editProjectModalOverlay">
                     <svg viewBox="0 0 24 24" fill="none"><path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
                 </button>
             </div>
             <form id="editProjectForm" class="admin-form" novalidate>
                 <div class="admin-field">
+                    <label for="editProjectLogo">Logo del proyecto</label>
+                    <div class="pd-logo-edit-row">
+                        <div class="pd-logo-edit-preview" id="editProjectLogoPreview">
+                            <img id="editProjectLogoImg" alt="" hidden>
+                            <span id="editProjectLogoFallback">N</span>
+                        </div>
+                        <div class="pd-logo-edit-actions">
+                            <input type="file" id="editProjectLogo" accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml" hidden>
+                            <button type="button" class="admin-btn-secondary" id="editProjectLogoPickBtn">Subir / reemplazar</button>
+                            <button type="button" class="admin-btn-secondary" id="editProjectLogoClearBtn">Quitar logo</button>
+                            <span class="pd-logo-edit-hint">JPG, PNG, WEBP, GIF o SVG · máx. 2 MB · se mantienen proporciones</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="admin-field">
                     <label for="editProjectName">Nombre del proyecto</label>
-                    <input type="text" id="editProjectName">
+                    <input type="text" id="editProjectName" placeholder="Ej. MARCO ARQUITECTÓNICO">
+                </div>
+                <div class="admin-field">
+                    <label for="editProjectSubtitle">Servicio contratado (subtítulo)</label>
+                    <input type="text" id="editProjectSubtitle" placeholder="Ej. Sitio web + Marketing Digital">
+                </div>
+                <div class="admin-field">
+                    <label for="editProjectStatus">Estado del proyecto</label>
+                    <select id="editProjectStatus">
+                        <option value="not_started">Pendiente</option>
+                        <option value="in_progress">En desarrollo</option>
+                        <option value="in_review">En revisión</option>
+                        <option value="paused">Pausado</option>
+                        <option value="completed">Finalizado</option>
+                        <option value="cancelled">Cancelado</option>
+                    </select>
                 </div>
                 <div class="admin-field">
                     <label for="editProjectDescription">Descripción</label>
-                    <textarea id="editProjectDescription" rows="2"></textarea>
+                    <textarea id="editProjectDescription" rows="4" placeholder="Descripción corta del proyecto..."></textarea>
+                </div>
+                <div class="admin-field">
+                    <label for="editProjectClient">Cliente</label>
+                    <input type="text" id="editProjectClient" placeholder="Nombre del cliente en la portada">
+                </div>
+                <div class="admin-field">
+                    <label for="editProjectServices">Servicios contratados</label>
+                    <input type="text" id="editProjectServices" placeholder="Sitio Web, SEO, Fotografía, Marketing Digital">
+                    <span class="pd-logo-edit-hint">Separa cada servicio con comas. Se muestran como etiquetas.</span>
                 </div>
                 <div class="admin-field">
                     <label for="editProjectModality">Modalidad</label>
@@ -628,7 +719,7 @@
                 </div>
                 <div class="pd-task-modal-meta">
                     <div class="admin-field">
-                        <label for="editProjectStart">Inicio</label>
+                        <label for="editProjectStart">Fecha de inicio</label>
                         <input type="date" id="editProjectStart">
                     </div>
                     <div class="admin-field">

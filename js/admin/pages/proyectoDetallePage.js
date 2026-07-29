@@ -6,7 +6,7 @@
    editar absolutamente todo desde esta página.
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
-import { getProject, getProjectStructure, duplicateProject, updateProject, setProjectStatus, archiveProject } from '../../services/projectService.js';
+import { getProject, getProjectStructure, duplicateProject, updateProject, setProjectStatus, archiveProject, uploadProjectLogo, clearProjectLogo } from '../../services/projectService.js';
 import { createPhase, updatePhase, deletePhase, createSection, updateSection, deleteSection } from '../../services/phaseService.js';
 import { createStage, updateStage, deleteStage } from '../../services/timelineStageService.js';
 import { createTask, updateTask, deleteTask, ensureApprovalRecord } from '../../services/taskService.js';
@@ -15,11 +15,15 @@ import { listTimelineEvents } from '../../services/timelineService.js';
 import { listProjectDeliverables, createDeliverable, updateDeliverable, deleteDeliverable } from '../../services/deliverableService.js';
 import { listAdmins } from '../../services/profileService.js';
 import {
-    PROJECT_STATUS_LABELS, PROGRESS_STATUS_LABELS, PD_STATUS_BADGE_CLASS,
+    PROJECT_STATUS_LABELS, PROJECT_COVER_STATUS_CLASS, PROGRESS_STATUS_LABELS, PD_STATUS_BADGE_CLASS,
     TASK_TYPE_LABELS, TASK_PRIORITY_LABELS, DELIVERABLE_STATUS_LABELS, TIMELINE_EVENT_ICONS,
     formatDate, formatDateTime, getInitials, escapeHtml, daysRemaining,
     getProjectClientProfile, populateResponsibleSelect, resolveTaskAssignment, getTaskResponsibleMeta
 } from '../../components/projectUi.js';
+
+const TEAM_ACCENT_COLORS = ['#5B9DFF', '#35D0C8', '#B388FF', '#FF9F5A', '#FF6B9D', '#7CDB6A'];
+let pendingLogoFile = null;
+let clearLogoOnSave = false;
 
 // Valores reales del enum public.progress_status (project_tasks.status).
 // "approved"/"cancelled" NO existen en este enum (son solo estados válidos
@@ -137,6 +141,7 @@ async function refreshAll() {
     refreshResponsibleSelectors();
 
     renderHeader(currentProject);
+    renderAssignedTeam(currentStructure.allTasks);
     renderProgressCards(currentProject, currentStructure.stages);
     renderTimeline(currentStructure.stages);
     renderBlocks(currentStructure.stages, currentStructure.unassignedPhases, { animate: false });
@@ -149,34 +154,86 @@ async function refreshAll() {
 }
 
 /* ---------------------------------------------------------
-   Header
+   Portada del proyecto
 --------------------------------------------------------- */
+function parseServicesInput(raw) {
+    return String(raw || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+}
+
+function getCoverClientName(project) {
+    return (project.client_display_name || '').trim()
+        || project.workspaces?.profiles?.full_name
+        || project.workspaces?.name
+        || 'Sin cliente';
+}
+
+function accentColorForUser(userId, index = 0) {
+    if (!userId) return TEAM_ACCENT_COLORS[index % TEAM_ACCENT_COLORS.length];
+    let hash = 0;
+    for (let i = 0; i < userId.length; i += 1) hash = (hash + userId.charCodeAt(i) * (i + 1)) % 997;
+    return TEAM_ACCENT_COLORS[hash % TEAM_ACCENT_COLORS.length];
+}
+
+function renderCoverLogo(project) {
+    const img = el('pdCoverLogo');
+    const fallback = el('pdCoverLogoFallback');
+    if (!img || !fallback) return;
+    const initials = getInitials(project.name || 'P');
+    fallback.textContent = initials;
+    if (project.logo_url) {
+        img.src = project.logo_url;
+        img.alt = `Logo de ${project.name}`;
+        img.hidden = false;
+        fallback.hidden = true;
+    } else {
+        img.removeAttribute('src');
+        img.hidden = true;
+        fallback.hidden = false;
+    }
+}
+
 function renderHeader(project) {
-    const clientName = project.workspaces?.profiles?.full_name || project.workspaces?.name || 'Sin cliente';
     document.title = `${project.name} | NEXA Hub`;
     el('pdBreadcrumbName').textContent = project.name;
 
-    const titleEl = el('pdTitle');
+    const cover = el('pdCover');
     const primaryColor = project.color_hex || project.project_types?.color_hex || '#2D8CFF';
     const secondaryColor = project.secondary_color_hex || '#FF8A3D';
-    titleEl.style.setProperty('--project-color', primaryColor);
-    titleEl.style.setProperty('--project-color-2', secondaryColor);
-
-    if (project.name.includes(' + ')) {
-        const [first, ...rest] = project.name.split(' + ');
-        titleEl.innerHTML = `<span class="pd-title-part">${escapeHtml(first)}</span><span class="pd-title-sep">+</span><span class="pd-title-part pd-title-part--secondary">${escapeHtml(rest.join(' + '))}</span>`;
-    } else {
-        titleEl.innerHTML = `<span class="pd-title-part">${escapeHtml(project.name)}</span>`;
+    if (cover) {
+        cover.style.setProperty('--project-color', primaryColor);
+        cover.style.setProperty('--project-color-2', secondaryColor);
     }
 
-    el('pdDescription').textContent = project.description || 'Sin descripción.';
-    el('pdMetaClient').textContent = clientName;
-    el('pdMetaModality').textContent = project.modality || 'Sin definir';
-    el('pdMetaStart').textContent = formatDate(project.start_date);
-    el('pdMetaEnd').textContent = formatDate(project.end_date);
+    renderCoverLogo(project);
+    el('pdCoverTitle').textContent = project.name;
+    el('pdCoverSubtitle').textContent = project.cover_subtitle || project.modality || '';
+    el('pdCoverSubtitle').hidden = !(project.cover_subtitle || project.modality);
+    el('pdCoverDescription').textContent = project.description || 'Sin descripción.';
+
+    const status = project.status || 'not_started';
+    const statusEl = el('pdCoverStatus');
+    statusEl.className = `pd-cover-status ${PROJECT_COVER_STATUS_CLASS[status] || PROJECT_COVER_STATUS_CLASS.not_started}`;
+    el('pdCoverStatusLabel').textContent = PROJECT_STATUS_LABELS[status] || status;
+
+    el('pdCoverStart').textContent = formatDate(project.start_date);
+    el('pdCoverEnd').textContent = formatDate(project.end_date);
+    el('pdCoverClient').textContent = getCoverClientName(project);
+
+    const services = Array.isArray(project.services) ? project.services.filter(Boolean) : [];
+    const servicesEl = el('pdCoverServices');
+    if (!services.length) {
+        servicesEl.innerHTML = '<span class="pd-cover-chip pd-cover-chip--empty">Sin servicios</span>';
+    } else {
+        servicesEl.innerHTML = services
+            .map((service) => `<span class="pd-cover-chip">${escapeHtml(service)}</span>`)
+            .join('');
+    }
 
     [el('pdEditProjectBtn'), el('pdEditProjectBtn2')].forEach((btn) => {
-        btn.onclick = () => openEditProjectModal(project);
+        if (btn) btn.onclick = () => openEditProjectModal(project);
     });
 
     el('detailDuplicateBtn').onclick = async () => {
@@ -189,6 +246,64 @@ function renderHeader(project) {
             alert(`No se pudo duplicar: ${error.message}`);
         }
     };
+}
+
+/**
+ * Equipo asignado: administradores únicos con al menos una tarea
+ * en el proyecto. Aparecen/desaparecen según las asignaciones.
+ */
+function renderAssignedTeam(tasks) {
+    const listEl = el('pdTeamList');
+    const emptyEl = el('pdTeamEmpty');
+    if (!listEl || !emptyEl) return;
+
+    const adminById = new Map((admins || []).map((a) => [a.id, a]));
+    const members = new Map();
+
+    for (const task of tasks || []) {
+        if (!task.assignee_id) continue;
+        const admin = adminById.get(task.assignee_id);
+        const profile = task.profiles || admin;
+        if (!admin && profile?.role !== 'admin') continue;
+
+        if (!members.has(task.assignee_id)) {
+            members.set(task.assignee_id, {
+                id: task.assignee_id,
+                full_name: admin?.full_name || profile?.full_name || 'Administrador',
+                avatar_url: admin?.avatar_url || profile?.avatar_url || null,
+                job_title: admin?.job_title || profile?.job_title || 'Equipo NEXA'
+            });
+        }
+    }
+
+    const team = [...members.values()];
+    if (!team.length) {
+        listEl.innerHTML = '';
+        emptyEl.hidden = false;
+        return;
+    }
+
+    emptyEl.hidden = true;
+    listEl.innerHTML = team.map((member, index) => {
+        const accent = accentColorForUser(member.id, index);
+        const initials = getInitials(member.full_name);
+        const avatar = member.avatar_url
+            ? `<img src="${escapeHtml(member.avatar_url)}" alt="" class="pd-team-avatar-img">`
+            : `<span class="pd-team-avatar-fallback">${escapeHtml(initials)}</span>`;
+        return `
+            <article class="pd-team-card">
+                <div class="pd-team-avatar" style="--team-accent:${accent}">
+                    ${avatar}
+                    <span class="pd-team-online" title="En línea"></span>
+                </div>
+                <div class="pd-team-info">
+                    <strong class="pd-team-name">${escapeHtml(member.full_name)}</strong>
+                    <span class="pd-team-role" style="color:${accent}">${escapeHtml(member.job_title || 'Equipo NEXA')}</span>
+                    <span class="pd-team-status"><span class="pd-team-status-dot"></span>En línea</span>
+                </div>
+            </article>
+        `;
+    }).join('');
 }
 
 function renderFooterBar(project) {
@@ -1160,11 +1275,38 @@ el('commentForm')?.addEventListener('submit', async (e) => {
 });
 
 /* ---------------------------------------------------------
-   Editar proyecto
+   Editar portada del proyecto
 --------------------------------------------------------- */
+function setEditLogoPreview(logoUrl, name) {
+    const img = el('editProjectLogoImg');
+    const fallback = el('editProjectLogoFallback');
+    if (!img || !fallback) return;
+    fallback.textContent = getInitials(name || 'P');
+    if (logoUrl) {
+        img.src = logoUrl;
+        img.hidden = false;
+        fallback.hidden = true;
+    } else {
+        img.removeAttribute('src');
+        img.hidden = true;
+        fallback.hidden = false;
+    }
+}
+
 function openEditProjectModal(project) {
+    pendingLogoFile = null;
+    clearLogoOnSave = false;
+    el('editProjectLogo').value = '';
+    setEditLogoPreview(project.logo_url, project.name);
     el('editProjectName').value = project.name;
+    el('editProjectSubtitle').value = project.cover_subtitle || '';
+    el('editProjectStatus').value = project.status || 'not_started';
     el('editProjectDescription').value = project.description || '';
+    el('editProjectClient').value = project.client_display_name
+        || project.workspaces?.profiles?.full_name
+        || project.workspaces?.name
+        || '';
+    el('editProjectServices').value = Array.isArray(project.services) ? project.services.join(', ') : '';
     el('editProjectModality').value = project.modality || '';
     el('editProjectResponsible').value = project.responsible_id || '';
     el('editProjectStart').value = project.start_date || '';
@@ -1176,6 +1318,23 @@ function openEditProjectModal(project) {
     openModal('editProjectModalOverlay');
 }
 
+el('editProjectLogoPickBtn')?.addEventListener('click', () => el('editProjectLogo')?.click());
+el('editProjectLogo')?.addEventListener('change', () => {
+    const file = el('editProjectLogo').files?.[0] || null;
+    pendingLogoFile = file;
+    clearLogoOnSave = false;
+    if (file) {
+        const url = URL.createObjectURL(file);
+        setEditLogoPreview(url, el('editProjectName').value);
+    }
+});
+el('editProjectLogoClearBtn')?.addEventListener('click', () => {
+    pendingLogoFile = null;
+    clearLogoOnSave = true;
+    el('editProjectLogo').value = '';
+    setEditLogoPreview(null, el('editProjectName').value);
+});
+
 el('editProjectForm')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const name = el('editProjectName').value.trim();
@@ -1186,7 +1345,11 @@ el('editProjectForm')?.addEventListener('submit', async (e) => {
     try {
         await updateProject(projectId, {
             name,
+            cover_subtitle: el('editProjectSubtitle').value.trim() || null,
+            status: el('editProjectStatus').value || 'not_started',
             description: el('editProjectDescription').value.trim() || null,
+            client_display_name: el('editProjectClient').value.trim() || null,
+            services: parseServicesInput(el('editProjectServices').value),
             modality: el('editProjectModality').value.trim() || null,
             responsible_id: el('editProjectResponsible').value || null,
             start_date: el('editProjectStart').value || null,
@@ -1194,6 +1357,15 @@ el('editProjectForm')?.addEventListener('submit', async (e) => {
             color_hex: el('editProjectColor').value || null,
             secondary_color_hex: el('editProjectColor2').value || null
         });
+
+        if (clearLogoOnSave) {
+            await clearProjectLogo(projectId);
+        } else if (pendingLogoFile) {
+            await uploadProjectLogo(projectId, pendingLogoFile);
+        }
+
+        pendingLogoFile = null;
+        clearLogoOnSave = false;
         closeModal('editProjectModalOverlay');
         await refreshAll();
     } catch (error) {

@@ -44,19 +44,31 @@ export function pdBadgeHtml(status) {
 }
 
 export const PROJECT_STATUS_LABELS = {
-    not_started: 'Sin iniciar',
-    in_progress: 'En curso',
+    not_started: 'Pendiente',
+    in_progress: 'En desarrollo',
+    in_review: 'En revisión',
     paused: 'Pausado',
-    completed: 'Completado',
+    completed: 'Finalizado',
     cancelled: 'Cancelado'
 };
 
 export const PROJECT_STATUS_BADGE_CLASS = {
     not_started: 'admin-badge--pending',
     in_progress: 'admin-badge--progress',
+    in_review: 'admin-badge--paused',
     paused: 'admin-badge--paused',
     completed: 'admin-badge--active',
     cancelled: 'admin-badge--completed'
+};
+
+/** Clases de badge específicas de la portada del proyecto. */
+export const PROJECT_COVER_STATUS_CLASS = {
+    not_started: 'pd-cover-status--pending',
+    in_progress: 'pd-cover-status--progress',
+    in_review: 'pd-cover-status--review',
+    paused: 'pd-cover-status--paused',
+    completed: 'pd-cover-status--done',
+    cancelled: 'pd-cover-status--cancelled'
 };
 
 export const TASK_TYPE_LABELS = {

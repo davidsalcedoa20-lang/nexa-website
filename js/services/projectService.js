@@ -7,10 +7,15 @@ const LIST_SELECT = `
     id, name, description, status, start_date, end_date, modality,
     progress_percent, client_progress_percent, nexa_progress_percent,
     color_hex, secondary_color_hex, archived_at, created_at, workspace_id, project_type_id, responsible_id,
+    logo_url, cover_subtitle, client_display_name, services,
     project_types ( id, name, slug, color_hex ),
     workspaces ( id, name, client_id, profiles:client_id ( id, full_name, email ) ),
     responsible:responsible_id ( id, full_name )
 `;
+
+const LOGO_BUCKET = 'project-logos';
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+const ALLOWED_LOGO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
 
 /**
  * Lista proyectos. En el admin trae todos (según RLS); en el
@@ -94,7 +99,7 @@ export async function getProjectStructure(projectId) {
     }
 
     // RLS de profiles impide que un cliente lea el perfil de un admin.
-    // get_public_profiles expone solo id/full_name/avatar_url/role.
+    // get_public_profiles expone id/full_name/avatar_url/role/job_title.
     tasks = await enrichTaskAssignees(tasks);
 
     const phasesWithChildren = phases.map((phase) => ({
@@ -195,4 +200,36 @@ export async function duplicateProject(sourceProjectId, newName) {
     });
     if (error) throw error;
     return data; // uuid del nuevo proyecto
+}
+
+/**
+ * Sube o reemplaza el logo de la portada del proyecto.
+ * Guarda la URL pública en projects.logo_url.
+ */
+export async function uploadProjectLogo(projectId, file) {
+    if (!file) throw new Error('Selecciona una imagen.');
+    if (!ALLOWED_LOGO_TYPES.includes(file.type)) {
+        throw new Error('Formato no permitido. Usa JPG, PNG, WEBP, GIF o SVG.');
+    }
+    if (file.size > MAX_LOGO_BYTES) {
+        throw new Error('El logo no puede superar 2 MB.');
+    }
+
+    const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+    const path = `${projectId}/logo-${Date.now()}.${ext}`;
+
+    const { error: uploadError } = await supabase.storage
+        .from(LOGO_BUCKET)
+        .upload(path, file, { upsert: true, contentType: file.type });
+    if (uploadError) throw uploadError;
+
+    const { data: pub } = supabase.storage.from(LOGO_BUCKET).getPublicUrl(path);
+    const logoUrl = pub?.publicUrl;
+    if (!logoUrl) throw new Error('No se pudo obtener la URL del logo.');
+
+    return updateProject(projectId, { logo_url: logoUrl });
+}
+
+export async function clearProjectLogo(projectId) {
+    return updateProject(projectId, { logo_url: null });
 }
