@@ -253,6 +253,8 @@ function renderHeader(project) {
  * Cualquier usuario con ≥1 tarea (cualquier estado) aparece una sola vez.
  * Orden: administradores → miembros → clientes (y por nombre dentro de cada grupo).
  */
+const TEAM_TASK_DONE_STATUSES = new Set(['completed', 'finished', 'approved']);
+
 function resolveTeamMemberRole(assigneeId, profile, adminById, clientId) {
     if (adminById.has(assigneeId) || profile?.role === 'admin') return 'admin';
     if ((clientId && assigneeId === clientId) || profile?.role === 'client') return 'client';
@@ -263,6 +265,33 @@ function teamSortRank(role) {
     if (role === 'admin') return 0;
     if (role === 'member') return 1;
     return 2; // client
+}
+
+function formatTeamTaskCount(count) {
+    if (!count) return 'Sin tareas asignadas';
+    return count === 1 ? '1 tarea asignada' : `${count} tareas asignadas`;
+}
+
+function getTeamParticipationStatus(taskCount, pendingCount) {
+    if (!taskCount) {
+        return {
+            key: 'empty',
+            label: 'Sin asignaciones',
+            mark: '○'
+        };
+    }
+    if (pendingCount > 0) {
+        return {
+            key: 'active',
+            label: 'Activo en el proyecto',
+            mark: '●'
+        };
+    }
+    return {
+        key: 'done',
+        label: 'Participación completada',
+        mark: '✓'
+    };
 }
 
 function renderAssignedTeam(tasks) {
@@ -282,24 +311,26 @@ function renderAssignedTeam(tasks) {
         const admin = adminById.get(task.assignee_id);
         const profile = task.profiles || admin || (task.assignee_id === clientId ? clientProfile : null);
         const role = resolveTeamMemberRole(task.assignee_id, profile, adminById, clientId);
+        const isDone = TEAM_TASK_DONE_STATUSES.has(task.status);
 
         if (!members.has(task.assignee_id)) {
             const fullName = admin?.full_name
                 || profile?.full_name
                 || (role === 'client' ? (clientProfile?.full_name || 'Cliente') : 'Usuario');
-            const jobTitle = admin?.job_title
-                || profile?.job_title
-                || (role === 'client' ? 'Cliente' : role === 'admin' ? 'Equipo NEXA' : 'Miembro del equipo');
 
             members.set(task.assignee_id, {
                 id: task.assignee_id,
                 role,
                 full_name: fullName,
                 avatar_url: admin?.avatar_url || profile?.avatar_url || null,
-                job_title: jobTitle,
-                is_active: admin?.is_active !== false
+                taskCount: 0,
+                pendingCount: 0
             });
         }
+
+        const member = members.get(task.assignee_id);
+        member.taskCount += 1;
+        if (!isDone) member.pendingCount += 1;
     }
 
     const team = [...members.values()].sort((a, b) => {
@@ -324,29 +355,23 @@ function renderAssignedTeam(tasks) {
             ? `<img src="${escapeHtml(member.avatar_url)}" alt="" class="pd-team-avatar-img">`
             : `<span class="pd-team-avatar-fallback">${escapeHtml(initials)}</span>`;
         const isClient = member.role === 'client';
-        const badge = isClient
-            ? '<span class="pd-team-badge pd-team-badge--client">Cliente</span>'
-            : '';
-        const roleLabel = isClient
-            ? 'Cliente'
-            : (member.job_title || (member.role === 'admin' ? 'Equipo NEXA' : 'Miembro del equipo'));
-        const online = member.is_active !== false;
-        const statusLabel = online ? 'En línea' : 'Desconectado';
-        const statusClass = online ? '' : ' is-offline';
+        const roleLabel = isClient ? 'Cliente' : 'Equipo NEXA';
+        const taskLabel = formatTeamTaskCount(member.taskCount);
+        const participation = getTeamParticipationStatus(member.taskCount, member.pendingCount);
 
         return `
             <article class="pd-team-card${isClient ? ' pd-team-card--client' : ''}">
-                <div class="pd-team-avatar${statusClass}" style="--team-accent:${accent}">
+                <div class="pd-team-avatar" style="--team-accent:${accent}">
                     ${avatar}
-                    <span class="pd-team-online" title="${statusLabel}"></span>
                 </div>
                 <div class="pd-team-info">
-                    <div class="pd-team-name-row">
-                        <strong class="pd-team-name">${escapeHtml(member.full_name)}</strong>
-                        ${badge}
-                    </div>
+                    <strong class="pd-team-name">${escapeHtml(member.full_name)}</strong>
                     <span class="pd-team-role" style="color:${isClient ? 'rgba(255,255,255,.55)' : accent}">${escapeHtml(roleLabel)}</span>
-                    <span class="pd-team-status${statusClass}"><span class="pd-team-status-dot"></span>${statusLabel}</span>
+                    <span class="pd-team-tasks">${escapeHtml(taskLabel)}</span>
+                    <span class="pd-team-status pd-team-status--${participation.key}">
+                        <span class="pd-team-status-mark" aria-hidden="true">${participation.mark}</span>
+                        ${escapeHtml(participation.label)}
+                    </span>
                 </div>
             </article>
         `;

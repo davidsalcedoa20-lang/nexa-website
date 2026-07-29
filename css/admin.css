@@ -2387,26 +2387,7 @@ body.admin-page{
     color:#fff;
     background:color-mix(in srgb, var(--team-accent, #5B9DFF) 35%, #1a1a1e);
 }
-.pd-team-online{
-    position:absolute;
-    right:0;
-    bottom:0;
-    width:10px;
-    height:10px;
-    border-radius:50%;
-    background:#3DDC97;
-    border:2px solid #121214;
-}
-.pd-team-avatar.is-offline .pd-team-online{
-    background:#6a6a6a;
-}
 .pd-team-info{ min-width:0; display:flex; flex-direction:column; gap:2px; }
-.pd-team-name-row{
-    display:flex;
-    align-items:center;
-    gap:6px;
-    min-width:0;
-}
 .pd-team-name{
     font-size:13.5px;
     font-weight:650;
@@ -2415,42 +2396,27 @@ body.admin-page{
     overflow:hidden;
     text-overflow:ellipsis;
 }
-.pd-team-badge{
-    flex-shrink:0;
-    display:inline-flex;
-    align-items:center;
-    padding:2px 6px;
-    border-radius:999px;
-    font-size:9.5px;
-    font-weight:700;
-    letter-spacing:.04em;
-    text-transform:uppercase;
-}
-.pd-team-badge--client{
-    color:#9EC8FF;
-    background:rgba(45,140,255,.16);
-    border:1px solid rgba(45,140,255,.28);
-}
 .pd-team-role{ font-size:12px; font-weight:550; }
+.pd-team-tasks{
+    font-size:11.5px;
+    color:rgba(255,255,255,.45);
+    font-weight:500;
+}
 .pd-team-status{
     display:inline-flex;
     align-items:center;
     gap:5px;
     font-size:11px;
-    color:rgba(255,255,255,.45);
+    font-weight:550;
+    margin-top:1px;
 }
-.pd-team-status-dot{
-    width:6px;
-    height:6px;
-    border-radius:50%;
-    background:#3DDC97;
+.pd-team-status-mark{
+    font-size:9px;
+    line-height:1;
 }
-.pd-team-status.is-offline{
-    color:rgba(255,255,255,.35);
-}
-.pd-team-status.is-offline .pd-team-status-dot{
-    background:#6a6a6a;
-}
+.pd-team-status--active{ color:#3DDC97; }
+.pd-team-status--done{ color:#6EB0FF; }
+.pd-team-status--empty{ color:rgba(255,255,255,.38); }
 .pd-team-empty{
     margin:0;
     font-size:13px;
