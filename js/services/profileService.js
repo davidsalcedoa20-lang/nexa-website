@@ -7,7 +7,7 @@ import { supabase } from './supabaseClient.js';
 export async function listAdmins() {
     const { data, error } = await supabase
         .from('profiles')
-        .select('id, full_name, email, avatar_url, job_title')
+        .select('id, full_name, email, avatar_url, job_title, is_active')
         .eq('role', 'admin')
         .order('full_name', { ascending: true });
     if (error) throw error;

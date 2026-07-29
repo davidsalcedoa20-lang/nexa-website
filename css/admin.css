@@ -2343,6 +2343,11 @@ body.admin-page{
     text-transform:uppercase;
     color:rgba(255,255,255,.55);
 }
+.pd-team-count{
+    letter-spacing:0;
+    font-weight:700;
+    color:rgba(255,255,255,.72);
+}
 .pd-team-list{ display:flex; flex-wrap:wrap; gap:10px; }
 .pd-team-card{
     display:flex;
@@ -2392,7 +2397,16 @@ body.admin-page{
     background:#3DDC97;
     border:2px solid #121214;
 }
+.pd-team-avatar.is-offline .pd-team-online{
+    background:#6a6a6a;
+}
 .pd-team-info{ min-width:0; display:flex; flex-direction:column; gap:2px; }
+.pd-team-name-row{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    min-width:0;
+}
 .pd-team-name{
     font-size:13.5px;
     font-weight:650;
@@ -2400,6 +2414,22 @@ body.admin-page{
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
+}
+.pd-team-badge{
+    flex-shrink:0;
+    display:inline-flex;
+    align-items:center;
+    padding:2px 6px;
+    border-radius:999px;
+    font-size:9.5px;
+    font-weight:700;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+}
+.pd-team-badge--client{
+    color:#9EC8FF;
+    background:rgba(45,140,255,.16);
+    border:1px solid rgba(45,140,255,.28);
 }
 .pd-team-role{ font-size:12px; font-weight:550; }
 .pd-team-status{
@@ -2414,6 +2444,12 @@ body.admin-page{
     height:6px;
     border-radius:50%;
     background:#3DDC97;
+}
+.pd-team-status.is-offline{
+    color:rgba(255,255,255,.35);
+}
+.pd-team-status.is-offline .pd-team-status-dot{
+    background:#6a6a6a;
 }
 .pd-team-empty{
     margin:0;

@@ -249,34 +249,67 @@ function renderHeader(project) {
 }
 
 /**
- * Equipo asignado: administradores únicos con al menos una tarea
- * en el proyecto. Aparecen/desaparecen según las asignaciones.
+ * Equipo asignado: derivados automáticamente de las tareas del proyecto.
+ * Cualquier usuario con ≥1 tarea (cualquier estado) aparece una sola vez.
+ * Orden: administradores → miembros → clientes (y por nombre dentro de cada grupo).
  */
+function resolveTeamMemberRole(assigneeId, profile, adminById, clientId) {
+    if (adminById.has(assigneeId) || profile?.role === 'admin') return 'admin';
+    if ((clientId && assigneeId === clientId) || profile?.role === 'client') return 'client';
+    return 'member';
+}
+
+function teamSortRank(role) {
+    if (role === 'admin') return 0;
+    if (role === 'member') return 1;
+    return 2; // client
+}
+
 function renderAssignedTeam(tasks) {
     const listEl = el('pdTeamList');
     const emptyEl = el('pdTeamEmpty');
+    const countEl = el('pdTeamCount');
     if (!listEl || !emptyEl) return;
 
     const adminById = new Map((admins || []).map((a) => [a.id, a]));
+    const clientProfile = getProjectClientProfile(currentProject);
+    const clientId = clientProfile?.id || null;
     const members = new Map();
 
     for (const task of tasks || []) {
         if (!task.assignee_id) continue;
+
         const admin = adminById.get(task.assignee_id);
-        const profile = task.profiles || admin;
-        if (!admin && profile?.role !== 'admin') continue;
+        const profile = task.profiles || admin || (task.assignee_id === clientId ? clientProfile : null);
+        const role = resolveTeamMemberRole(task.assignee_id, profile, adminById, clientId);
 
         if (!members.has(task.assignee_id)) {
+            const fullName = admin?.full_name
+                || profile?.full_name
+                || (role === 'client' ? (clientProfile?.full_name || 'Cliente') : 'Usuario');
+            const jobTitle = admin?.job_title
+                || profile?.job_title
+                || (role === 'client' ? 'Cliente' : role === 'admin' ? 'Equipo NEXA' : 'Miembro del equipo');
+
             members.set(task.assignee_id, {
                 id: task.assignee_id,
-                full_name: admin?.full_name || profile?.full_name || 'Administrador',
+                role,
+                full_name: fullName,
                 avatar_url: admin?.avatar_url || profile?.avatar_url || null,
-                job_title: admin?.job_title || profile?.job_title || 'Equipo NEXA'
+                job_title: jobTitle,
+                is_active: admin?.is_active !== false
             });
         }
     }
 
-    const team = [...members.values()];
+    const team = [...members.values()].sort((a, b) => {
+        const rankDiff = teamSortRank(a.role) - teamSortRank(b.role);
+        if (rankDiff !== 0) return rankDiff;
+        return String(a.full_name || '').localeCompare(String(b.full_name || ''), 'es', { sensitivity: 'base' });
+    });
+
+    if (countEl) countEl.textContent = `(${team.length})`;
+
     if (!team.length) {
         listEl.innerHTML = '';
         emptyEl.hidden = false;
@@ -290,16 +323,30 @@ function renderAssignedTeam(tasks) {
         const avatar = member.avatar_url
             ? `<img src="${escapeHtml(member.avatar_url)}" alt="" class="pd-team-avatar-img">`
             : `<span class="pd-team-avatar-fallback">${escapeHtml(initials)}</span>`;
+        const isClient = member.role === 'client';
+        const badge = isClient
+            ? '<span class="pd-team-badge pd-team-badge--client">Cliente</span>'
+            : '';
+        const roleLabel = isClient
+            ? 'Cliente'
+            : (member.job_title || (member.role === 'admin' ? 'Equipo NEXA' : 'Miembro del equipo'));
+        const online = member.is_active !== false;
+        const statusLabel = online ? 'En línea' : 'Desconectado';
+        const statusClass = online ? '' : ' is-offline';
+
         return `
-            <article class="pd-team-card">
-                <div class="pd-team-avatar" style="--team-accent:${accent}">
+            <article class="pd-team-card${isClient ? ' pd-team-card--client' : ''}">
+                <div class="pd-team-avatar${statusClass}" style="--team-accent:${accent}">
                     ${avatar}
-                    <span class="pd-team-online" title="En línea"></span>
+                    <span class="pd-team-online" title="${statusLabel}"></span>
                 </div>
                 <div class="pd-team-info">
-                    <strong class="pd-team-name">${escapeHtml(member.full_name)}</strong>
-                    <span class="pd-team-role" style="color:${accent}">${escapeHtml(member.job_title || 'Equipo NEXA')}</span>
-                    <span class="pd-team-status"><span class="pd-team-status-dot"></span>En línea</span>
+                    <div class="pd-team-name-row">
+                        <strong class="pd-team-name">${escapeHtml(member.full_name)}</strong>
+                        ${badge}
+                    </div>
+                    <span class="pd-team-role" style="color:${isClient ? 'rgba(255,255,255,.55)' : accent}">${escapeHtml(roleLabel)}</span>
+                    <span class="pd-team-status${statusClass}"><span class="pd-team-status-dot"></span>${statusLabel}</span>
                 </div>
             </article>
         `;
