@@ -41,8 +41,13 @@ export async function ensureFinanceSettings() {
     if (readError) throw readError;
 
     if (existing) {
-        // Idempotente: completa catálogos Fase 2 si faltan
-        await supabase.rpc('seed_finance_defaults', { p_admin_id: adminId }).catch(() => null);
+        // Idempotente: completa catálogos Fase 2 si faltan (ignorar error si RPC no aplica).
+        const { error: seedError } = await supabase.rpc('seed_finance_defaults', {
+            p_admin_id: adminId
+        });
+        if (seedError) {
+            console.warn('[financeService] seed_finance_defaults:', seedError.message);
+        }
 
         if (!Array.isArray(existing.dashboard_layout) || !existing.dashboard_layout.length) {
             const { data, error } = await supabase
