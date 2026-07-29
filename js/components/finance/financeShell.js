@@ -147,8 +147,16 @@ export function openHelpDrawer(widgetKey) {
             <p>${escapeHtml(help.how)}</p>
         </section>
         <section class="fin-help-block">
+            <h3>Qué afecta este indicador</h3>
+            <ul>${(help.affects || ['Los ingresos y gastos registrados en el mes seleccionado.']).map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
+        </section>
+        <section class="fin-help-block">
             <h3>Para qué sirve</h3>
             <p>${escapeHtml(help.why)}</p>
+        </section>
+        <section class="fin-help-block">
+            <h3>Cómo mejorarlo</h3>
+            <ul>${(help.improve || ['Registra movimientos con disciplina y revisa categorías cada mes.']).map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
         </section>
         <section class="fin-help-block">
             <h3>Ejemplo real</h3>

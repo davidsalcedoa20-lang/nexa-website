@@ -256,3 +256,61 @@ export const FINANCE_SUBNAV = [
     { id: 'reportes', href: 'contabilidad-reportes.html', label: 'Reportes' },
     { id: 'config', href: 'contabilidad-configuracion.html', label: 'Configuración' }
 ];
+
+/** Enriquecimiento Fase 2 de la ayuda inteligente. */
+const HELP_EXTRA = {
+    income_month: {
+        affects: ['Nuevos ingresos confirmados/pagados', 'Cambios de estado', 'Fecha del movimiento'],
+        improve: ['Cierra cobros pendientes', 'Sube ticket promedio', 'Reduce descuentos innecesarios'],
+        how: 'Suma del valor base (sin IVA) de ingresos con estado Confirmado o Pagado cuya fecha cae en el mes seleccionado.'
+    },
+    expense_month: {
+        affects: ['Gastos confirmados/pagados del mes', 'Categorías y fechas'],
+        improve: ['Recorta suscripciones poco usadas', 'Negocia con proveedores', 'Evita gastos fuera de presupuesto'],
+        how: 'Suma del valor base (sin IVA) de gastos Confirmados o Pagados del mes.'
+    },
+    gross_profit: {
+        affects: ['Ingresos del mes', 'Gastos del mes'],
+        improve: ['Mejora precios', 'Baja costos directos de entrega', 'Elige proyectos más rentables'],
+        how: 'Ingresos del mes − Gastos del mes (valores base, sin IVA).'
+    },
+    operating_profit: {
+        affects: ['Utilidad bruta', 'Gastos operativos registrados'],
+        improve: ['Optimiza marketing y herramientas', 'Mantén operación liviana'],
+        how: 'En Fase 2 equivale a la utilidad bruta (cuando se separen costos directos vs operativos se refinará).'
+    },
+    net_profit: {
+        affects: ['Utilidad operacional', 'Otros ajustes futuros (impuestos)'],
+        improve: ['Controla gastos totales', 'Mejora cobros', 'Revisa precios'],
+        how: 'Por ahora = utilidad bruta. Impuestos y ajustes no operativos llegarán en fases posteriores.'
+    },
+    cash_flow: {
+        affects: ['Entradas de dinero (base+IVA)', 'Salidas de dinero (base+IVA)'],
+        improve: ['Pide anticipos', 'Acorta plazos de cobro', 'Planifica pagos grandes'],
+        how: 'Suma (valor+IVA) de ingresos activos − suma (valor+IVA) de gastos activos del mes.'
+    },
+    available_balance: {
+        affects: ['Saldo de apertura de cuentas', 'Flujo de caja acumulado del mes'],
+        improve: ['Mantén colchón de 1–2 meses de gastos fijos', 'Separa caja personal y empresarial'],
+        how: 'Saldo de apertura de cuentas activas + flujo de caja del mes.'
+    },
+    receivables: {
+        affects: ['Ingresos en estado Pendiente'],
+        improve: ['Seguimiento semanal de mora', 'Políticas claras de pago'],
+        how: 'Suma (valor+IVA) de ingresos con estado Pendiente.'
+    },
+    payables: {
+        affects: ['Gastos en estado Pendiente'],
+        improve: ['Agenda fechas de pago', 'Prioriza proveedores críticos'],
+        how: 'Suma (valor+IVA) de gastos con estado Pendiente.'
+    },
+    profitability: {
+        affects: ['Utilidad neta', 'Ingresos del mes'],
+        improve: ['Enfócate en servicios de mayor margen', 'Elimina trabajo poco rentable'],
+        how: '(Utilidad neta ÷ Ingresos del mes) × 100.'
+    }
+};
+
+Object.keys(HELP_EXTRA).forEach((key) => {
+    if (FINANCE_HELP[key]) Object.assign(FINANCE_HELP[key], HELP_EXTRA[key]);
+});
