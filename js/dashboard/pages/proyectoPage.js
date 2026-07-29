@@ -37,6 +37,7 @@ const loadingEl = document.getElementById('projectDetailLoadingState');
 let currentUserId = null;
 let currentProject = null;
 let currentStructure = null;
+let currentDeliverables = [];
 
 /** Etapa activa en la línea de tiempo (navegador principal). */
 let selectedStageId = null;
@@ -77,7 +78,7 @@ async function init() {
 async function refreshAll() {
     currentProject = await getProject(projectId);
     currentStructure = await getProjectStructure(projectId);
-    const deliverables = await listProjectDeliverables(projectId);
+    currentDeliverables = await listProjectDeliverables(projectId);
     const comments = await listComments(projectId, 'project', projectId);
     const events = await listTimelineEvents(projectId);
 
@@ -94,8 +95,7 @@ async function refreshAll() {
     renderStageProgress(currentStructure.stages);
     renderTimelineChips(currentStructure.stages);
     renderPhases(currentStructure.stages, currentStructure.unassignedPhases, { animate: false });
-    renderMyTasks(currentStructure.allTasks);
-    renderDeliverables(deliverables);
+    renderStageScopedPanels();
     renderActivityPreview(events);
     renderComments(comments);
     renderTimeline(events);
@@ -157,6 +157,58 @@ function selectStage(stageId) {
     updateTimelineActiveState();
     updateProgressActiveState();
     renderPhases(currentStructure.stages, currentStructure.unassignedPhases, { animate: true });
+    renderStageScopedPanels();
+}
+
+function getTasksForSelectedStage() {
+    if (!currentStructure) return [];
+    let phases = [];
+    if (selectedStageId === '__unassigned__') {
+        phases = currentStructure.unassignedPhases || [];
+    } else {
+        const stage = (currentStructure.stages || []).find((s) => s.id === selectedStageId);
+        phases = stage?.phases || [];
+    }
+    const tasks = [];
+    phases.forEach((phase) => {
+        (phase.sections || []).forEach((section) => {
+            (section.tasks || []).forEach((task) => tasks.push(task));
+        });
+    });
+    return tasks;
+}
+
+function getDeliverablesForSelectedStage() {
+    const all = currentDeliverables || [];
+    if (selectedStageId === '__unassigned__') {
+        return all.filter((d) => !d.timeline_stage_id);
+    }
+    return all.filter((d) => d.timeline_stage_id === selectedStageId);
+}
+
+function collectStageTaskStats(stage) {
+    let total = 0;
+    let done = 0;
+    (stage?.phases || []).forEach((phase) => {
+        (phase.sections || []).forEach((section) => {
+            (section.tasks || []).forEach((task) => {
+                total += 1;
+                if (['completed', 'finished', 'approved'].includes(task.status)) done += 1;
+            });
+        });
+    });
+    return { total, done, pending: Math.max(0, total - done) };
+}
+
+function collectStageDeliverableStats(stageId) {
+    const list = (currentDeliverables || []).filter((d) => d.timeline_stage_id === stageId);
+    const delivered = list.filter((d) => d.status === 'delivered' || d.status === 'approved').length;
+    return { total: list.length, delivered, pending: Math.max(0, list.length - delivered) };
+}
+
+function renderStageScopedPanels() {
+    renderMyTasks(getTasksForSelectedStage());
+    renderDeliverables(getDeliverablesForSelectedStage());
 }
 
 function updateTimelineActiveState() {
@@ -199,15 +251,26 @@ function renderTimelineChips(stages) {
         return;
     }
 
-    track.innerHTML = stages.map((stage, idx) => `
+    track.innerHTML = stages.map((stage, idx) => {
+        const taskStats = collectStageTaskStats(stage);
+        const delivStats = collectStageDeliverableStats(stage.id);
+        return `
         <div class="dash-timeline-chip ${selectedStageId === stage.id ? 'is-active' : ''}" data-stage-id="${stage.id}" style="--stage-color:${escapeHtml(stage.color_hex)}" role="button" tabindex="0">
             <div class="dash-timeline-chip-top">
                 <span class="dash-timeline-chip-num">${idx + 1}</span>
                 <span class="dash-timeline-chip-name">${escapeHtml(stage.name)}</span>
             </div>
             <span class="dash-timeline-chip-sub">${stage.progress_percent || 0}% · ${PROGRESS_STATUS_LABELS[stage.status] || stage.status}</span>
-        </div>
-    `).join('') + (unassigned.length ? `
+            <div class="dash-timeline-chip-stats">
+                <span>${taskStats.total} tarea${taskStats.total === 1 ? '' : 's'}</span>
+                <span>${taskStats.done} completada${taskStats.done === 1 ? '' : 's'}</span>
+                <span>${taskStats.pending} pendiente${taskStats.pending === 1 ? '' : 's'}</span>
+                <span>${delivStats.total} entregable${delivStats.total === 1 ? '' : 's'}</span>
+                <span>${delivStats.delivered} entregado${delivStats.delivered === 1 ? '' : 's'}</span>
+                <span>${delivStats.pending} pend. entreg.</span>
+            </div>
+        </div>`;
+    }).join('') + (unassigned.length ? `
         <div class="dash-timeline-chip ${selectedStageId === '__unassigned__' ? 'is-active' : ''}" data-stage-id="__unassigned__" style="--stage-color:#8a8a8a" role="button" tabindex="0">
             <div class="dash-timeline-chip-top">
                 <span class="dash-timeline-chip-num">·</span>
@@ -436,6 +499,7 @@ function renderMyTasks(tasks) {
     if (!myTasks.length) {
         list.innerHTML = '';
         emptyState.style.display = 'block';
+        emptyState.textContent = 'No tienes tareas en esta etapa.';
         return;
     }
     emptyState.style.display = 'none';

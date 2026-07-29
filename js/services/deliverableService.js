@@ -23,12 +23,16 @@ export async function listProjectDeliverables(projectId) {
 }
 
 export async function createDeliverable(payload) {
-    const { project_id, phase_id, title, description, status, due_date, delivered_at, notes, external_link } = payload;
+    const {
+        project_id, phase_id, timeline_stage_id,
+        title, description, status, due_date, delivered_at, notes, external_link
+    } = payload;
     const { data, error } = await supabase
         .from('project_deliverables')
         .insert({
             project_id,
             phase_id: phase_id || null,
+            timeline_stage_id: timeline_stage_id || null,
             title,
             description: description || null,
             status: status || 'draft',

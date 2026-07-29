@@ -29,12 +29,13 @@ export function getAgendaCardTone(task) {
     return { key: 'scheduled', label: 'Programada' };
 }
 
+/** Semana completa Lunes–Domingo (Workspace). */
 export const WEEKDAY_LABELS = [
     'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'
 ];
 
-/** Solo Lunes–Viernes (vista Workspace). */
-export const WORKWEEK_LABELS = WEEKDAY_LABELS.slice(0, 5);
+/** @deprecated Usar WEEKDAY_LABELS (7 días). Conservado por compatibilidad. */
+export const WORKWEEK_LABELS = WEEKDAY_LABELS;
 
 /** Lunes de la semana que contiene `date` (local). */
 export function startOfWeek(date = new Date()) {

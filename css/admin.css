@@ -3429,12 +3429,14 @@ body.admin-page{
 .agenda-week-nav span{ font-size:13px; color:#d0d0d0; min-width:200px; text-align:center; }
 .agenda-loading{ color:#7a7a7a; font-size:13px; }
 
-/* Tablero amplio L?V */
+/* Tablero semanal completo L–D */
 .agenda-week-board{
     display:grid;
-    grid-template-columns:repeat(5, minmax(240px, 1fr));
+    grid-template-columns:repeat(7, minmax(240px, 1fr));
     gap:16px;
     overflow-x:auto;
+    scroll-behavior:smooth;
+    -webkit-overflow-scrolling:touch;
     padding-bottom:8px;
     align-items:start;
 }
@@ -3618,7 +3620,7 @@ body.admin-page{
     .ws-footer{ grid-template-columns:1fr; }
 }
 @media screen and (max-width:900px){
-    .agenda-week-board{ grid-template-columns:repeat(5, minmax(220px, 1fr)); }
+    .agenda-week-board{ grid-template-columns:repeat(7, minmax(220px, 1fr)); }
 }
 @media screen and (max-width:576px){
     .ws-stats{ grid-template-columns:1fr; }
@@ -4078,4 +4080,45 @@ body.admin-page{
 .perm-editor-actions{
     display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:flex-end;
     margin-top:8px; padding-bottom:24px;
+}
+
+.perm-greeting{ display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.perm-greeting .admin-btn-primary{ display:inline-flex; align-items:center; gap:8px; }
+.perm-card.is-inactive{ opacity:.72; }
+.perm-role-badge.is-inactive{ color:#FFB080; background:rgba(255,159,90,.12); border-color:rgba(255,159,90,.35); }
+.perm-editor-heading{ display:flex; align-items:center; gap:12px; }
+.perm-editor-toolbar{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+.perm-danger-btn{ border-color:rgba(255,90,110,.35) !important; color:#FF8A9A !important; }
+.perm-admin-modal{ max-width:720px; width:min(720px, 96vw); max-height:min(92vh, 920px); display:flex; flex-direction:column; }
+.perm-admin-modal-body{ overflow:auto; padding:0 22px 18px; }
+.perm-avatar-row{ display:flex; gap:14px; align-items:center; margin-bottom:14px; }
+.perm-avatar-preview{
+    width:72px; height:72px; border-radius:50%; overflow:hidden;
+    background:rgba(140,82,255,.2); display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:700; flex-shrink:0;
+}
+.perm-avatar-preview img{ width:100%; height:100%; object-fit:cover; display:block; }
+.perm-password-row{ display:flex; gap:8px; }
+.perm-password-row input{ flex:1; }
+.perm-radio small{ display:block; color:rgba(255,255,255,.4); font-size:11.5px; margin-top:2px; }
+
+.pd-stage-scope-label{
+    color:rgba(255,255,255,.45);
+    font-weight:500;
+    font-size:12px;
+    letter-spacing:0;
+    text-transform:none;
+}
+.pd-timeline-chip-stats,
+.dash-timeline-chip-stats{
+    display:flex;
+    flex-wrap:wrap;
+    gap:6px 10px;
+    margin-top:8px;
+    font-size:10.5px;
+    color:rgba(255,255,255,.42);
+}
+.pd-timeline-chip-stats span,
+.dash-timeline-chip-stats span{
+    white-space:nowrap;
 }

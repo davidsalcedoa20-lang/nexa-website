@@ -17,7 +17,7 @@ import { listProjects } from '../../services/projectService.js';
 import {
     AGENDA_PRIORITY_LABELS,
     AGENDA_STATUS_LABELS,
-    WORKWEEK_LABELS,
+    WEEKDAY_LABELS,
     startOfWeek,
     addDays,
     toISODate,
@@ -140,7 +140,7 @@ function renderFocusCard(stats) {
 }
 
 function renderWeekLabel() {
-    const end = addDays(weekStart, 4);
+    const end = addDays(weekStart, 6);
     const opts = { day: 'numeric', month: 'long' };
     el('agendaWeekLabel').textContent =
         `${weekStart.toLocaleDateString('es-CO', opts)} – ${end.toLocaleDateString('es-CO', { ...opts, year: 'numeric' })}`;
@@ -150,7 +150,7 @@ function renderWeekBoard() {
     const board = el('agendaWeekView');
     const todayIso = toISODate(new Date());
 
-    board.innerHTML = WORKWEEK_LABELS.map((label, index) => {
+    board.innerHTML = WEEKDAY_LABELS.map((label, index) => {
         const dayDate = addDays(weekStart, index);
         const iso = toISODate(dayDate);
         const dayTasks = sortAgendaTasks(tasks.filter((t) => t.task_date === iso));

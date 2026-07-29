@@ -301,16 +301,18 @@
 
                 <section class="pd-footer-grid">
                     <div class="pd-footer-panel pd-tasks-panel">
-                        <h3>Tareas</h3>
+                        <div class="pd-panel-header">
+                            <h3>Tareas <span class="pd-stage-scope-label" id="pdTasksStageLabel"></span></h3>
+                        </div>
                         <div id="pdTasksByResponsible"></div>
                     </div>
                     <div class="pd-footer-panel pd-deliverables-panel">
                         <div class="pd-panel-header">
-                            <h3>Entregables</h3>
+                            <h3>Entregables <span class="pd-stage-scope-label" id="pdDeliverablesStageLabel"></span></h3>
                             <button type="button" class="pd-mini-add-btn" id="pdAddDeliverableBtn">+ Nuevo entregable</button>
                         </div>
                         <div id="pdDeliverablesList"></div>
-                        <div class="admin-empty-inline" id="pdDeliverablesEmptyState" style="display:none;">Sin entregables todavía.</div>
+                        <div class="admin-empty-inline" id="pdDeliverablesEmptyState" style="display:none;">Sin entregables en esta etapa.</div>
                     </div>
                     <div class="pd-footer-panel pd-activity-panel">
                         <h3>Actividad reciente</h3>

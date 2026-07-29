@@ -1741,3 +1741,9 @@ body.dash-page{
     .pd-drive-browser-head{ display:none; }
     .pd-drive-browser-row{ grid-template-columns:1fr; }
 }
+
+.dash-timeline-chip-stats{
+    display:flex; flex-wrap:wrap; gap:6px 10px; margin-top:8px;
+    font-size:10.5px; color:rgba(255,255,255,.42);
+}
+.dash-timeline-chip-stats span{ white-space:nowrap; }

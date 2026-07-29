@@ -37,4 +37,13 @@ set role = 'owner', project_access_mode = 'all'
 where email = 'CORREO_DE_JAIME';
 ```
 
-Diego y el resto de admins existentes reciben todos los permisos automáticamente en la migración.
+## Crear / editar administradores
+
+Edge Function: `manage-admin`
+
+```bash
+npx supabase functions deploy manage-admin
+npm run db:push
+```
+
+UI: `admin/usuarios-permisos.html` → botón **Nuevo administrador**.

@@ -153,8 +153,7 @@ async function refreshAll() {
     renderProgressCards(currentProject, currentStructure.stages);
     renderTimeline(currentStructure.stages);
     renderBlocks(currentStructure.stages, currentStructure.unassignedPhases, { animate: false });
-    renderTasksByResponsible(currentStructure.allTasks, currentProject);
-    renderDeliverables(currentDeliverables);
+    renderStageScopedPanels();
     renderActivity(currentEvents);
     renderFullTimeline(currentEvents);
     renderComments(comments);
@@ -456,6 +455,78 @@ function selectStage(stageId) {
     updateTimelineActiveState();
     updateProgressActiveState();
     renderBlocks(currentStructure.stages, currentStructure.unassignedPhases, { animate: true });
+    renderStageScopedPanels();
+}
+
+/** Nombre de la etapa activa (para etiquetas de paneles). */
+function getSelectedStageName() {
+    if (selectedStageId === '__unassigned__') return 'Sin etapa';
+    const stage = (currentStructure?.stages || []).find((s) => s.id === selectedStageId);
+    return stage?.name || '';
+}
+
+/** Tareas pertenecientes a la etapa seleccionada (vía bloque → sección). */
+function getTasksForSelectedStage() {
+    if (!currentStructure) return [];
+    let phases = [];
+    if (selectedStageId === '__unassigned__') {
+        phases = currentStructure.unassignedPhases || [];
+    } else {
+        const stage = (currentStructure.stages || []).find((s) => s.id === selectedStageId);
+        phases = stage?.phases || [];
+    }
+    const tasks = [];
+    phases.forEach((phase) => {
+        (phase.sections || []).forEach((section) => {
+            (section.tasks || []).forEach((task) => tasks.push(task));
+        });
+    });
+    return tasks;
+}
+
+/** Entregables de la etapa seleccionada. */
+function getDeliverablesForSelectedStage() {
+    const all = currentDeliverables || [];
+    if (selectedStageId === '__unassigned__') {
+        return all.filter((d) => !d.timeline_stage_id);
+    }
+    return all.filter((d) => d.timeline_stage_id === selectedStageId);
+}
+
+function collectStageTaskStats(stage) {
+    let total = 0;
+    let done = 0;
+    (stage?.phases || []).forEach((phase) => {
+        (phase.sections || []).forEach((section) => {
+            (section.tasks || []).forEach((task) => {
+                total += 1;
+                if (['completed', 'finished', 'approved'].includes(task.status)) done += 1;
+            });
+        });
+    });
+    return { total, done, pending: Math.max(0, total - done) };
+}
+
+function collectStageDeliverableStats(stageId) {
+    const list = (currentDeliverables || []).filter((d) => d.timeline_stage_id === stageId);
+    const delivered = list.filter((d) => d.status === 'delivered' || d.status === 'approved').length;
+    return {
+        total: list.length,
+        delivered,
+        pending: Math.max(0, list.length - delivered)
+    };
+}
+
+/** Actualiza paneles de tareas/entregables según la etapa activa. */
+function renderStageScopedPanels() {
+    const stageName = getSelectedStageName();
+    const tasksLabel = el('pdTasksStageLabel');
+    const delivLabel = el('pdDeliverablesStageLabel');
+    if (tasksLabel) tasksLabel.textContent = stageName ? `· ${stageName}` : '';
+    if (delivLabel) delivLabel.textContent = stageName ? `· ${stageName}` : '';
+
+    renderTasksByResponsible(getTasksForSelectedStage(), currentProject);
+    renderDeliverables(getDeliverablesForSelectedStage());
 }
 
 function updateTimelineActiveState() {
@@ -474,7 +545,10 @@ function renderTimeline(stages) {
     const track = el('pdTimelineTrack');
     const unassigned = currentStructure?.unassignedPhases || [];
 
-    track.innerHTML = stages.map((stage, idx) => `
+    track.innerHTML = stages.map((stage, idx) => {
+        const taskStats = collectStageTaskStats(stage);
+        const delivStats = collectStageDeliverableStats(stage.id);
+        return `
         <div class="pd-timeline-chip ${selectedStageId === stage.id ? 'is-active' : ''}" data-stage-id="${stage.id}" style="--stage-color:${escapeHtml(stage.color_hex)}" role="button" tabindex="0">
             <div class="pd-timeline-chip-top">
                 <span class="pd-timeline-chip-num">${idx + 1}</span>
@@ -484,8 +558,16 @@ function renderTimeline(stages) {
                 </button>
             </div>
             <span class="pd-timeline-chip-sub">${stage.progress_percent || 0}% · ${(PROGRESS_STATUS_LABELS[stage.status] || stage.status)}</span>
-        </div>
-    `).join('') + (unassigned.length ? `
+            <div class="pd-timeline-chip-stats">
+                <span>${taskStats.total} tarea${taskStats.total === 1 ? '' : 's'}</span>
+                <span>${taskStats.done} completada${taskStats.done === 1 ? '' : 's'}</span>
+                <span>${taskStats.pending} pendiente${taskStats.pending === 1 ? '' : 's'}</span>
+                <span>${delivStats.total} entregable${delivStats.total === 1 ? '' : 's'}</span>
+                <span>${delivStats.delivered} entregado${delivStats.delivered === 1 ? '' : 's'}</span>
+                <span>${delivStats.pending} pend. entreg.</span>
+            </div>
+        </div>`;
+    }).join('') + (unassigned.length ? `
         <div class="pd-timeline-chip ${selectedStageId === '__unassigned__' ? 'is-active' : ''}" data-stage-id="__unassigned__" style="--stage-color:#8a8a8a" role="button" tabindex="0">
             <div class="pd-timeline-chip-top">
                 <span class="pd-timeline-chip-num">·</span>
@@ -788,8 +870,9 @@ function openSectionModal(section) {
 --------------------------------------------------------- */
 function renderTasksByResponsible(tasks, project) {
     const container = el('pdTasksByResponsible');
+    if (!container) return;
     if (!tasks.length) {
-        container.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin tareas todavía.</span>';
+        container.innerHTML = '<span style="color:#6a6a6a; font-size:12px;">Sin tareas en esta etapa.</span>';
         return;
     }
 
@@ -1192,7 +1275,8 @@ function renderDeliverables(deliverables) {
             try {
                 await updateDeliverable(deliverable.id, { status: nextStatus });
                 currentDeliverables = await listProjectDeliverables(projectId);
-                renderDeliverables(currentDeliverables);
+                renderStageScopedPanels();
+                renderTimeline(currentStructure.stages);
             } catch (error) {
                 alert(`No se pudo actualizar: ${error.message}`);
             }
@@ -1248,12 +1332,19 @@ el('deliverableForm')?.addEventListener('submit', async (e) => {
         if (editingDeliverableId) {
             await updateDeliverable(editingDeliverableId, payload);
         } else {
-            await createDeliverable({ project_id: projectId, ...payload });
+            await createDeliverable({
+                project_id: projectId,
+                timeline_stage_id: selectedStageId && selectedStageId !== '__unassigned__'
+                    ? selectedStageId
+                    : null,
+                ...payload
+            });
         }
         closeModal('deliverableModalOverlay');
         el('deliverableForm').reset();
         currentDeliverables = await listProjectDeliverables(projectId);
-        renderDeliverables(currentDeliverables);
+        renderStageScopedPanels();
+        renderTimeline(currentStructure.stages);
     } catch (error) {
         errorEl.textContent = error.message;
         errorEl.classList.add('active');
@@ -1267,7 +1358,8 @@ el('deliverableDeleteBtn')?.addEventListener('click', async () => {
         await deleteDeliverable(editingDeliverableId);
         closeModal('deliverableModalOverlay');
         currentDeliverables = await listProjectDeliverables(projectId);
-        renderDeliverables(currentDeliverables);
+        renderStageScopedPanels();
+        renderTimeline(currentStructure.stages);
     } catch (error) {
         alert(`No se pudo eliminar: ${error.message}`);
     }
