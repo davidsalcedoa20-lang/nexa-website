@@ -1,10 +1,10 @@
 /* ==========================================================
-   NEXA HUB — Service Worker (solo estáticos)
+   NEXA HUB — Service Worker (solo estáticos del Hub)
+   No cachea marketing (/pages), Supabase, OAuth ni APIs.
    ========================================================== */
-const CACHE_VERSION = 'nexa-hub-static-v1';
+const CACHE_VERSION = 'nexa-hub-static-v2';
 const PRECACHE_URLS = [
-  '/',
-  '/index.html',
+  '/portal/index.html',
   '/manifest.json',
   '/assets/icons/icon-192.png',
   '/assets/icons/icon-512.png',
@@ -13,7 +13,9 @@ const PRECACHE_URLS = [
   '/css/style.css',
   '/css/portal.css',
   '/css/admin.css',
-  '/js/pwa-register.js'
+  '/js/pwa-register.js',
+  '/js/portal.js',
+  '/js/vendor/supabase-js.min.js'
 ];
 
 /** Orígenes / rutas que NUNCA deben cachearse */
@@ -23,6 +25,9 @@ function shouldBypass(request, url) {
   const host = url.hostname.toLowerCase();
   const path = url.pathname.toLowerCase();
   const href = url.href.toLowerCase();
+
+  // Sitio corporativo / marketing (no pertenece al Hub)
+  if (path === '/' || path === '/index.html' || path.startsWith('/pages/')) return true;
 
   // Supabase / APIs / auth
   if (host.includes('supabase.co') || host.includes('supabase.in')) return true;
@@ -44,9 +49,24 @@ function shouldBypass(request, url) {
   return false;
 }
 
-function isStaticAsset(url) {
+function isHubStaticAsset(url) {
   if (url.origin !== self.location.origin) return false;
   const path = url.pathname.toLowerCase();
+
+  // Solo shell del Hub
+  if (!(
+    path.startsWith('/portal/') ||
+    path.startsWith('/admin/') ||
+    path.startsWith('/dashboard/') ||
+    path.startsWith('/assets/') ||
+    path.startsWith('/css/') ||
+    path.startsWith('/js/') ||
+    path === '/manifest.json' ||
+    path === '/service-worker.js'
+  )) {
+    return false;
+  }
+
   return (
     path.endsWith('.html') ||
     path.endsWith('.css') ||
@@ -63,11 +83,7 @@ function isStaticAsset(url) {
     path.endsWith('.woff2') ||
     path.endsWith('.ttf') ||
     path.endsWith('.otf') ||
-    path === '/' ||
-    path === '/manifest.json' ||
-    path.startsWith('/assets/') ||
-    path.startsWith('/css/') ||
-    path.startsWith('/js/')
+    path === '/manifest.json'
   );
 }
 
@@ -97,20 +113,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   if (shouldBypass(request, url)) {
-    return; // red directa, sin cache
+    return;
   }
 
-  if (!isStaticAsset(url)) {
-    return; // no tocar fetch dinámicos ni cross-origin no estáticos
+  if (!isHubStaticAsset(url)) {
+    return;
   }
 
-  // HTML: network-first (actualizaciones en Vercel), fallback a cache
-  if (request.mode === 'navigate' || url.pathname.endsWith('.html') || url.pathname === '/') {
+  // HTML del Hub: network-first (actualizaciones en Vercel)
+  if (request.mode === 'navigate' || url.pathname.endsWith('.html')) {
     event.respondWith(networkFirst(request));
     return;
   }
 
-  // CSS/JS/imagenes/fuentes: stale-while-revalidate
   event.respondWith(staleWhileRevalidate(request));
 });
 
@@ -126,8 +141,8 @@ async function networkFirst(request) {
     const cached = await cache.match(request);
     if (cached) return cached;
     if (request.mode === 'navigate') {
-      const home = await cache.match('/index.html') || await cache.match('/');
-      if (home) return home;
+      const login = await cache.match('/portal/index.html');
+      if (login) return login;
     }
     throw _;
   }
