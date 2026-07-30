@@ -50,6 +50,10 @@ import {
     renderDashboardGrid,
     wireDashboardGrid
 } from '../../../components/finance/financeDashboardGrid.js';
+import {
+    renderAssistantPanel,
+    tipOfTheMonth
+} from '../../../components/finance/financeAssistant.js';
 import { formatMoney } from '../../../components/finance/financeFormat.js';
 import { escapeHtml } from '../../../components/projectUi.js';
 
@@ -66,13 +70,13 @@ let projects = [];
 let rows = [];
 
 const SECTION_META = {
-    dashboard: { title: 'Dashboard', subtitle: 'Lo esencial de este mes, en un vistazo.' },
+    dashboard: { title: 'Dashboard', subtitle: '¿Cuánto tengo? ¿Cuánto debo? ¿Cuánto puedo repartir?' },
     ingresos: { title: 'Ingresos', subtitle: 'Registra el dinero que entra.' },
     egresos: { title: 'Egresos', subtitle: 'Registra el dinero que sale.' },
     fijos: { title: 'Pagos Fijos', subtitle: 'Gastos que se repiten todos los meses.' },
     empleados: { title: 'Empleados', subtitle: 'Reparto por porcentaje del dinero disponible.' },
     prestamos: { title: 'Préstamos', subtitle: 'Lo que debes o te deben, sin complicaciones.' },
-    resumen: { title: 'Resumen', subtitle: 'Indicadores fáciles de entender.' }
+    resumen: { title: 'Resumen', subtitle: 'Solo los indicadores que importan.' }
 };
 
 async function init() {
@@ -85,7 +89,7 @@ async function init() {
 
     ensureHelpDrawer();
     setSelectedMonth(monthKey);
-    root.innerHTML = '<p class="fin-loading">Abriendo contabilidad…</p>';
+    root.innerHTML = '<p class="fin-loading">Abriendo finanzas…</p>';
 
     try {
         book = await getFinanceBook(bookId);
@@ -135,7 +139,10 @@ function render() {
             monthKey,
             showMonth: !['fijos', 'prestamos'].includes(section)
         })}
-        <div id="finSectionBody">${renderSectionBody()}</div>
+        <div class="fin-layout">
+            <div class="fin-layout-main" id="finSectionBody">${renderSectionBody()}</div>
+            ${renderAssistantPanel(section)}
+        </div>
         <div id="finModalHost"></div>
     `;
 
@@ -166,60 +173,186 @@ function renderSectionBody() {
 
 function renderDashboard() {
     const v = summary.values;
+    const toShare = Math.max(0, v.available);
+    const fixedItems = summary.fixedItems || [];
+    const loans = summary.activeLoans || [];
+
     return `
         <div class="fin-toolbar">
-            <p class="fin-toolbar-note">Mueve, oculta o cambia el tamaño de las tarjetas.</p>
+            <p class="fin-toolbar-note">Responde en segundos: cuánto entró, cuánto salió y cuánto queda.</p>
             <button type="button" class="admin-btn-secondary" id="finToggleEdit">
                 ${editMode ? 'Listo' : 'Personalizar'}
             </button>
         </div>
-        <section class="fin-summary-strip fin-summary-strip-4">
-            <div>
-                <span>Ingresos <button type="button" class="fin-help-btn" data-help="income_total">ⓘ</button></span>
+
+        <div class="fin-dash-hero-grid">
+            <article class="fin-caja-card">
+                <div class="fin-caja-top">
+                    <div>
+                        <span class="fin-kicker" style="color:#4ADE80">Caja disponible</span>
+                        <strong class="fin-caja-value ${v.available < 0 ? 'is-neg' : ''}">${money(v.available)}</strong>
+                    </div>
+                    <button type="button" class="fin-help-btn" data-help="available" title="Qué significa">ⓘ</button>
+                </div>
+                <ul class="fin-caja-breakdown">
+                    <li><span>Ingresos este mes</span><b class="is-pos">${money(v.income_total)}</b></li>
+                    <li><span>Egresos este mes</span><b class="is-neg">− ${money(v.expense_total)}</b></li>
+                    <li><span>Pagos fijos</span><b class="is-neg">− ${money(v.fixed_total)}</b></li>
+                </ul>
+                <div class="fin-caja-foot">
+                    <span>Disponible para repartir</span>
+                    <strong>${money(toShare)}</strong>
+                </div>
+            </article>
+
+            <article class="fin-metric-card tone-income">
+                <div class="fin-metric-head">
+                    <span>Ingresos</span>
+                    <button type="button" class="fin-help-btn" data-help="income_total">ⓘ</button>
+                </div>
                 <strong>${money(v.income_total)}</strong>
-            </div>
-            <div>
-                <span>Egresos <button type="button" class="fin-help-btn" data-help="expense_total">ⓘ</button></span>
+                <span class="fin-metric-sub">${summary.counts.incomes} registro${summary.counts.incomes === 1 ? '' : 's'}</span>
+            </article>
+
+            <article class="fin-metric-card tone-expense">
+                <div class="fin-metric-head">
+                    <span>Egresos</span>
+                    <button type="button" class="fin-help-btn" data-help="expense_total">ⓘ</button>
+                </div>
                 <strong>${money(v.expense_total)}</strong>
-            </div>
-            <div>
-                <span>Pagos fijos <button type="button" class="fin-help-btn" data-help="fixed_total">ⓘ</button></span>
+                <span class="fin-metric-sub">${summary.counts.expenses} registro${summary.counts.expenses === 1 ? '' : 's'}</span>
+            </article>
+
+            <article class="fin-metric-card tone-fixed">
+                <div class="fin-metric-head">
+                    <span>Pagos fijos</span>
+                    <button type="button" class="fin-help-btn" data-help="fixed_total">ⓘ</button>
+                </div>
                 <strong>${money(v.fixed_total)}</strong>
-            </div>
-            <div>
-                <span>Disponible <button type="button" class="fin-help-btn" data-help="available">ⓘ</button></span>
-                <strong>${money(v.available)}</strong>
-            </div>
-        </section>
-        ${renderDashboardGrid({
-            layout,
-            values: v,
-            currency: book.currency || 'COP',
-            editMode
-        })}
-        ${summary.shares.length ? `
+                <ul class="fin-mini-list">
+                    ${fixedItems.length
+                        ? fixedItems.slice(0, 4).map((f) => `
+                            <li><span>${escapeHtml(f.name)}</span><b>${money(f.amount)}</b></li>
+                        `).join('')
+                        : '<li class="fin-muted">Sin pagos fijos activos</li>'}
+                </ul>
+            </article>
+        </div>
+
+        <div class="fin-dash-mid-grid">
             <section class="fin-panel fin-shares-panel">
                 <div class="fin-panel-head">
-                    <h3>Reparto del disponible</h3>
+                    <h3>Distribución de utilidades</h3>
                     <button type="button" class="fin-help-btn" data-help="distributed">ⓘ</button>
                 </div>
-                <div class="fin-shares-list">
-                    ${summary.shares.map((s) => `
-                        <div class="fin-share-row">
-                            <div>
-                                <strong>${escapeHtml(s.name)}</strong>
-                                <span>${escapeHtml(s.job_title || 'Sin cargo')} · ${s.percentage}%</span>
+                ${summary.shares.length ? `
+                    <div class="fin-shares-list">
+                        ${summary.shares.map((s) => `
+                            <div class="fin-share-row">
+                                <div class="fin-share-person">
+                                    <span class="fin-avatar">${escapeHtml((s.name || '?').slice(0, 1).toUpperCase())}</span>
+                                    <div>
+                                        <strong>${escapeHtml(s.name)}</strong>
+                                        <span>${escapeHtml(s.job_title || 'Sin cargo')} · ${s.percentage}%</span>
+                                    </div>
+                                </div>
+                                <b>${money(s.amount)}</b>
                             </div>
-                            <b>${money(s.amount)}</b>
-                        </div>
-                    `).join('')}
-                </div>
+                        `).join('')}
+                    </div>
+                ` : `
+                    <p class="fin-muted">Agrega empleados con porcentaje para ver el reparto.
+                        <a href="${bookSectionHref(bookId, 'empleados', monthKey)}">Ir a Empleados</a>
+                    </p>
+                `}
             </section>
-        ` : `
-            <p class="fin-muted">Agrega empleados con porcentaje para ver el reparto automático.
-                <a href="${bookSectionHref(bookId, 'empleados', monthKey)}">Ir a Empleados</a>
-            </p>
-        `}
+
+            <section class="fin-panel">
+                <div class="fin-panel-head">
+                    <h3>Préstamos activos</h3>
+                    <button type="button" class="fin-help-btn" data-help="pending_loans">ⓘ</button>
+                </div>
+                ${loans.length ? `
+                    <div class="fin-loan-preview">
+                        ${loans.map((l) => {
+                            const pct = Number(l.principal) > 0
+                                ? Math.min(100, Math.round((Number(l.paid_amount || 0) / Number(l.principal)) * 100))
+                                : 0;
+                            return `
+                                <div class="fin-loan-preview-item">
+                                    <div class="fin-loan-preview-top">
+                                        <strong>${escapeHtml(l.counterparty)}</strong>
+                                        <span>${escapeHtml(LOAN_TYPE_LABELS[l.loan_type] || l.loan_type)}</span>
+                                    </div>
+                                    <div class="fin-progress"><i style="width:${pct}%"></i></div>
+                                    <div class="fin-loan-preview-meta">
+                                        <span>Pendiente ${money(l.remaining_balance)}</span>
+                                        <span>${escapeHtml(l.next_due_date || 'Sin fecha')}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                ` : '<p class="fin-muted">No hay préstamos activos.</p>'}
+            </section>
+
+            <section class="fin-panel fin-quick-actions">
+                <h3>Acciones rápidas</h3>
+                <a class="fin-qa tone-income" href="${bookSectionHref(bookId, 'ingresos', monthKey)}">+ Nuevo ingreso</a>
+                <a class="fin-qa tone-expense" href="${bookSectionHref(bookId, 'egresos', monthKey)}">− Nuevo egreso</a>
+                <a class="fin-qa tone-fixed" href="${bookSectionHref(bookId, 'fijos', monthKey)}">+ Pago fijo</a>
+                <a class="fin-qa tone-loan" href="${bookSectionHref(bookId, 'prestamos', monthKey)}">+ Nuevo préstamo</a>
+                <a class="fin-qa tone-emp" href="${bookSectionHref(bookId, 'empleados', monthKey)}">+ Nuevo empleado</a>
+            </section>
+        </div>
+
+        <section class="fin-flow-strip" aria-label="Flujo de dinero del mes">
+            <div class="fin-flow-step">
+                <span>Ingresos</span>
+                <strong class="is-pos">${money(v.income_total)}</strong>
+            </div>
+            <span class="fin-flow-op">−</span>
+            <div class="fin-flow-step">
+                <span>Egresos</span>
+                <strong class="is-neg">${money(v.expense_total)}</strong>
+            </div>
+            <span class="fin-flow-op">−</span>
+            <div class="fin-flow-step">
+                <span>Pagos fijos</span>
+                <strong class="is-neg">${money(v.fixed_total)}</strong>
+            </div>
+            <span class="fin-flow-op">=</span>
+            <div class="fin-flow-step is-result">
+                <span>Disponible para repartir</span>
+                <strong class="is-pos">${money(toShare)}</strong>
+            </div>
+            <span class="fin-flow-op">→</span>
+            <div class="fin-flow-step">
+                <span>Total repartido</span>
+                <strong>${money(v.distributed)}</strong>
+            </div>
+        </section>
+
+        <div class="fin-tip-banner">
+            <span aria-hidden="true">💡</span>
+            <div>
+                <strong>Tip del mes</strong>
+                <p>${escapeHtml(tipOfTheMonth(v))}</p>
+            </div>
+        </div>
+
+        ${editMode ? `
+            <div class="fin-customize-wrap">
+                <h3>Personalizar tarjetas</h3>
+                <p class="fin-muted">Arrastra, oculta o cambia el tamaño. Los cambios se guardan solos.</p>
+                ${renderDashboardGrid({
+                    layout,
+                    values: v,
+                    currency: book.currency || 'COP',
+                    editMode: true
+                })}
+            </div>
+        ` : ''}
     `;
 }
 
@@ -620,13 +753,13 @@ function loanModalHtml(row = null) {
 function renderResumen() {
     const v = summary.values;
     const cards = [
-        { key: 'income_total', label: 'Dinero ingresado', value: money(v.income_total) },
-        { key: 'expense_total', label: 'Dinero gastado', value: money(v.expense_total) },
-        { key: 'fixed_total', label: 'Pagos fijos', value: money(v.fixed_total) },
-        { key: 'available', label: 'Dinero disponible', value: money(v.available) },
-        { key: 'distributed', label: 'Dinero repartido', value: money(v.distributed) },
-        { key: 'pending_loan_balance', label: 'Dinero pendiente', value: money(v.pending_loan_balance) },
-        { key: 'pending_loans', label: 'Préstamos activos', value: String(v.pending_loans) }
+        { key: 'income_total', label: 'Ingresos', value: money(v.income_total) },
+        { key: 'expense_total', label: 'Egresos', value: money(v.expense_total) },
+        { key: 'fixed_total', label: 'Pagos Fijos', value: money(v.fixed_total) },
+        { key: 'available', label: 'Disponible', value: money(v.available) },
+        { key: 'distributed', label: 'Repartido', value: money(v.distributed) },
+        { key: 'pending_loan_balance', label: 'Pendiente', value: money(v.pending_loan_balance) },
+        { key: 'pending_loans', label: 'Préstamos', value: String(v.pending_loans) }
     ];
     return `
         <div class="fin-resumen-grid">
@@ -646,9 +779,12 @@ function renderResumen() {
                 <div class="fin-shares-list">
                     ${summary.shares.map((s) => `
                         <div class="fin-share-row">
-                            <div>
-                                <strong>${escapeHtml(s.name)}</strong>
-                                <span>${s.percentage}%</span>
+                            <div class="fin-share-person">
+                                <span class="fin-avatar">${escapeHtml((s.name || '?').slice(0, 1).toUpperCase())}</span>
+                                <div>
+                                    <strong>${escapeHtml(s.name)}</strong>
+                                    <span>${s.percentage}%</span>
+                                </div>
                             </div>
                             <b>${money(s.amount)}</b>
                         </div>
@@ -670,20 +806,22 @@ function wireSection() {
     });
 
     if (section === 'dashboard') {
-        document.getElementById('finToggleEdit')?.addEventListener('click', async () => {
+        document.getElementById('finToggleEdit')?.addEventListener('click', () => {
             editMode = !editMode;
             render();
         });
-        wireDashboardGrid({
-            getLayout: () => layout,
-            setLayout: (next) => { layout = normalizeLayout(next); },
-            onSave: async (next) => {
-                layout = normalizeLayout(next);
-                book = await saveBookDashboardLayout(bookId, layout);
-                render();
-            },
-            editMode
-        });
+        if (editMode) {
+            wireDashboardGrid({
+                getLayout: () => layout,
+                setLayout: (next) => { layout = normalizeLayout(next); },
+                onSave: async (next) => {
+                    layout = normalizeLayout(next);
+                    book = await saveBookDashboardLayout(bookId, layout);
+                    render();
+                },
+                editMode: true
+            });
+        }
         return;
     }
 

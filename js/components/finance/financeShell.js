@@ -42,8 +42,8 @@ export function bookSectionHref(bookId, section, monthKey = getSelectedMonth()) 
 
 export function renderBookSubnav(bookId, activeId, monthKey) {
     return `
-        <nav class="fin-subnav" aria-label="Secciones de contabilidad">
-            <a href="contabilidad.html" class="fin-subnav-item">← Mis Contabilidades</a>
+        <nav class="fin-subnav" aria-label="Secciones de finanzas">
+            <a href="contabilidad.html" class="fin-subnav-item">← Mis Finanzas</a>
             ${FINANCE_SECTIONS.map((item) => `
                 <a href="${bookSectionHref(bookId, item.id, monthKey)}"
                    class="fin-subnav-item${item.id === activeId ? ' is-active' : ''}">

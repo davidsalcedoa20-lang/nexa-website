@@ -594,6 +594,8 @@ export async function getBookSummary(bookId, monthKey = currentMonthKey()) {
             pending_loan_balance: pendingLoanBalance
         },
         shares,
+        fixedItems: fixedActive.slice(0, 6),
+        activeLoans: activeLoans.slice(0, 4),
         counts: {
             incomes: incomes.length,
             expenses: expenses.length,

@@ -13,12 +13,12 @@ export const FINANCE_SECTIONS = [
 ];
 
 export const FINANCE_WIDGETS = [
-    { key: 'income_total', name: 'Dinero ingresado', color: '#4ADE80', size: 'md', icon: 'income' },
+    { key: 'available', name: 'Caja disponible', color: '#4ADE80', size: 'lg', icon: 'wallet' },
+    { key: 'income_total', name: 'Dinero ingresado', color: '#2D8CFF', size: 'md', icon: 'income' },
     { key: 'expense_total', name: 'Dinero gastado', color: '#FF6B81', size: 'md', icon: 'expense' },
-    { key: 'fixed_total', name: 'Pagos fijos del mes', color: '#FF8A3D', size: 'md', icon: 'ops' },
-    { key: 'available', name: 'Dinero disponible', color: '#2D8CFF', size: 'md', icon: 'wallet' },
-    { key: 'distributed', name: 'Dinero repartido', color: '#8C52FF', size: 'md', icon: 'pct' },
-    { key: 'pending_loan_balance', name: 'Dinero pendiente', color: '#FF6B81', size: 'md', icon: 'payable' },
+    { key: 'fixed_total', name: 'Pagos fijos del mes', color: '#8C52FF', size: 'md', icon: 'ops' },
+    { key: 'distributed', name: 'Dinero repartido', color: '#C9A8FF', size: 'md', icon: 'pct' },
+    { key: 'pending_loan_balance', name: 'Dinero pendiente', color: '#FF8A3D', size: 'md', icon: 'payable' },
     { key: 'pending_loans', name: 'Préstamos activos', color: '#FFC15F', size: 'md', icon: 'receivable', format: 'count' }
 ];
 
@@ -52,11 +52,11 @@ export const FINANCE_HELP = {
         tip: 'Si cancelas una suscripción, márcala como Inactiva.'
     },
     available: {
-        title: 'Dinero disponible',
-        meaning: 'Lo que queda después de restar egresos y pagos fijos a los ingresos.',
+        title: 'Caja disponible',
+        meaning: 'Lo que queda después de restar egresos y pagos fijos a los ingresos. Es el dinero que realmente puedes usar o repartir.',
         how: 'Ingresos − Egresos − Pagos fijos.',
-        example: 'Entran $12M, gastas $2M y fijos $1M → disponible $9M.',
-        tip: 'Este es el dinero que puedes repartir o reinvertir.'
+        example: 'Entran $32M, gastas $8.3M y fijos $4.2M → disponible $19.5M.',
+        tip: 'Este es el número más importante del mes.'
     },
     distributed: {
         title: 'Dinero repartido',

@@ -1,5 +1,5 @@
 /* ==========================================================
-   NEXA HUB — Contabilidad V2: Mis Contabilidades
+   NEXA HUB — Finanzas: Mis Finanzas (home de libros)
    ========================================================== */
 import {
     listFinanceBooks,
@@ -30,14 +30,14 @@ function relativeTime(iso) {
 
 async function init() {
     if (!root) return;
-    root.innerHTML = '<p class="fin-loading">Cargando tus contabilidades…</p>';
+    root.innerHTML = '<p class="fin-loading">Cargando tus finanzas…</p>';
     try {
         const list = await listFinanceBooks();
         books = await getBooksCardStats(list);
         render();
     } catch (error) {
-        console.error('[contabilidadesHome]', error);
-        root.innerHTML = `<p class="fin-error">No se pudo cargar Contabilidad: ${escapeHtml(error.message)}</p>`;
+        console.error('[finanzasHome]', error);
+        root.innerHTML = `<p class="fin-error">No se pudo cargar Finanzas: ${escapeHtml(error.message)}</p>`;
     }
 }
 
@@ -45,9 +45,9 @@ function render() {
     root.innerHTML = `
         <div class="fin-page-header">
             <div class="fin-page-heading">
-                <span class="fin-kicker">Contabilidad</span>
-                <h1>Mis Contabilidades</h1>
-                <p>Crea espacios independientes para tu negocio, tus finanzas o un proyecto.</p>
+                <span class="fin-kicker">Finanzas</span>
+                <h1>Mis Finanzas</h1>
+                <p>Administra tus finanzas de forma simple y clara. Cada contabilidad es un espacio independiente.</p>
             </div>
             <button type="button" class="admin-btn-primary" id="finNewBookBtn">+ Nueva Contabilidad</button>
         </div>
@@ -59,7 +59,7 @@ function render() {
         ` : `
             <div class="fin-books-empty">
                 <h2>Aún no tienes contabilidades</h2>
-                <p>Crea la primera. Solo necesitas un nombre, una moneda y una fecha de inicio.</p>
+                <p>Crea la primera. Solo pedimos nombre, descripción, color, moneda y fecha de inicio.</p>
                 <button type="button" class="admin-btn-primary" id="finNewBookEmpty">+ Nueva Contabilidad</button>
             </div>
         `}
@@ -128,7 +128,7 @@ function renderBookCard(book) {
             <p class="fin-book-desc">${escapeHtml(book.description || 'Sin descripción')}</p>
             <div class="fin-book-meta">
                 <div>
-                    <span>Saldo actual</span>
+                    <span>Caja disponible</span>
                     <strong class="${Number(book.balance) < 0 ? 'is-neg' : ''}">${formatMoney(book.balance || 0, { currency })}</strong>
                 </div>
                 <div>
