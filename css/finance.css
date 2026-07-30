@@ -1,5 +1,5 @@
 /* ==========================================================
-   NEXA HUB — ERP Financiero (Fase 1)
+   NEXA HUB — Contabilidad V2
    ========================================================== */
 
 .fin-main{ display:flex; flex-direction:column; gap:18px; }
@@ -328,4 +328,102 @@
     .fin-subnav{ flex-wrap:nowrap; overflow-x:auto; }
     .fin-subnav-item{ white-space:nowrap; }
     .fin-year-compare{ grid-template-columns:1fr; }
+    .fin-books-grid{ grid-template-columns:1fr; }
+    .fin-resumen-grid{ grid-template-columns:1fr; }
+    .fin-summary-strip-4{ grid-template-columns:1fr; }
+}
+
+/* ---- V2: Mis Contabilidades ---- */
+.fin-books-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));
+    gap:16px;
+}
+.fin-book-card{
+    display:flex; flex-direction:column; gap:12px;
+    padding:20px;
+    border-radius:20px;
+    background:linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.04);
+    position:relative;
+    overflow:hidden;
+}
+.fin-book-card::before{
+    content:""; position:absolute; inset:0 auto 0 0; width:3px;
+    background:var(--book-color, #8C52FF);
+}
+.fin-book-card-top{
+    display:flex; align-items:center; justify-content:space-between;
+}
+.fin-book-dot{
+    width:12px; height:12px; border-radius:50%;
+    background:var(--book-color, #8C52FF);
+    box-shadow:0 0 0 4px color-mix(in srgb, var(--book-color, #8C52FF) 22%, transparent);
+}
+.fin-book-card h2{
+    margin:0; font-size:20px; color:#fff; font-weight:700;
+}
+.fin-book-desc{
+    margin:0; color:#9a9a9a; font-size:13.5px; line-height:1.5;
+    min-height:2.8em;
+}
+.fin-book-meta{
+    display:grid; gap:10px;
+    padding:12px 0; border-top:1px solid rgba(255,255,255,.06);
+    border-bottom:1px solid rgba(255,255,255,.06);
+}
+.fin-book-meta span{
+    display:block; font-size:11px; color:#7a7a7a; margin-bottom:2px;
+}
+.fin-book-meta strong{ font-size:14px; color:#fff; font-weight:600; }
+.fin-book-meta strong.is-neg{ color:#FF6B81; }
+.fin-book-enter{ text-align:center; text-decoration:none; margin-top:4px; }
+.fin-books-empty{
+    display:flex; flex-direction:column; align-items:center; gap:10px;
+    padding:56px 20px; text-align:center;
+    border-radius:20px; border:1px dashed rgba(255,255,255,.12);
+    background:rgba(255,255,255,.02);
+}
+.fin-books-empty h2{ margin:0; color:#fff; font-size:20px; }
+.fin-books-empty p{ margin:0 0 8px; color:#8a8a8a; max-width:360px; }
+
+.fin-color-picker{ display:flex; flex-wrap:wrap; gap:8px; margin-top:6px; }
+.fin-color-swatch{
+    width:28px; height:28px; border-radius:50%; border:2px solid transparent;
+    background:var(--swatch); cursor:pointer; padding:0;
+}
+.fin-color-swatch.is-selected{
+    border-color:#fff;
+    box-shadow:0 0 0 3px rgba(255,255,255,.15);
+}
+
+.fin-summary-strip-4{ grid-template-columns:repeat(4, minmax(0, 1fr)); }
+.fin-panel-head{
+    display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:12px;
+}
+.fin-panel-head h3{ margin:0; }
+.fin-shares-panel{ margin-top:8px; }
+.fin-shares-list{ display:flex; flex-direction:column; gap:10px; }
+.fin-share-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:12px 14px; border-radius:12px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06);
+}
+.fin-share-row strong{ display:block; color:#fff; font-size:14px; }
+.fin-share-row span{ color:#8a8a8a; font-size:12px; }
+.fin-share-row b{ color:#fff; font-size:15px; font-variant-numeric:tabular-nums; }
+
+.fin-resumen-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(200px, 1fr)); gap:14px;
+}
+.fin-resumen-card{
+    padding:18px; border-radius:18px;
+    background:linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    display:flex; flex-direction:column; gap:10px; min-height:120px;
+}
+
+@media screen and (max-width:1100px){
+    .fin-summary-strip-4{ grid-template-columns:repeat(2, minmax(0, 1fr)); }
 }

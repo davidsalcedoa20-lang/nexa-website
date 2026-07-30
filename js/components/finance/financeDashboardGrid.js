@@ -57,10 +57,16 @@ export function renderDashboardGrid({
             ${items.map((item) => {
                 const meta = metaFor(item.key);
                 const raw = values[item.key];
-                const display = item.key === 'profitability'
-                    ? (raw === null || raw === undefined ? '—' : `${Number(raw).toFixed(1)}%`)
-                    : formatMoney(raw ?? 0, { currency, locale });
-                const variation = formatVariation(variations[item.key]);
+                let display;
+                if (meta.format === 'count' || item.key === 'pending_loans') {
+                    display = String(Number(raw || 0));
+                } else if (item.key === 'profitability') {
+                    display = raw === null || raw === undefined ? '—' : `${Number(raw).toFixed(1)}%`;
+                } else {
+                    display = formatMoney(raw ?? 0, { currency, locale });
+                }
+                const hasVariation = Object.prototype.hasOwnProperty.call(variations, item.key);
+                const variation = hasVariation ? formatVariation(variations[item.key]) : null;
                 const icon = ICONS[meta.icon] || ICONS.chart;
                 return `
                     <article class="fin-kpi-card size-${item.size}${item.visible ? '' : ' is-hidden-card'}"
@@ -82,7 +88,7 @@ export function renderDashboardGrid({
                         </div>
                         <span class="fin-kpi-name">${escapeHtml(meta.name)}</span>
                         <strong class="fin-kpi-value">${escapeHtml(display)}</strong>
-                        <span class="fin-kpi-delta tone-${variation.tone}">${escapeHtml(variation.text)}</span>
+                        ${variation ? `<span class="fin-kpi-delta tone-${variation.tone}">${escapeHtml(variation.text)}</span>` : ''}
                     </article>
                 `;
             }).join('')}

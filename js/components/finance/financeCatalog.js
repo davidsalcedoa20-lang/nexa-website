@@ -1,316 +1,97 @@
 /* ==========================================================
-   NEXA HUB — ERP Financiero: catálogo de widgets + ayuda
+   NEXA HUB — Contabilidad V2: catálogo simple
    ========================================================== */
-export const FINANCE_WIDGETS = [
-    {
-        key: 'income_month',
-        name: 'Ingresos del mes',
-        color: '#4ADE80',
-        icon: 'income',
-        size: 'md'
-    },
-    {
-        key: 'expense_month',
-        name: 'Gastos del mes',
-        color: '#FF6B81',
-        icon: 'expense',
-        size: 'md'
-    },
-    {
-        key: 'gross_profit',
-        name: 'Utilidad Bruta',
-        color: '#2D8CFF',
-        icon: 'chart',
-        size: 'md'
-    },
-    {
-        key: 'operating_profit',
-        name: 'Utilidad Operacional',
-        color: '#5FA8FF',
-        icon: 'ops',
-        size: 'md'
-    },
-    {
-        key: 'net_profit',
-        name: 'Utilidad Neta',
-        color: '#8C52FF',
-        icon: 'net',
-        size: 'md'
-    },
-    {
-        key: 'cash_flow',
-        name: 'Flujo de Caja',
-        color: '#FFC15F',
-        icon: 'flow',
-        size: 'md'
-    },
-    {
-        key: 'available_balance',
-        name: 'Saldo Disponible',
-        color: '#4ADE80',
-        icon: 'wallet',
-        size: 'md'
-    },
-    {
-        key: 'receivables',
-        name: 'Cuentas por Cobrar',
-        color: '#FF8A3D',
-        icon: 'receivable',
-        size: 'md'
-    },
-    {
-        key: 'payables',
-        name: 'Cuentas por Pagar',
-        color: '#FF4D6A',
-        icon: 'payable',
-        size: 'md'
-    },
-    {
-        key: 'profitability',
-        name: 'Rentabilidad',
-        color: '#C9A8FF',
-        icon: 'pct',
-        size: 'md'
-    }
+
+export const FINANCE_SECTIONS = [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'ingresos', label: 'Ingresos' },
+    { id: 'egresos', label: 'Egresos' },
+    { id: 'fijos', label: 'Pagos Fijos' },
+    { id: 'empleados', label: 'Empleados' },
+    { id: 'prestamos', label: 'Préstamos' },
+    { id: 'resumen', label: 'Resumen' }
 ];
 
-export const DEFAULT_DASHBOARD_LAYOUT = FINANCE_WIDGETS.map((w, index) => ({
+export const FINANCE_WIDGETS = [
+    { key: 'income_total', name: 'Dinero ingresado', color: '#4ADE80', size: 'md', icon: 'income' },
+    { key: 'expense_total', name: 'Dinero gastado', color: '#FF6B81', size: 'md', icon: 'expense' },
+    { key: 'fixed_total', name: 'Pagos fijos del mes', color: '#FF8A3D', size: 'md', icon: 'ops' },
+    { key: 'available', name: 'Dinero disponible', color: '#2D8CFF', size: 'md', icon: 'wallet' },
+    { key: 'distributed', name: 'Dinero repartido', color: '#8C52FF', size: 'md', icon: 'pct' },
+    { key: 'pending_loan_balance', name: 'Dinero pendiente', color: '#FF6B81', size: 'md', icon: 'payable' },
+    { key: 'pending_loans', name: 'Préstamos activos', color: '#FFC15F', size: 'md', icon: 'receivable', format: 'count' }
+];
+
+export const DEFAULT_DASHBOARD_LAYOUT = FINANCE_WIDGETS.map((w, i) => ({
     key: w.key,
     visible: true,
-    order: index,
-    size: w.size || 'md'
+    order: i,
+    size: w.size
 }));
 
-/** Contenido pedagógico del panel ⓘ (lenguaje sencillo). */
 export const FINANCE_HELP = {
-    income_month: {
-        title: 'Ingresos del mes',
-        meaning: 'Es todo el dinero que entra a tu negocio en el mes seleccionado: pagos de clientes, proyectos cerrados, servicios facturados, etc.',
-        how: 'Suma de todos los ingresos con fecha dentro del mes y estado confirmado o pagado. (Los cálculos automáticos se activarán en fases siguientes.)',
-        why: 'Te dice si el mes está generando dinero. Sin ingresos claros, no puedes planear gastos ni crecimiento.',
-        example: 'Si cobraste $8.000.000 por un sitio web y $2.000.000 por mantenimiento, tus ingresos del mes son $10.000.000.',
-        tips: [
-            'Registra cada cobro el día en que realmente entra (o se confirma).',
-            'Separa ingresos por proyecto para ver qué clientes son más rentables.',
-            'No mezcles préstamos personales con ingresos del negocio.'
-        ],
-        mistakes: [
-            'Contar un presupuesto aceptado como ingreso antes de cobrar.',
-            'Olvidar ingresos pequeños (soporte, extras) que sí suman.',
-            'Duplicar el mismo pago en dos categorías.'
-        ]
+    income_total: {
+        title: 'Dinero ingresado',
+        meaning: 'Todo el dinero que entró en esta contabilidad en el mes que estás viendo.',
+        how: 'Se suman todos los ingresos del mes.',
+        example: 'Si cobraste $5.000.000 y $3.000.000, aquí verás $8.000.000.',
+        tip: 'Registra cada cobro el mismo día para no olvidarlo.'
     },
-    expense_month: {
-        title: 'Gastos del mes',
-        meaning: 'Es el dinero que sale del negocio en el mes: herramientas, publicidad, proveedores, arriendo, comisiones, etc.',
-        how: 'Suma de gastos del mes con estado confirmado o pagado.',
-        why: 'Controlar gastos evita sorpresas. Un mes con buenos ingresos puede quedar en rojo si los gastos se disparan.',
-        example: 'Software $350.000 + ads $800.000 + freelancer $1.200.000 = $2.350.000 de gastos.',
-        tips: [
-            'Clasifica cada gasto en una categoría clara.',
-            'Revisa gastos recurrentes cada mes (suscripciones).',
-            'Pregúntate: ¿este gasto genera ingreso o solo comodidad?'
-        ],
-        mistakes: [
-            'No registrar gastos en efectivo “pequeños”.',
-            'Pagar gastos personales con la caja del negocio sin marcarlos.',
-            'Dejar facturas sin categoría “porque después lo arreglo”.'
-        ]
+    expense_total: {
+        title: 'Dinero gastado',
+        meaning: 'Todo lo que salió en gastos del mes (sin contar todavía los pagos fijos como ítem aparte en el resumen).',
+        how: 'Se suman todos los egresos del mes.',
+        example: 'Software $200.000 + transporte $150.000 = $350.000.',
+        tip: 'Anota también los gastos pequeños: al final del mes sí se notan.'
     },
-    gross_profit: {
-        title: 'Utilidad Bruta',
-        meaning: 'Es lo que queda después de restar a los ingresos los costos directos de entregar el servicio o producto.',
-        how: 'Ingresos − costos directos. En agencias suele ser ingresos menos costos variables del proyecto (freelancers, stock, comisiones directas).',
-        why: 'Mide si tu trabajo “en bruto” es rentable antes de pagar la operación fija (arriendo, software, admin).',
-        example: 'Ingresos $10M − costos directos $3M = utilidad bruta $7M.',
-        tips: [
-            'Identifica qué gastos son realmente directos del proyecto.',
-            'Si la utilidad bruta es baja, revisa precios o costos de entrega.'
-        ],
-        mistakes: [
-            'Meter arriendo o internet como costo directo.',
-            'Creer que utilidad bruta = dinero en el bolsillo.'
-        ]
+    fixed_total: {
+        title: 'Pagos fijos del mes',
+        meaning: 'Lo que necesitas cada mes para cubrir suscripciones y cuentas que se repiten.',
+        how: 'Se suman todos los pagos fijos marcados como Activos.',
+        example: 'Hosting + Internet + Adobe = total fijo del mes.',
+        tip: 'Si cancelas una suscripción, márcala como Inactiva.'
     },
-    operating_profit: {
-        title: 'Utilidad Operacional',
-        meaning: 'Es la utilidad después de restar también los gastos de operación (marketing, herramientas, admin, etc.).',
-        how: 'Utilidad bruta − gastos operativos del mes.',
-        why: 'Responde: ¿el negocio funciona bien en el día a día, sin contar cosas financieras extraordinarias?',
-        example: 'Utilidad bruta $7M − operación $2.5M = utilidad operacional $4.5M.',
-        tips: [
-            'Mantén la operación liviana mientras creces.',
-            'Compara este número mes a mes, no solo el total de ingresos.'
-        ],
-        mistakes: [
-            'Ignorar suscripciones que se renuevan solas.',
-            'Mezclar gastos personales con operación.'
-        ]
+    available: {
+        title: 'Dinero disponible',
+        meaning: 'Lo que queda después de restar egresos y pagos fijos a los ingresos.',
+        how: 'Ingresos − Egresos − Pagos fijos.',
+        example: 'Entran $12M, gastas $2M y fijos $1M → disponible $9M.',
+        tip: 'Este es el dinero que puedes repartir o reinvertir.'
     },
-    net_profit: {
-        title: 'Utilidad Neta',
-        meaning: 'Es lo que “realmente queda” al final, después de costos, operación y (en fases futuras) impuestos u otros ajustes.',
-        how: 'Utilidad operacional ± otros ingresos/gastos no operativos. Impuestos se integrarán después.',
-        why: 'Es el indicador más cercano a la ganancia final del periodo.',
-        example: 'Si tras todo queda $3.8M, esa es tu utilidad neta del mes (simplificado).',
-        tips: [
-            'Úsala para decidir reinversión vs. retiro.',
-            'No gastes la utilidad neta el mismo día: deja colchón.'
-        ],
-        mistakes: [
-            'Confundir utilidad neta con saldo en el banco.',
-            'Retirar todo y quedarse sin capital de trabajo.'
-        ]
+    distributed: {
+        title: 'Dinero repartido',
+        meaning: 'Cómo se reparte el disponible entre las personas según su porcentaje.',
+        how: 'Disponible × porcentaje de cada empleado activo.',
+        example: 'Disponible $10M · 50% = $5M para esa persona.',
+        tip: 'La suma de porcentajes debería acercarse a 100%.'
     },
-    cash_flow: {
-        title: 'Flujo de Caja',
-        meaning: 'Mide el movimiento real de dinero: entradas menos salidas de efectivo en el periodo.',
-        how: 'Entradas de caja del mes − salidas de caja del mes. No es lo mismo que utilidad (puedes ganar en papel y no tener efectivo).',
-        why: 'Un negocio rentable puede quebrar por falta de efectivo. El flujo de caja protege tu operación.',
-        example: 'Entran $6M y salen $5.2M → flujo positivo $800.000.',
-        tips: [
-            'Anticipa meses con muchos pagos (nómina, herramientas anuales).',
-            'Negocia anticipos en proyectos largos.'
-        ],
-        mistakes: [
-            'Confundir factura emitida con dinero cobrado.',
-            'Olvidar pagos programados de la siguiente semana.'
-        ]
+    pending_loans: {
+        title: 'Préstamos activos',
+        meaning: 'Cuántos préstamos siguen pendientes (por pagar o por cobrar).',
+        how: 'Se cuentan los préstamos que no están marcados como Pagado.',
+        example: 'Tienes 2 préstamos pendientes → aquí verás 2.',
+        tip: 'Actualiza lo abonado para ver cuánto falta.'
     },
-    available_balance: {
-        title: 'Saldo Disponible',
-        meaning: 'Es el dinero que tienes disponible ahora en tus cuentas/cajas registradas.',
-        how: 'Suma de saldos de cuentas activas (caja, bancos, etc.). Se enriquecerá con conciliación bancaria en fases futuras.',
-        why: 'Te dice cuánto puedes gastar o invertir sin ahogarte.',
-        example: 'Caja $1.2M + banco $4.5M = saldo disponible $5.7M.',
-        tips: [
-            'Separa un fondo de emergencia (ej. 1–2 meses de gastos fijos).',
-            'No cuentes cheques o transferencias pendientes como disponibles.'
-        ],
-        mistakes: [
-            'Usar el saldo de la app bancaria sin registrar movimientos aquí.',
-            'Mezclar dinero personal y empresarial en la misma cuenta.'
-        ]
-    },
-    receivables: {
-        title: 'Cuentas por Cobrar',
-        meaning: 'Dinero que clientes te deben: trabajos entregados o facturados que aún no has cobrado.',
-        how: 'Suma de ingresos en estado pendiente / por cobrar. (Cobranza detallada llega en fases siguientes.)',
-        why: 'Si crece mucho, tu negocio “prestó” dinero a clientes. Hay que cobrar con disciplina.',
-        example: 'Tres clientes te deben $1.5M, $800.000 y $2M → CxC = $4.3M.',
-        tips: [
-            'Define plazos claros de pago desde la propuesta.',
-            'Haz seguimiento semanal a deudas vencidas.'
-        ],
-        mistakes: [
-            'Seguir trabajando sin abono cuando ya hay mora.',
-            'No documentar acuerdos de pago.'
-        ]
-    },
-    payables: {
-        title: 'Cuentas por Pagar',
-        meaning: 'Dinero que tú debes a proveedores, freelancers o servicios aún no pagados.',
-        how: 'Suma de obligaciones pendientes de pago.',
-        why: 'Te ayuda a no olvidar pagos y a planear la caja de la semana/mes.',
-        example: 'Debes $900.000 a un diseñador y $250.000 de hosting anual prorrateado → CxP visibles según registros.',
-        tips: [
-            'Agenda fechas de pago junto con cobros esperados.',
-            'Prioriza proveedores críticos para tu operación.'
-        ],
-        mistakes: [
-            'Pagar tarde y dañar relaciones clave.',
-            'No registrar deudas “porque ya me acuerdo”.'
-        ]
-    },
-    profitability: {
-        title: 'Rentabilidad',
-        meaning: 'Indica qué tan eficiente es tu negocio para convertir ingresos en ganancia (porcentaje).',
-        how: 'Normalmente: (Utilidad neta ÷ Ingresos) × 100. En Fase 1 se muestra la estructura; el cálculo fino llega después.',
-        why: 'Un mes puede facturar mucho y ser poco rentable. Este % te dice la calidad del negocio, no solo el volumen.',
-        example: 'Utilidad neta $2M e ingresos $10M → rentabilidad 20%.',
-        tips: [
-            'Compara rentabilidad entre meses y entre tipos de servicio.',
-            'Subir precio o bajar costo directo suele mejorar el % más que “hacer más de lo mismo”.'
-        ],
-        mistakes: [
-            'Obsesionarse solo con facturación total.',
-            'Comparar rentabilidad sin mirar el flujo de caja.'
-        ]
+    pending_loan_balance: {
+        title: 'Dinero pendiente',
+        meaning: 'Cuánto falta por pagar o por cobrar en tus préstamos activos.',
+        how: 'Suma de (valor total − lo ya abonado) de cada préstamo que aún no está pagado.',
+        example: 'Préstamo de $5M con $2M abonados → pendiente $3M.',
+        tip: 'Cada vez que abonas, actualiza el campo Abonado.'
     }
 };
 
-export const FINANCE_STATUS_LABELS = {
-    draft: 'Borrador',
+export const LOAN_TYPE_LABELS = {
+    received: 'Préstamo recibido',
+    granted: 'Préstamo otorgado'
+};
+
+export const LOAN_STATUS_LABELS = {
     pending: 'Pendiente',
-    confirmed: 'Confirmado',
     paid: 'Pagado',
-    cancelled: 'Anulado'
+    overdue: 'Vencido'
 };
 
-export const FINANCE_SUBNAV = [
-    { id: 'dashboard', href: 'contabilidad.html', label: 'Dashboard' },
-    { id: 'ingresos', href: 'contabilidad-ingresos.html', label: 'Ingresos' },
-    { id: 'gastos', href: 'contabilidad-gastos.html', label: 'Gastos' },
-    { id: 'flujo', href: 'contabilidad-flujo.html', label: 'Flujo de Caja' },
-    { id: 'indicadores', href: 'contabilidad-indicadores.html', label: 'Indicadores' },
-    { id: 'reportes', href: 'contabilidad-reportes.html', label: 'Reportes' },
-    { id: 'config', href: 'contabilidad-configuracion.html', label: 'Configuración' }
+export const BOOK_COLORS = [
+    '#8C52FF', '#2D8CFF', '#4ADE80', '#FF8A3D', '#FF6B81', '#FFC15F', '#5FA8FF', '#C9A8FF'
 ];
-
-/** Enriquecimiento Fase 2 de la ayuda inteligente. */
-const HELP_EXTRA = {
-    income_month: {
-        affects: ['Nuevos ingresos confirmados/pagados', 'Cambios de estado', 'Fecha del movimiento'],
-        improve: ['Cierra cobros pendientes', 'Sube ticket promedio', 'Reduce descuentos innecesarios'],
-        how: 'Suma del valor base (sin IVA) de ingresos con estado Confirmado o Pagado cuya fecha cae en el mes seleccionado.'
-    },
-    expense_month: {
-        affects: ['Gastos confirmados/pagados del mes', 'Categorías y fechas'],
-        improve: ['Recorta suscripciones poco usadas', 'Negocia con proveedores', 'Evita gastos fuera de presupuesto'],
-        how: 'Suma del valor base (sin IVA) de gastos Confirmados o Pagados del mes.'
-    },
-    gross_profit: {
-        affects: ['Ingresos del mes', 'Gastos del mes'],
-        improve: ['Mejora precios', 'Baja costos directos de entrega', 'Elige proyectos más rentables'],
-        how: 'Ingresos del mes − Gastos del mes (valores base, sin IVA).'
-    },
-    operating_profit: {
-        affects: ['Utilidad bruta', 'Gastos operativos registrados'],
-        improve: ['Optimiza marketing y herramientas', 'Mantén operación liviana'],
-        how: 'En Fase 2 equivale a la utilidad bruta (cuando se separen costos directos vs operativos se refinará).'
-    },
-    net_profit: {
-        affects: ['Utilidad operacional', 'Otros ajustes futuros (impuestos)'],
-        improve: ['Controla gastos totales', 'Mejora cobros', 'Revisa precios'],
-        how: 'Por ahora = utilidad bruta. Impuestos y ajustes no operativos llegarán en fases posteriores.'
-    },
-    cash_flow: {
-        affects: ['Entradas de dinero (base+IVA)', 'Salidas de dinero (base+IVA)'],
-        improve: ['Pide anticipos', 'Acorta plazos de cobro', 'Planifica pagos grandes'],
-        how: 'Suma (valor+IVA) de ingresos activos − suma (valor+IVA) de gastos activos del mes.'
-    },
-    available_balance: {
-        affects: ['Saldo de apertura de cuentas', 'Flujo de caja acumulado del mes'],
-        improve: ['Mantén colchón de 1–2 meses de gastos fijos', 'Separa caja personal y empresarial'],
-        how: 'Saldo de apertura de cuentas activas + flujo de caja del mes.'
-    },
-    receivables: {
-        affects: ['Ingresos en estado Pendiente'],
-        improve: ['Seguimiento semanal de mora', 'Políticas claras de pago'],
-        how: 'Suma (valor+IVA) de ingresos con estado Pendiente.'
-    },
-    payables: {
-        affects: ['Gastos en estado Pendiente'],
-        improve: ['Agenda fechas de pago', 'Prioriza proveedores críticos'],
-        how: 'Suma (valor+IVA) de gastos con estado Pendiente.'
-    },
-    profitability: {
-        affects: ['Utilidad neta', 'Ingresos del mes'],
-        improve: ['Enfócate en servicios de mayor margen', 'Elimina trabajo poco rentable'],
-        how: '(Utilidad neta ÷ Ingresos del mes) × 100.'
-    }
-};
-
-Object.keys(HELP_EXTRA).forEach((key) => {
-    if (FINANCE_HELP[key]) Object.assign(FINANCE_HELP[key], HELP_EXTRA[key]);
-});
