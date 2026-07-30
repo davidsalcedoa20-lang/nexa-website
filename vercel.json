@@ -1,0 +1,22 @@
+{
+  "redirects": [
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "hub.nexaorigin.com" }],
+      "destination": "/portal/index.html",
+      "permanent": false
+    },
+    {
+      "source": "/index.html",
+      "has": [{ "type": "host", "value": "hub.nexaorigin.com" }],
+      "destination": "/portal/index.html",
+      "permanent": false
+    },
+    {
+      "source": "/pages/:path*",
+      "has": [{ "type": "host", "value": "hub.nexaorigin.com" }],
+      "destination": "/portal/index.html",
+      "permanent": false
+    }
+  ]
+}

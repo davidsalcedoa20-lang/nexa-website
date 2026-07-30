@@ -11,22 +11,13 @@ El código ya está preparado: la PWA abre `/portal/index.html` (login → dashb
 
 ## 1. Qué hacer en Vercel
 
-1. En el proyecto de NEXA WEB, agrega el dominio `hub.nexaorigin.com`.
-2. Mantén `www.nexaorigin.com` (y el apex si aplica) para el sitio público.
-3. (Recomendado, un solo proyecto) Configura un rewrite por host para que en `hub.nexaorigin.com` la ruta `/` sirva el Hub:
-
-   - Source: `/`
-   - Destination: `/portal/index.html`
-   - Condición: Host = `hub.nexaorigin.com`
-
-   (Si usas `vercel.json`, puedes añadir esa regla cuando decidas tocar Vercel.)
-
-4. Asegura las variables de entorno en el entorno de producción:
-   - `SUPABASE_URL`
-   - `SUPABASE_ANON_KEY`
-   - y las de Google Drive / Calendar que ya uses
-
-5. Redeploy después de publicar estos cambios (nueva versión del Service Worker: `nexa-hub-static-v2`).
+1. Dominio `hub.nexaorigin.com` asignado al proyecto (ya hecho si DNS está OK).
+2. Mantén `www.nexaorigin.com` / `nexaorigin.com` para el corporativo.
+3. El archivo `vercel.json` en la raíz ya define redirects por hostname:
+   - En `hub.nexaorigin.com`: `/`, `/index.html` y `/pages/*` → `/portal/index.html`
+   - En `www` / apex: sin cambios (sitio público)
+4. **Redeploy** el proyecto para que Vercel aplique `vercel.json`.
+5. Confirma variables `SUPABASE_URL` / `SUPABASE_ANON_KEY` (y Google si aplica).
 
 ---
 
