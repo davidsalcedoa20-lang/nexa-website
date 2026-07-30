@@ -13,11 +13,10 @@ El código ya está preparado: la PWA abre `/portal/index.html` (login → dashb
 
 1. Dominio `hub.nexaorigin.com` asignado al proyecto (ya hecho si DNS está OK).
 2. Mantén `www.nexaorigin.com` / `nexaorigin.com` para el corporativo.
-3. El archivo `vercel.json` en la raíz ya define redirects por hostname:
-   - En `hub.nexaorigin.com`: `/`, `/index.html` y `/pages/*` → `/portal/index.html`
-   - En `www` / apex: sin cambios (sitio público)
-4. **Redeploy** el proyecto para que Vercel aplique `vercel.json`.
-5. Confirma variables `SUPABASE_URL` / `SUPABASE_ANON_KEY` (y Google si aplica).
+3. Enrutamiento por hostname (ya en el repo):
+   - `vercel.json`: redirects **solo** si `host === hub.nexaorigin.com`
+   - `middleware.js`: refuerzo Edge — `www` / apex nunca se redirigen; `hub` → `/portal/index.html`
+4. **Redeploy** obligatorio para aplicar ambos archivos.
 
 ---
 
