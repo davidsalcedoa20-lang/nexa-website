@@ -11,17 +11,11 @@
   var MAX_MS = 1200;
 
   function resolveLogo() {
-    return '/assets/logo/nexa-logo.png';
-  }
-
-  /** En app instalada, si alguien cae en marketing, mandar al Hub */
-  function guardStandaloneEntry() {
-    if (!isStandalone()) return;
     var path = window.location.pathname || '';
-    var isMarketing = path === '/' || path === '/index.html' || path.indexOf('/pages/') === 0;
-    if (isMarketing) {
-      window.location.replace('/portal/index.html');
+    if (path.indexOf('/admin') === 0 || path.indexOf('/portal') === 0 || path.indexOf('/dashboard') === 0) {
+      return '../assets/logo/nexa-logo.png';
     }
+    return '/assets/logo/nexa-logo.png';
   }
 
   function isStandalone() {
@@ -130,6 +124,5 @@
   } catch (_) { /* noop */ }
 
   showSplash();
-  guardStandaloneEntry();
   registerServiceWorker();
 })();

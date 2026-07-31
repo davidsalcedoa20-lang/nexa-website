@@ -1,9 +1,8 @@
 {
-  "id": "/portal/index.html",
   "name": "NEXA HUB",
   "short_name": "NEXA HUB",
   "description": "Plataforma de gestión empresarial NEXA HUB",
-  "start_url": "/portal/index.html",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
