@@ -532,8 +532,8 @@
     display:grid;
     place-items:center;
     flex-shrink:0;
-    background:linear-gradient(135deg, var(--cx-pink), var(--cx-fuchsia));
-    box-shadow:0 0 24px rgba(255,45,149,.45);
+    background:linear-gradient(135deg, var(--cx-blue-soft), var(--cx-blue));
+    box-shadow:0 0 24px rgba(45,140,255,.45);
     color:#fff;
 }
 
@@ -564,12 +564,12 @@
 
 .cotizar-script{
     margin:2px 0 0;
-    font-family:"Great Vibes", cursive;
-    font-size:clamp(22px, 3vw, 30px);
-    background:linear-gradient(100deg, #C9A8FF, var(--cx-pink));
-    -webkit-background-clip:text;
-    background-clip:text;
-    color:transparent;
+    font-family:"Poppins", sans-serif;
+    font-size:clamp(14px, 1.6vw, 16px);
+    font-weight:300;
+    font-style:italic;
+    letter-spacing:.04em;
+    color:rgba(160,160,168,.72);
 }
 
 /* ---------- Trust bar ---------- */
