@@ -1,0 +1,697 @@
+/* ==========================================================
+   NEXA — Cotizar Proyecto (experiencia cinematográfica)
+   Identidad: azul eléctrico, fucsia, negro profundo
+   ========================================================== */
+
+.cotizar-page{
+    background:#050505;
+    overflow-x:hidden;
+}
+
+.cotizar-page .navbar{
+    position:relative;
+    z-index:40;
+}
+
+.cotizar-page .nav-links a.is-active-nav{
+    color:#fff;
+}
+
+.cotizar{
+    --cx-blue:#2D8CFF;
+    --cx-blue-soft:#3B82F6;
+    --cx-pink:#FF2D95;
+    --cx-fuchsia:#D946EF;
+    --cx-bg:#050505;
+    --cx-glass:rgba(255,255,255,.035);
+    --cx-border:rgba(255,255,255,.1);
+
+    position:relative;
+    min-height:100vh;
+    padding:110px 28px 36px;
+    color:#fff;
+    isolation:isolate;
+}
+
+/* ---------- Fondo ---------- */
+.cotizar-bg{
+    position:absolute;
+    inset:0;
+    z-index:0;
+    overflow:hidden;
+    pointer-events:none;
+}
+
+.cotizar-nebula{
+    position:absolute;
+    border-radius:50%;
+    filter:blur(80px);
+    opacity:.45;
+    will-change:transform;
+}
+
+.cotizar-nebula--blue{
+    width:min(60vw, 620px);
+    height:min(60vw, 620px);
+    top:8%;
+    left:18%;
+    background:radial-gradient(circle, rgba(45,140,255,.55), transparent 68%);
+}
+
+.cotizar-nebula--pink{
+    width:min(50vw, 520px);
+    height:min(50vw, 520px);
+    top:28%;
+    right:8%;
+    background:radial-gradient(circle, rgba(255,45,149,.42), transparent 70%);
+}
+
+.cotizar-grid{
+    position:absolute;
+    inset:auto 0 0;
+    height:42%;
+    background-image:
+        linear-gradient(rgba(45,140,255,.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,45,149,.06) 1px, transparent 1px);
+    background-size:56px 56px;
+    mask-image:linear-gradient(to top, rgba(0,0,0,.55), transparent 90%);
+    transform:perspective(700px) rotateX(58deg) scale(1.4);
+    transform-origin:center bottom;
+}
+
+.cotizar-particles{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+}
+
+/* ---------- Layout ---------- */
+.cotizar-shell{
+    position:relative;
+    z-index:1;
+    max-width:1240px;
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) minmax(260px, 300px);
+    gap:28px 36px;
+    align-items:start;
+}
+
+.cotizar-main{
+    display:flex;
+    flex-direction:column;
+    gap:28px;
+    min-width:0;
+}
+
+.cotizar-kicker{
+    margin:0 0 14px;
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.42);
+}
+
+.cotizar-title{
+    margin:0;
+    font-size:clamp(2.4rem, 6.2vw, 4.6rem);
+    line-height:.95;
+    font-weight:800;
+    letter-spacing:-.03em;
+    display:flex;
+    flex-direction:column;
+    gap:.08em;
+}
+
+.cotizar-title-gradient{
+    background:linear-gradient(105deg, var(--cx-blue) 0%, var(--cx-fuchsia) 55%, var(--cx-pink) 100%);
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+}
+
+.cotizar-subtitle{
+    margin:18px 0 0;
+    max-width:540px;
+    font-size:clamp(14px, 1.5vw, 16.5px);
+    line-height:1.65;
+    color:rgba(255,255,255,.68);
+    font-weight:400;
+}
+
+/* ---------- Esfera ---------- */
+.cotizar-sphere-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:18px;
+    margin:8px 0 4px;
+}
+
+.cotizar-sphere{
+    position:relative;
+    width:min(280px, 62vw);
+    height:min(280px, 62vw);
+    display:grid;
+    place-items:center;
+}
+
+.cotizar-sphere-glow{
+    position:absolute;
+    inset:-18%;
+    border-radius:50%;
+    background:
+        radial-gradient(circle at 40% 35%, rgba(45,140,255,.35), transparent 45%),
+        radial-gradient(circle at 65% 65%, rgba(255,45,149,.28), transparent 50%);
+    filter:blur(8px);
+    animation:cotizarGlowPulse 4.8s ease-in-out infinite;
+}
+
+.cotizar-sphere-core{
+    position:relative;
+    z-index:3;
+    width:58%;
+    height:58%;
+    border-radius:50%;
+    display:grid;
+    place-items:center;
+    background:
+        radial-gradient(circle at 35% 30%, rgba(255,255,255,.14), transparent 40%),
+        linear-gradient(160deg, rgba(20,24,36,.95), rgba(8,8,12,.98));
+    border:1px solid rgba(255,255,255,.16);
+    box-shadow:
+        0 0 40px rgba(45,140,255,.25),
+        0 0 70px rgba(255,45,149,.18),
+        inset 0 1px 0 rgba(255,255,255,.12);
+    overflow:hidden;
+}
+
+.cotizar-sphere-logo{
+    width:68%;
+    height:auto;
+    object-fit:contain;
+    filter:drop-shadow(0 0 16px rgba(45,140,255,.35));
+}
+
+.cotizar-ring{
+    position:absolute;
+    border-radius:50%;
+    border:1px solid transparent;
+    z-index:2;
+}
+
+.cotizar-ring--1{
+    inset:2%;
+    border-color:rgba(45,140,255,.35);
+    box-shadow:0 0 20px rgba(45,140,255,.15);
+}
+
+.cotizar-ring--2{
+    inset:-6%;
+    border-color:rgba(217,70,239,.22);
+    transform:rotateX(66deg) rotateZ(18deg);
+}
+
+.cotizar-ring--3{
+    inset:-14%;
+    border-color:rgba(45,140,255,.16);
+    transform:rotateX(68deg) rotateZ(-28deg);
+}
+
+.cotizar-orbit{
+    position:absolute;
+    inset:-10%;
+    border-radius:50%;
+    border:1px dashed rgba(255,255,255,.08);
+    transform:rotateX(62deg);
+    animation:cotizarOrbit 18s linear infinite;
+    z-index:2;
+}
+
+.cotizar-orbit--rev{
+    inset:-18%;
+    animation-direction:reverse;
+    animation-duration:26s;
+    border-color:rgba(255,45,149,.12);
+}
+
+.cotizar-orbit-dot{
+    position:absolute;
+    top:0;
+    left:50%;
+    width:8px;
+    height:8px;
+    margin:-4px 0 0 -4px;
+    border-radius:50%;
+    background:var(--cx-blue);
+    box-shadow:0 0 12px var(--cx-blue);
+}
+
+.cotizar-orbit-dot--pink{
+    background:var(--cx-pink);
+    box-shadow:0 0 12px var(--cx-pink);
+}
+
+.cotizar-status{
+    display:inline-flex;
+    align-items:center;
+    gap:10px;
+    padding:10px 16px;
+    border-radius:999px;
+    background:rgba(10,10,14,.72);
+    border:1px solid rgba(255,255,255,.1);
+    backdrop-filter:blur(14px);
+    -webkit-backdrop-filter:blur(14px);
+    font-size:12.5px;
+    color:rgba(255,255,255,.72);
+    box-shadow:0 10px 40px rgba(0,0,0,.35);
+}
+
+.cotizar-status-dots{
+    display:inline-flex;
+    gap:4px;
+}
+
+.cotizar-status-dots i{
+    width:6px;
+    height:6px;
+    border-radius:50%;
+    background:var(--cx-fuchsia);
+    animation:cotizarDot 1.2s ease-in-out infinite;
+}
+
+.cotizar-status-dots i:nth-child(2){
+    background:var(--cx-blue);
+    animation-delay:.15s;
+}
+
+.cotizar-status-dots i:nth-child(3){
+    animation-delay:.3s;
+}
+
+/* ---------- Stats panel ---------- */
+.cotizar-stats{
+    position:sticky;
+    top:100px;
+    display:flex;
+    flex-direction:column;
+    gap:0;
+    padding:8px;
+    border-radius:24px;
+    background:linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.015));
+    border:1px solid var(--cx-border);
+    backdrop-filter:blur(18px);
+    -webkit-backdrop-filter:blur(18px);
+    box-shadow:
+        0 20px 60px rgba(0,0,0,.4),
+        inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+.cotizar-stat{
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+    padding:18px 16px;
+    border-radius:18px;
+    transition:background .25s ease, transform .25s ease;
+    position:relative;
+    overflow:hidden;
+}
+
+.cotizar-stat + .cotizar-stat{
+    border-top:1px solid rgba(255,255,255,.06);
+}
+
+.cotizar-stat::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:linear-gradient(120deg, transparent 30%, rgba(255,255,255,.05), transparent 70%);
+    transform:translateX(-120%);
+    transition:transform .6s ease;
+    pointer-events:none;
+}
+
+.cotizar-stat:hover{
+    background:rgba(255,255,255,.035);
+    transform:translateX(-2px);
+}
+
+.cotizar-stat:hover::after{
+    transform:translateX(120%);
+}
+
+.cotizar-stat-icon{
+    width:42px;
+    height:42px;
+    border-radius:14px;
+    display:grid;
+    place-items:center;
+    flex-shrink:0;
+    border:1px solid rgba(255,255,255,.1);
+}
+
+.cotizar-stat-icon svg{
+    width:20px;
+    height:20px;
+}
+
+.cotizar-stat-icon--blue{
+    color:var(--cx-blue);
+    background:rgba(45,140,255,.12);
+    box-shadow:0 0 22px rgba(45,140,255,.18);
+}
+
+.cotizar-stat-icon--pink{
+    color:var(--cx-pink);
+    background:rgba(255,45,149,.12);
+    box-shadow:0 0 22px rgba(255,45,149,.16);
+}
+
+.cotizar-stat h3{
+    margin:0 0 4px;
+    font-size:14px;
+    font-weight:650;
+    color:#fff;
+}
+
+.cotizar-stat p{
+    margin:0;
+    font-size:12.5px;
+    line-height:1.45;
+    color:rgba(255,255,255,.55);
+}
+
+.cotizar-stat strong{
+    color:#fff;
+    font-weight:650;
+}
+
+/* ---------- Cards ---------- */
+.cotizar-cards{
+    display:grid;
+    gap:12px;
+}
+
+.cotizar-card{
+    display:flex;
+    gap:16px;
+    align-items:flex-start;
+    padding:18px 20px;
+    border-radius:20px;
+    background:linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.015));
+    border:1px solid var(--cx-border);
+    backdrop-filter:blur(16px);
+    -webkit-backdrop-filter:blur(16px);
+    transition:transform .28s ease, border-color .28s ease, box-shadow .28s ease;
+}
+
+.cotizar-card:hover{
+    transform:translateY(-3px);
+    border-color:rgba(45,140,255,.28);
+    box-shadow:0 16px 40px rgba(0,0,0,.35), 0 0 30px rgba(45,140,255,.08);
+}
+
+.cotizar-card-icon{
+    width:44px;
+    height:44px;
+    border-radius:14px;
+    display:grid;
+    place-items:center;
+    flex-shrink:0;
+}
+
+.cotizar-card-icon svg{
+    width:22px;
+    height:22px;
+}
+
+.cotizar-card-icon--blue{
+    color:var(--cx-blue);
+    background:rgba(45,140,255,.12);
+    border:1px solid rgba(45,140,255,.25);
+}
+
+.cotizar-card-icon--pink{
+    color:var(--cx-pink);
+    background:rgba(255,45,149,.12);
+    border:1px solid rgba(255,45,149,.25);
+}
+
+.cotizar-card h2{
+    margin:0 0 6px;
+    font-size:16px;
+    font-weight:650;
+}
+
+.cotizar-card p{
+    margin:0;
+    font-size:13.5px;
+    line-height:1.55;
+    color:rgba(255,255,255,.58);
+}
+
+/* ---------- CTA ---------- */
+.cotizar-cta{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+    margin-top:6px;
+    text-align:center;
+}
+
+.cotizar-cta-label{
+    font-size:11px;
+    letter-spacing:.22em;
+    text-transform:uppercase;
+    color:rgba(255,255,255,.4);
+}
+
+.cotizar-btn{
+    position:relative;
+    display:inline-flex;
+    align-items:center;
+    gap:16px;
+    width:min(100%, 480px);
+    padding:18px 22px;
+    border-radius:20px;
+    text-decoration:none;
+    color:#fff;
+    overflow:hidden;
+    background:linear-gradient(135deg, rgba(12,16,28,.95), rgba(18,10,22,.95));
+    border:1px solid transparent;
+    background-clip:padding-box;
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,.08) inset,
+        0 0 40px rgba(45,140,255,.35),
+        0 0 70px rgba(255,45,149,.22),
+        0 18px 40px rgba(0,0,0,.45);
+    transition:transform .25s ease, box-shadow .25s ease, filter .25s ease;
+    will-change:transform;
+}
+
+.cotizar-btn::before{
+    content:"";
+    position:absolute;
+    inset:-1px;
+    border-radius:21px;
+    padding:1px;
+    background:linear-gradient(110deg, var(--cx-blue), var(--cx-fuchsia), var(--cx-pink));
+    -webkit-mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask:linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite:xor;
+    mask-composite:exclude;
+    pointer-events:none;
+}
+
+.cotizar-btn:hover{
+    transform:translateY(-3px) scale(1.01);
+    box-shadow:
+        0 0 0 1px rgba(255,255,255,.1) inset,
+        0 0 55px rgba(45,140,255,.45),
+        0 0 90px rgba(255,45,149,.3),
+        0 22px 50px rgba(0,0,0,.5);
+    filter:brightness(1.05);
+}
+
+.cotizar-btn-shine{
+    position:absolute;
+    inset:0;
+    background:linear-gradient(110deg, transparent 30%, rgba(255,255,255,.16) 48%, transparent 62%);
+    transform:translateX(-130%);
+    animation:cotizarShine 3.6s ease-in-out infinite;
+    pointer-events:none;
+}
+
+.cotizar-btn-icon{
+    width:54px;
+    height:54px;
+    border-radius:50%;
+    display:grid;
+    place-items:center;
+    flex-shrink:0;
+    background:linear-gradient(135deg, var(--cx-pink), var(--cx-fuchsia));
+    box-shadow:0 0 24px rgba(255,45,149,.45);
+    color:#fff;
+}
+
+.cotizar-btn-icon svg{
+    width:28px;
+    height:28px;
+}
+
+.cotizar-btn-text{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:3px;
+    text-align:left;
+}
+
+.cotizar-btn-text strong{
+    font-size:clamp(15px, 2vw, 18px);
+    font-weight:750;
+    letter-spacing:.04em;
+}
+
+.cotizar-btn-text small{
+    font-size:12.5px;
+    color:rgba(255,255,255,.62);
+    font-weight:400;
+}
+
+.cotizar-script{
+    margin:2px 0 0;
+    font-family:"Great Vibes", cursive;
+    font-size:clamp(22px, 3vw, 30px);
+    background:linear-gradient(100deg, #C9A8FF, var(--cx-pink));
+    -webkit-background-clip:text;
+    background-clip:text;
+    color:transparent;
+}
+
+/* ---------- Trust bar ---------- */
+.cotizar-trust{
+    position:relative;
+    z-index:1;
+    max-width:1240px;
+    margin:36px auto 0;
+    padding:18px 8px 8px;
+    display:grid;
+    grid-template-columns:repeat(4, minmax(0, 1fr));
+    gap:12px;
+    border-top:1px solid rgba(255,255,255,.08);
+}
+
+.cotizar-trust-item span{
+    display:block;
+    font-size:13px;
+    font-weight:650;
+    color:#fff;
+    margin-bottom:4px;
+}
+
+.cotizar-trust-item p{
+    margin:0;
+    font-size:12px;
+    color:rgba(255,255,255,.45);
+}
+
+/* ---------- Motion helpers ---------- */
+[data-cotizar-reveal]{
+    opacity:0;
+    transform:translateY(28px);
+}
+
+@keyframes cotizarGlowPulse{
+    0%, 100%{ opacity:.7; transform:scale(1); }
+    50%{ opacity:1; transform:scale(1.05); }
+}
+
+@keyframes cotizarOrbit{
+    to{ transform:rotateX(62deg) rotateZ(360deg); }
+}
+
+@keyframes cotizarDot{
+    0%, 80%, 100%{ opacity:.25; transform:scale(.85); }
+    40%{ opacity:1; transform:scale(1.15); }
+}
+
+@keyframes cotizarShine{
+    0%, 55%{ transform:translateX(-130%); }
+    100%{ transform:translateX(130%); }
+}
+
+@media (prefers-reduced-motion: reduce){
+    .cotizar-sphere-glow,
+    .cotizar-orbit,
+    .cotizar-orbit--rev,
+    .cotizar-status-dots i,
+    .cotizar-btn-shine{
+        animation:none !important;
+    }
+    [data-cotizar-reveal]{
+        opacity:1;
+        transform:none;
+    }
+}
+
+/* ---------- Responsive ---------- */
+@media screen and (max-width:1100px){
+    .cotizar-shell{
+        grid-template-columns:1fr;
+    }
+    .cotizar-stats{
+        position:static;
+        display:grid;
+        grid-template-columns:repeat(2, minmax(0, 1fr));
+        gap:8px;
+        padding:12px;
+    }
+    .cotizar-stat + .cotizar-stat{
+        border-top:none;
+    }
+    .cotizar-stat{
+        border:1px solid rgba(255,255,255,.06);
+        background:rgba(255,255,255,.02);
+    }
+}
+
+@media screen and (max-width:720px){
+    .cotizar{
+        padding:96px 16px 28px;
+    }
+    .cotizar-title{
+        font-size:clamp(2.1rem, 10vw, 3rem);
+    }
+    .cotizar-stats{
+        grid-template-columns:1fr;
+    }
+    .cotizar-trust{
+        grid-template-columns:1fr 1fr;
+        gap:16px;
+    }
+    .cotizar-btn{
+        width:100%;
+        padding:16px 18px;
+    }
+    .cotizar-btn-icon{
+        width:48px;
+        height:48px;
+    }
+    .cotizar-status{
+        font-size:11.5px;
+        text-align:center;
+    }
+}
+
+@media screen and (max-width:420px){
+    .cotizar-trust{
+        grid-template-columns:1fr;
+    }
+    .cotizar-card{
+        padding:16px;
+    }
+}
