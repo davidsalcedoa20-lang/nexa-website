@@ -186,6 +186,7 @@ Deno.serve(async (req) => {
                 user_metadata: {
                     role: 'admin',
                     full_name: fullName,
+                    job_title: jobTitle,
                     must_change_password: true,
                     created_by: caller.id
                 }
@@ -196,20 +197,45 @@ Deno.serve(async (req) => {
 
             const userId = created.user.id;
 
-            // El trigger puede crear el perfil; upsert para asegurar datos.
-            const { error: profileError } = await db.from('profiles').upsert({
-                id: userId,
+            // El trigger on_auth_user_created suele crear el perfil;
+            // insert/update (como create-client) evita sorpresas del upsert.
+            const { data: existingProfile } = await db
+                .from('profiles')
+                .select('id')
+                .eq('id', userId)
+                .maybeSingle();
+
+            const profilePayload = {
                 email,
                 full_name: fullName,
-                role: 'admin',
+                role: 'admin' as const,
                 job_title: jobTitle,
                 avatar_url: avatarUrl,
                 is_active: true,
                 project_access_mode: projectAccessMode,
                 created_by: caller.id
-            });
-            if (profileError) {
-                return json({ error: `Usuario Auth creado pero falló el perfil: ${profileError.message}` }, 400);
+            };
+
+            if (!existingProfile) {
+                const { error: profileInsertError } = await db.from('profiles').insert({
+                    id: userId,
+                    ...profilePayload
+                });
+                if (profileInsertError) {
+                    return json({
+                        error: `Usuario Auth creado pero falló el perfil: ${profileInsertError.message}`
+                    }, 400);
+                }
+            } else {
+                const { error: profileUpdateError } = await db
+                    .from('profiles')
+                    .update(profilePayload)
+                    .eq('id', userId);
+                if (profileUpdateError) {
+                    return json({
+                        error: `Usuario Auth creado pero falló el perfil: ${profileUpdateError.message}`
+                    }, 400);
+                }
             }
 
             let finalKeys = permissionKeys;
@@ -221,8 +247,15 @@ Deno.serve(async (req) => {
                 if (!finalKeys.includes('projects.view_assigned')) finalKeys.push('projects.view_assigned');
             }
 
-            await replacePermissions(db, userId, finalKeys, caller.id);
-            await replaceProjectAccess(db, userId, projectAccessMode, projectIds);
+            try {
+                await replacePermissions(db, userId, finalKeys, caller.id);
+                await replaceProjectAccess(db, userId, projectAccessMode, projectIds);
+            } catch (permError) {
+                const msg = permError instanceof Error ? permError.message : String(permError);
+                return json({
+                    error: `Administrador creado, pero falló al asignar permisos/acceso: ${msg}`
+                }, 400);
+            }
 
             return json({
                 ok: true,

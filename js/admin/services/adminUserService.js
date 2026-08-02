@@ -7,19 +7,41 @@ const AVATAR_BUCKET = 'avatars';
 const MAX_AVATAR_BYTES = 2 * 1024 * 1024;
 const ALLOWED_AVATAR_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
+async function extractFunctionsError(error, data) {
+    // supabase.functions.invoke a menudo deja solo "non-2xx status";
+    // el mensaje real puede venir en data o en error.context (Response).
+    if (data && typeof data === 'object' && data.error) return String(data.error);
+
+    const ctx = error?.context;
+    if (!ctx) return error?.message || 'Error al gestionar administradores.';
+
+    try {
+        if (typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) return String(body.error);
+            if (typeof body?.message === 'string' && body.message) return body.message;
+        } else if (typeof ctx.text === 'function') {
+            const text = await ctx.text();
+            if (text) {
+                try {
+                    const parsed = JSON.parse(text);
+                    if (parsed?.error) return String(parsed.error);
+                } catch (_) {
+                    return text.slice(0, 300);
+                }
+            }
+        }
+    } catch (_) { /* ignore */ }
+
+    return error?.message || 'Error al gestionar administradores.';
+}
+
 async function invokeManageAdmin(action, payload = {}) {
     const { data, error } = await supabase.functions.invoke('manage-admin', {
         body: { action, ...payload }
     });
     if (error) {
-        let message = error.message || 'Error al gestionar administradores.';
-        try {
-            if (error.context && typeof error.context.json === 'function') {
-                const body = await error.context.json();
-                if (body?.error) message = body.error;
-            }
-        } catch (_) { /* ignore */ }
-        throw new Error(message);
+        throw new Error(await extractFunctionsError(error, data));
     }
     if (data?.error) throw new Error(data.error);
     return data;
