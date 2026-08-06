@@ -3,31 +3,40 @@
    ========================================================== */
 import { supabase } from '../admin/supabase/client.js';
 
+const ROLE_LABELS_FALLBACK = {
+    editor: 'Editor',
+    designer: 'Diseñador',
+    photographer: 'Fotógrafo',
+    community: 'Community Manager',
+    admin_ops: 'Administrador'
+};
+
+function mapEmployee(row) {
+    if (!row) return row;
+    const roleLabel = row.employee_roles?.label || ROLE_LABELS_FALLBACK[row.role_key] || row.role_key;
+    return {
+        ...row,
+        employee_roles: row.employee_roles || { key: row.role_key, label: roleLabel }
+    };
+}
+
 export async function listEmployees() {
     const { data, error } = await supabase
         .from('employees')
-        .select(`
-            *,
-            employee_roles ( key, label ),
-            profiles:profile_id ( id, email, is_active )
-        `)
+        .select('*, profiles:profile_id ( id, email, is_active )')
         .order('created_at', { ascending: false });
     if (error) throw error;
-    return data || [];
+    return (data || []).map(mapEmployee);
 }
 
 export async function getEmployee(employeeId) {
     const { data, error } = await supabase
         .from('employees')
-        .select(`
-            *,
-            employee_roles ( key, label ),
-            profiles:profile_id ( id, email, is_active, full_name )
-        `)
+        .select('*, profiles:profile_id ( id, email, is_active, full_name )')
         .eq('id', employeeId)
         .maybeSingle();
     if (error) throw error;
-    return data;
+    return mapEmployee(data);
 }
 
 export async function getMyEmployee() {
@@ -43,8 +52,26 @@ export async function getMyEmployee() {
 }
 
 export async function createEmployee(payload) {
-    const { data, error } = await supabase.functions.invoke('create-employee', { body: payload });
-    if (error) throw new Error((data && data.error) || error.message || 'No se pudo crear el empleado.');
+    // No mandar dataURL enormes a la Edge Function
+    const body = { ...payload };
+    if (body.photo_url && String(body.photo_url).length > 180000) {
+        body.photo_url = null;
+    }
+
+    const { data, error } = await supabase.functions.invoke('create-employee', { body });
+
+    if (error) {
+        let serverMessage = data && data.error;
+        try {
+            // A veces el body de error viene en error.context
+            if (!serverMessage && error.context && typeof error.context.json === 'function') {
+                const parsed = await error.context.json();
+                serverMessage = parsed?.error;
+            }
+        } catch (_) { /* ignore */ }
+        throw new Error(serverMessage || error.message || 'No se pudo crear el empleado.');
+    }
+
     if (data?.error) throw new Error(data.error);
     return data;
 }

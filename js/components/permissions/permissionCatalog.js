@@ -120,9 +120,7 @@ export const PAGE_PERMISSION_MAP = {
     'tareas.html': ['tasks.create', 'tasks.edit', 'tasks.delete', 'projects.view_all', 'projects.view_assigned'],
     'calendario.html': ['calendar.view', 'calendar.create', 'calendar.edit'],
     'configuracion.html': ['settings.access', 'settings.integrations', 'settings.system'],
-    'usuarios-permisos.html': ['users.create', 'users.edit', 'users.delete'],
-    'empleados.html': ['employees.view', 'employees.create', 'employees.edit'],
-    'empleado.html': ['employees.view', 'employees.edit', 'employees.projects'],
-    'empleados-calendario.html': ['employees.view', 'employees.projects'],
-    'empleados-rendimiento.html': ['employees.view']
+    'usuarios-permisos.html': ['users.create', 'users.edit', 'users.delete']
+    // Empleados: cualquier admin/owner puede entrar (como Finanzas).
+    // Los permisos employees.* se usan en UI/acciones, no para bloquear la página.
 };

@@ -132,9 +132,11 @@ passGen?.addEventListener('click', () => {
 photoInput?.addEventListener('change', () => {
     const file = photoInput.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) {
-        errorEl.textContent = 'La foto no puede superar 2 MB.';
+    if (file.size > 800 * 1024) {
+        errorEl.textContent = 'La foto es muy pesada (máx. 800 KB). Puedes crear el empleado sin foto.';
         errorEl.classList.add('active');
+        photoInput.value = '';
+        photoDataUrl = null;
         return;
     }
     const reader = new FileReader();
@@ -177,6 +179,7 @@ form?.addEventListener('submit', async (e) => {
             window.alert(`Empleado creado.\nCorreo: ${result.email}\nContraseña temporal: ${result.temporaryPassword}\n\nCópiala y envíasela al editor.`);
         }
     } catch (err) {
+        console.error('[empleados] create', err);
         errorEl.textContent = err.message || 'No se pudo crear.';
         errorEl.classList.add('active');
     } finally {

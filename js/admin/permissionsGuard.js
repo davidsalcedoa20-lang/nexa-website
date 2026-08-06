@@ -95,15 +95,9 @@ export async function applyPermissionUI() {
         link.hidden = !allowed;
     });
 
-    // Grupo Empleados completo
+    // Grupo Empleados: visible para todo staff (owner/admin).
     document.querySelectorAll('.emp-nav-group').forEach((group) => {
-        if (owner) {
-            group.hidden = false;
-            return;
-        }
-        const allowed = ['employees.view', 'employees.create', 'employees.edit', 'employees.projects']
-            .some((k) => keys.includes(k));
-        group.hidden = !allowed;
+        group.hidden = false;
     });
 
     document.querySelectorAll('[data-requires-permission]').forEach((el) => {

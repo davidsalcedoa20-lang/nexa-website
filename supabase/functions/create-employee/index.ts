@@ -49,16 +49,6 @@ Deno.serve(async (req) => {
             return json({ error: 'Solo un administrador puede crear empleados.' }, 403);
         }
 
-        if (callerProfile.role !== 'owner') {
-            const { data: perm } = await adminClient
-                .from('user_permissions')
-                .select('permission_key')
-                .eq('user_id', caller.id)
-                .eq('permission_key', 'employees.create')
-                .maybeSingle();
-            if (!perm) return json({ error: 'No tienes permiso para crear empleados.' }, 403);
-        }
-
         const body = await req.json().catch(() => ({}));
         const firstName = String(body.first_name || '').trim();
         const lastName = String(body.last_name || '').trim();
@@ -67,7 +57,9 @@ Deno.serve(async (req) => {
         const roleKey = String(body.role_key || 'editor').trim();
         const status = String(body.status || 'active').trim() === 'inactive' ? 'inactive' : 'active';
         const colorHex = String(body.color_hex || '#2D8CFF').trim() || '#2D8CFF';
-        const photoUrl = body.photo_url ? String(body.photo_url).trim() : null;
+        const photoUrlRaw = body.photo_url ? String(body.photo_url).trim() : null;
+        // Evitar payloads enormes (dataURL) que rompen la Edge Function
+        const photoUrl = photoUrlRaw && photoUrlRaw.length < 200_000 ? photoUrlRaw : null;
 
         if (!firstName || !lastName || !email) {
             return json({ error: 'Nombre, apellido y correo son obligatorios.' }, 400);
