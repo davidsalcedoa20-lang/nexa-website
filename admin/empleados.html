@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Empleados | NEXA Hub</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/employees.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="admin-page" data-auth-guard="admin">
+<div class="admin-shell">
+<aside class="admin-sidebar" id="adminSidebar">
+    <a href="index.html" class="admin-logo"><img src="../assets/logo/nexa-logo.png" alt="Nexa Logo"><span class="admin-logo-tag">HUB · ADMIN</span></a>
+    <nav class="admin-nav">
+        <a href="index.html" class="admin-nav-item">Dashboard</a>
+        <a href="clientes.html" class="admin-nav-item">Clientes</a>
+        <a href="proyectos.html" class="admin-nav-item">Proyectos</a>
+        <a href="tareas.html" class="admin-nav-item">Tareas</a>
+        <a href="mi-agenda.html" class="admin-nav-item">Workspace</a>
+        <a href="contabilidad.html" class="admin-nav-item">Finanzas</a>
+        <a href="calendario.html" class="admin-nav-item">Calendario</a>
+        <div class="emp-nav-group">
+            <div class="emp-nav-label"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Empleados</div>
+            <div class="emp-nav-sub">
+                <a href="empleados.html" class="is-active">Todos los empleados</a>
+                <a href="empleados.html?nuevo=1">Crear empleado</a>
+                <a href="empleados-calendario.html" class="">Calendario de entregas</a>
+                <a href="empleados-rendimiento.html" class="">Rendimiento</a>
+            </div>
+        </div>
+        <a href="usuarios-permisos.html" class="admin-nav-item">Usuarios y Permisos</a>
+        <a href="configuracion.html" class="admin-nav-item">Configuración</a>
+    </nav>
+    <button type="button" class="admin-logout" data-logout>Cerrar sesión</button>
+</aside>
+<div class="admin-overlay" id="adminOverlay"></div>
+<div class="admin-content">
+<header class="admin-topbar">
+    <div class="admin-topbar-left">
+        <button class="admin-menu-toggle" id="adminMenuToggle" aria-label="Abrir menú"><svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+        <a href="../index.html" class="admin-topbar-logo"><img src="../assets/logo/nexa-logo.png" alt="Nexa Logo"><span>NEXA HUB</span></a>
+    </div>
+    <div class="admin-topbar-right">
+        <div class="admin-user" id="adminUserToggle">
+            <div class="admin-avatar" data-user-initials>--</div>
+            <div class="admin-user-info">
+                <span class="admin-user-name" data-user-name>Cargando...</span>
+                <span class="admin-user-role" data-user-role-label>Administrador</span>
+            </div>
+            <div class="admin-user-menu" id="adminUserMenu">
+                <a href="configuracion.html" class="admin-user-menu-item">Mi perfil</a>
+                <button type="button" class="admin-user-menu-item admin-user-menu-logout" data-logout>Cerrar sesión</button>
+            </div>
+        </div>
+    </div>
+</header>
+<main class="admin-main">
+<div class="emp-page">
+  <div class="emp-hero">
+    <div><span class="emp-kicker">Equipo creativo</span><h1>Empleados</h1><p>Administra editores y su espacio de trabajo.</p></div>
+    <button type="button" class="admin-btn-primary" id="empNewBtn">+ Nuevo empleado</button>
+  </div>
+  <div class="admin-state" id="empLoading" style="display:flex"><div class="admin-spinner"></div><span>Cargando empleados…</span></div>
+  <div class="emp-empty" id="empEmpty" style="display:none">Todavía no hay empleados. Crea el primero.</div>
+  <div class="emp-grid" id="empGrid"></div>
+</div>
+</main>
+</div>
+</div>
+<div class="admin-modal-overlay" id="empModalOverlay">
+  <div class="admin-modal emp-modal" style="width:min(720px,94vw)">
+    <div class="admin-modal-header"><h3>Nuevo empleado</h3><button type="button" class="admin-modal-close" id="empModalClose">✕</button></div>
+    <form id="empForm" class="admin-form" style="padding:18px 20px 22px">
+      <div class="admin-field"><label>Nombre *</label><input name="first_name" required></div>
+      <div class="admin-field"><label>Apellido *</label><input name="last_name" required></div>
+      <div class="admin-field span-2"><label>Correo *</label><input type="email" name="email" required></div>
+      <div class="admin-field span-2"><label>Contraseña temporal *</label>
+        <div style="display:flex;gap:8px"><input type="text" name="password" id="empPassword" required minlength="8" style="flex:1"><button type="button" class="admin-btn-secondary" id="empPassGenerate">Generar</button></div>
+      </div>
+      <div class="admin-field"><label>Cargo</label>
+        <select name="role_key"><option value="editor" selected>Editor</option><option value="designer" disabled>Diseñador (próximamente)</option><option value="photographer" disabled>Fotógrafo (próximamente)</option><option value="community" disabled>Community Manager (próximamente)</option><option value="admin_ops" disabled>Administrador (próximamente)</option></select>
+      </div>
+      <div class="admin-field"><label>Estado</label><select name="status"><option value="active">Activo</option><option value="inactive">Inactivo</option></select></div>
+      <div class="admin-field span-2"><label>Color identificador</label><div class="emp-color-row" id="empColorRow"></div></div>
+      <div class="admin-field span-2"><label>Foto</label>
+        <div style="display:flex;gap:12px;align-items:center"><div id="empPhotoPreview" class="emp-avatar"></div><input type="file" id="empPhoto" accept="image/*"></div>
+      </div>
+      <span class="admin-form-error span-2" id="empFormError"></span>
+      <div class="admin-modal-actions span-2" style="grid-column:1/-1">
+        <button type="button" class="admin-btn-secondary" id="empModalCancel">Cancelar</button>
+        <button type="submit" class="admin-btn-primary">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="../js/vendor/supabase-js.min.js"></script>
+<script type="module" src="../js/portal.js"></script>
+<script type="module" src="../js/admin.js"></script>
+<script type="module" src="../js/admin/pages/empleadosPage.js"></script>
+</body>
+</html>

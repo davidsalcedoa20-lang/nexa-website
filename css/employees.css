@@ -1,0 +1,241 @@
+/* ==========================================================
+   NEXA HUB — Empleados (estilos propios, no reutiliza Clientes)
+   ========================================================== */
+
+.emp-nav-group{ margin:6px 0 10px; }
+.emp-nav-label{
+    display:flex; align-items:center; gap:10px;
+    padding:10px 16px; color:#cfcfcf; font-size:12px; font-weight:700;
+    letter-spacing:.08em; text-transform:uppercase;
+}
+.emp-nav-label svg{ width:18px; height:18px; opacity:.85; }
+.emp-nav-sub{ display:flex; flex-direction:column; gap:2px; padding:0 8px 6px 28px; }
+.emp-nav-sub a{
+    text-decoration:none; color:#9a9a9a; font-size:13px; padding:8px 12px; border-radius:10px;
+}
+.emp-nav-sub a:hover, .emp-nav-sub a.is-active{
+    color:#fff; background:rgba(45,140,255,.14);
+}
+
+.emp-page{ display:flex; flex-direction:column; gap:20px; }
+.emp-hero{
+    display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; align-items:flex-end;
+}
+.emp-hero h1{ margin:0; font-size:28px; color:#fff; font-weight:700; }
+.emp-hero p{ margin:6px 0 0; color:#9a9a9a; font-size:14px; }
+.emp-kicker{
+    display:block; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:rgba(255,255,255,.42); margin-bottom:6px;
+}
+
+.emp-grid{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(280px, 1fr)); gap:16px;
+}
+.emp-card{
+    position:relative; display:flex; flex-direction:column; gap:14px;
+    padding:20px; border-radius:22px; text-decoration:none; color:inherit;
+    background:linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    backdrop-filter:blur(16px);
+    transition:transform .2s, border-color .2s, box-shadow .2s;
+}
+.emp-card:hover{
+    transform:translateY(-3px);
+    border-color:rgba(45,140,255,.35);
+    box-shadow:0 18px 40px rgba(0,0,0,.35);
+}
+.emp-card::before{
+    content:""; position:absolute; inset:0 auto 0 0; width:3px; border-radius:22px 0 0 22px;
+    background:var(--emp-color, #2D8CFF);
+}
+.emp-card-top{ display:flex; align-items:center; gap:14px; }
+.emp-avatar{
+    width:56px; height:56px; border-radius:18px; object-fit:cover;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+    display:inline-flex; align-items:center; justify-content:center;
+    font-weight:800; color:#fff; font-size:18px; overflow:hidden; flex-shrink:0;
+}
+.emp-avatar img{ width:100%; height:100%; object-fit:cover; }
+.emp-card-name{ margin:0; color:#fff; font-size:17px; font-weight:700; }
+.emp-card-role{ margin:2px 0 0; color:#a8a8a8; font-size:13px; }
+.emp-pill{
+    display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px;
+    font-size:11px; font-weight:700; letter-spacing:.04em;
+}
+.emp-pill.is-active{ color:#4ADE80; background:rgba(74,222,128,.12); }
+.emp-pill.is-inactive{ color:#FF6B81; background:rgba(255,107,129,.12); }
+.emp-card-meta{ display:flex; gap:10px; flex-wrap:wrap; color:#8a8a8a; font-size:12px; }
+
+.emp-stats{
+    display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:12px;
+}
+.emp-stat{
+    padding:16px; border-radius:18px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+}
+.emp-stat span{ display:block; color:#8a8a8a; font-size:12px; margin-bottom:6px; }
+.emp-stat strong{ color:#fff; font-size:22px; font-weight:800; letter-spacing:-.02em; }
+
+.emp-profile-bar{
+    display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+    padding:20px; border-radius:22px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+}
+.emp-profile-bar .emp-avatar{ width:72px; height:72px; border-radius:22px; font-size:22px; }
+
+.emp-workspace-title{
+    margin:28px 0 14px; font-size:13px; letter-spacing:.16em; text-transform:uppercase;
+    color:rgba(255,255,255,.5); font-weight:700;
+}
+.emp-workspace{
+    display:grid; grid-template-columns:1fr 1fr; gap:16px;
+}
+.emp-ws-card{
+    min-height:320px; padding:20px; border-radius:22px;
+    background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.015));
+    border:1px solid rgba(255,255,255,.08);
+    display:flex; flex-direction:column; gap:14px;
+}
+.emp-ws-card.span-2{ grid-column: span 2; }
+.emp-ws-head{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+}
+.emp-ws-head h2{ margin:0; color:#fff; font-size:16px; font-weight:700; }
+.emp-ws-head p{ margin:4px 0 0; color:#8a8a8a; font-size:12.5px; }
+
+.emp-drive{
+    display:flex; align-items:center; gap:14px; padding:16px; border-radius:16px;
+    background:rgba(45,140,255,.08); border:1px solid rgba(45,140,255,.22);
+}
+.emp-drive-icon{
+    width:44px; height:44px; border-radius:12px; display:grid; place-items:center;
+    background:rgba(45,140,255,.18); color:#2D8CFF;
+}
+.emp-drive-icon svg{ width:22px; height:22px; }
+.emp-drive input{
+    flex:1; min-width:0; background:transparent; border:none; color:#fff; font:inherit; outline:none;
+}
+.emp-drive a, .emp-link-btn{
+    text-decoration:none; color:#fff; background:linear-gradient(135deg, #2D8CFF, #8C52FF);
+    border:none; border-radius:12px; padding:10px 14px; font-size:13px; font-weight:600; cursor:pointer;
+}
+
+.emp-editor{
+    flex:1; min-height:220px; border-radius:16px; padding:14px 16px;
+    background:rgba(0,0,0,.25); border:1px solid rgba(255,255,255,.08);
+    color:#eee; outline:none; overflow:auto; line-height:1.6;
+}
+.emp-editor:empty:before{
+    content:attr(data-placeholder); color:#666;
+}
+.emp-toolbar{ display:flex; gap:6px; flex-wrap:wrap; }
+.emp-toolbar button{
+    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
+    color:#ddd; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px;
+}
+.emp-toolbar button:hover{ background:rgba(140,82,255,.2); color:#fff; }
+
+.emp-video-list{ display:flex; flex-direction:column; gap:10px; flex:1; overflow:auto; }
+.emp-video{
+    padding:14px 16px; border-radius:16px; cursor:grab;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08);
+    transition:border-color .2s, transform .15s;
+}
+.emp-video:active{ cursor:grabbing; }
+.emp-video.is-dragging{ opacity:.55; transform:scale(.98); }
+.emp-video-top{ display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+.emp-video-num{
+    font-size:11px; font-weight:800; letter-spacing:.08em; color:#8C52FF; text-transform:uppercase;
+}
+.emp-video h3{ margin:4px 0; color:#fff; font-size:15px; }
+.emp-video p{ margin:0; color:#9a9a9a; font-size:13px; line-height:1.5; }
+.emp-video-meta{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+.emp-chip{
+    font-size:11px; padding:3px 8px; border-radius:999px; font-weight:650;
+    background:rgba(255,255,255,.06); color:#cfcfcf;
+}
+.emp-chip.priority-alta{ color:#FF6B81; background:rgba(255,107,129,.12); }
+.emp-chip.priority-media{ color:#FFC15F; background:rgba(255,193,95,.12); }
+.emp-chip.priority-baja{ color:#4ADE80; background:rgba(74,222,128,.12); }
+.emp-chip.status-pendiente{ color:#8a8a8a; }
+.emp-chip.status-en_edicion{ color:#2D8CFF; background:rgba(45,140,255,.14); }
+.emp-chip.status-entregado{ color:#4ADE80; background:rgba(74,222,128,.12); }
+.emp-video-actions{ display:flex; gap:6px; margin-top:10px; }
+.emp-video-actions button, .emp-mini-btn{
+    border:1px solid rgba(255,255,255,.12); background:rgba(255,255,255,.04);
+    color:#ddd; border-radius:8px; padding:6px 10px; cursor:pointer; font-size:12px;
+}
+.emp-video-actions button.is-danger{ color:#FF6B81; }
+
+.emp-calendar{
+    display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:8px; flex:1;
+}
+.emp-day{
+    min-height:110px; border-radius:14px; padding:10px;
+    background:rgba(255,255,255,.025); border:1px dashed rgba(255,255,255,.1);
+    transition:border-color .15s, background .15s;
+}
+.emp-day.is-over{
+    border-color:rgba(45,140,255,.55); background:rgba(45,140,255,.1);
+}
+.emp-day-label{ font-size:11px; color:#8a8a8a; margin-bottom:8px; font-weight:650; }
+.emp-day-label strong{ display:block; color:#fff; font-size:16px; margin-top:2px; }
+.emp-day-task{
+    font-size:11px; padding:6px 8px; border-radius:8px; margin-bottom:6px;
+    background:rgba(140,82,255,.18); border-left:3px solid var(--emp-color, #8C52FF);
+    color:#fff; cursor:grab;
+}
+
+.emp-projects-row{ display:flex; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+.emp-project-tab{
+    border:1px solid rgba(255,255,255,.1); background:rgba(255,255,255,.03);
+    color:#bbb; border-radius:999px; padding:8px 14px; cursor:pointer; font-size:13px;
+}
+.emp-project-tab.is-active{
+    color:#fff; border-color:rgba(45,140,255,.4); background:rgba(45,140,255,.16);
+}
+
+.emp-chat{
+    margin-top:12px; border-top:1px solid rgba(255,255,255,.08); padding-top:12px;
+    display:flex; flex-direction:column; gap:8px; max-height:180px; overflow:auto;
+}
+.emp-chat-msg{
+    padding:8px 10px; border-radius:12px; background:rgba(255,255,255,.04); font-size:12.5px; color:#ddd;
+}
+.emp-chat-msg strong{ color:#fff; font-size:11px; }
+.emp-chat-form{ display:flex; gap:8px; }
+.emp-chat-form input{
+    flex:1; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.1);
+    border-radius:10px; color:#fff; padding:8px 10px; font:inherit;
+}
+
+.emp-modal .admin-form{ display:grid; grid-template-columns:1fr 1fr; gap:12px 14px; }
+.emp-modal .admin-field.span-2{ grid-column: span 2; }
+.emp-color-row{ display:flex; gap:8px; flex-wrap:wrap; }
+.emp-color-swatch{
+    width:28px; height:28px; border-radius:50%; border:2px solid transparent; cursor:pointer; padding:0;
+    background:var(--c);
+}
+.emp-color-swatch.is-selected{ border-color:#fff; box-shadow:0 0 0 3px rgba(255,255,255,.15); }
+.emp-photo-preview{
+    width:72px; height:72px; border-radius:18px; object-fit:cover;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.1);
+}
+
+.emp-empty{
+    padding:40px 20px; text-align:center; color:#8a8a8a; border-radius:18px;
+    border:1px dashed rgba(255,255,255,.12);
+}
+
+@media (max-width:1100px){
+    .emp-workspace{ grid-template-columns:1fr; }
+    .emp-ws-card.span-2{ grid-column: span 1; }
+    .emp-stats{ grid-template-columns:1fr 1fr; }
+    .emp-calendar{ grid-template-columns:repeat(2, 1fr); }
+}
+@media (max-width:720px){
+    .emp-stats{ grid-template-columns:1fr; }
+    .emp-modal .admin-form{ grid-template-columns:1fr; }
+    .emp-modal .admin-field.span-2{ grid-column: span 1; }
+    .emp-calendar{ grid-template-columns:1fr; }
+}

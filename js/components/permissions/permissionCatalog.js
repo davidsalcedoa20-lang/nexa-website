@@ -89,6 +89,17 @@ export const PERMISSION_MODULES = [
         permissions: [
             { key: 'reports.view', label: 'Ver reportes' }
         ]
+    },
+    {
+        id: 'employees',
+        label: 'Empleados',
+        permissions: [
+            { key: 'employees.view', label: 'Ver empleados' },
+            { key: 'employees.create', label: 'Crear empleados' },
+            { key: 'employees.edit', label: 'Editar empleados' },
+            { key: 'employees.delete', label: 'Eliminar empleados' },
+            { key: 'employees.projects', label: 'Gestionar proyectos de empleados' }
+        ]
     }
 ];
 
@@ -97,7 +108,8 @@ export const ALL_PERMISSION_KEYS = PERMISSION_MODULES.flatMap((m) => m.permissio
 export const ROLE_LABELS = {
     owner: '👑 Propietario',
     admin: 'Administrador',
-    client: 'Cliente'
+    client: 'Cliente',
+    employee: 'Empleado'
 };
 
 /** Mapeo nav/página → permiso mínimo para ver la sección. */
@@ -108,5 +120,9 @@ export const PAGE_PERMISSION_MAP = {
     'tareas.html': ['tasks.create', 'tasks.edit', 'tasks.delete', 'projects.view_all', 'projects.view_assigned'],
     'calendario.html': ['calendar.view', 'calendar.create', 'calendar.edit'],
     'configuracion.html': ['settings.access', 'settings.integrations', 'settings.system'],
-    'usuarios-permisos.html': ['users.create', 'users.edit', 'users.delete']
+    'usuarios-permisos.html': ['users.create', 'users.edit', 'users.delete'],
+    'empleados.html': ['employees.view', 'employees.create', 'employees.edit'],
+    'empleado.html': ['employees.view', 'employees.edit', 'employees.projects'],
+    'empleados-calendario.html': ['employees.view', 'employees.projects'],
+    'empleados-rendimiento.html': ['employees.view']
 };

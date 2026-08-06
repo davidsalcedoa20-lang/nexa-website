@@ -65,11 +65,13 @@ async function fetchOrCreateProfile(supabase, user) {
         return existingProfile;
     }
 
+    const metaRole = user.user_metadata && user.user_metadata.role;
+    const allowedBootstrap = ['admin', 'client', 'employee', 'owner'];
     const newProfile = {
         id: user.id,
         email: user.email,
         full_name: (user.user_metadata && user.user_metadata.full_name) || '',
-        role: 'admin'
+        role: allowedBootstrap.includes(metaRole) ? metaRole : 'client'
     };
 
     const { data: createdProfile, error: insertError } = await supabase
@@ -182,6 +184,15 @@ if (portalLoginForm) {
             return;
         }
 
+        if (profile.role === 'employee') {
+            if (authData.user.user_metadata && authData.user.user_metadata.must_change_password === true) {
+                window.location.href = 'change-password.html';
+                return;
+            }
+            window.location.href = '../editor/index.html';
+            return;
+        }
+
         if (profile.role === 'client') {
             if (authData.user.user_metadata && authData.user.user_metadata.must_change_password === true) {
                 window.location.href = 'change-password.html';
@@ -255,9 +266,8 @@ async function initChangePasswordPage(form) {
 
     const profile = await fetchOrCreateProfile(supabase, user);
 
-    // Este flujo es solo para clientes (los admins no tienen esta pantalla;
-    // si alguno llega aquí por error, se lo manda de vuelta a su panel).
-    if (!profile || profile.role !== 'client') {
+    // Clientes y empleados usan esta pantalla para el cambio obligatorio/voluntario.
+    if (!profile || (profile.role !== 'client' && profile.role !== 'employee')) {
         window.location.href = profile && (profile.role === 'admin' || profile.role === 'owner')
             ? '../admin/index.html'
             : 'index.html';
@@ -318,7 +328,9 @@ async function initChangePasswordPage(form) {
             return;
         }
 
-        window.location.href = '../dashboard/index.html';
+        window.location.href = profile.role === 'employee'
+            ? '../editor/index.html'
+            : '../dashboard/index.html';
     });
 
     [newPasswordInput, confirmPasswordInput].forEach(function (field) {
@@ -355,7 +367,9 @@ async function initAuthGuard(requiredRole) {
     const profile = await fetchOrCreateProfile(supabase, user);
     const isStaff = profile && (profile.role === 'admin' || profile.role === 'owner');
     const isValid = profile && profile.is_active !== false && (
-        requiredRole === 'admin' ? isStaff : profile.role === requiredRole
+        requiredRole === 'admin' ? isStaff
+            : requiredRole === 'employee' ? profile.role === 'employee'
+            : profile.role === requiredRole
     );
 
     if (!isValid) {

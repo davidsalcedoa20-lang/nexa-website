@@ -79,7 +79,8 @@ export async function applyPermissionUI() {
         { match: 'tareas.html', any: ['tasks.create', 'tasks.edit', 'tasks.delete', 'projects.view_all', 'projects.view_assigned'] },
         { match: 'calendario.html', any: ['calendar.view', 'calendar.create'] },
         { match: 'configuracion.html', any: ['settings.access', 'settings.integrations', 'settings.system'] },
-        { match: 'usuarios-permisos.html', any: ['users.create', 'users.edit', 'users.delete'] }
+        { match: 'usuarios-permisos.html', any: ['users.create', 'users.edit', 'users.delete'] },
+        { match: 'empleados.html', any: ['employees.view', 'employees.create', 'employees.edit'] }
     ];
 
     document.querySelectorAll('.admin-nav-item').forEach((link) => {
@@ -92,6 +93,17 @@ export async function applyPermissionUI() {
         }
         const allowed = rule.any.some((k) => keys.includes(k));
         link.hidden = !allowed;
+    });
+
+    // Grupo Empleados completo
+    document.querySelectorAll('.emp-nav-group').forEach((group) => {
+        if (owner) {
+            group.hidden = false;
+            return;
+        }
+        const allowed = ['employees.view', 'employees.create', 'employees.edit', 'employees.projects']
+            .some((k) => keys.includes(k));
+        group.hidden = !allowed;
     });
 
     document.querySelectorAll('[data-requires-permission]').forEach((el) => {
