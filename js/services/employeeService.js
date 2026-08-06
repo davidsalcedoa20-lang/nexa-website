@@ -95,24 +95,46 @@ export async function getEmployeeStats(employeeId) {
     if (pErr) throw pErr;
     const ids = (projects || []).map((p) => p.id);
     if (!ids.length) {
-        return { pending: 0, delivered: 0, lastDelivery: null, productivity: 0 };
+        return {
+            pending: 0,
+            active: 0,
+            delivered: 0,
+            lastDelivery: null,
+            nextDelivery: null,
+            lastActivity: null,
+            productivity: 0
+        };
     }
     const { data: tasks, error: tErr } = await supabase
         .from('employee_tasks')
-        .select('status, delivered_at, updated_at')
+        .select('status, delivered_at, updated_at, delivery_date, name')
         .in('project_id', ids);
     if (tErr) throw tErr;
     const list = tasks || [];
-    const pending = list.filter((t) => t.status !== 'entregado').length;
-    const delivered = list.filter((t) => t.status === 'entregado').length;
+    const isDone = (s) => s === 'finalizado' || s === 'entregado';
+    const active = list.filter((t) => !isDone(t.status)).length;
+    const delivered = list.filter((t) => isDone(t.status)).length;
     const total = list.length || 1;
     const last = list
         .filter((t) => t.delivered_at)
         .sort((a, b) => new Date(b.delivered_at) - new Date(a.delivered_at))[0];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const upcoming = list
+        .filter((t) => t.delivery_date && !isDone(t.status))
+        .sort((a, b) => String(a.delivery_date).localeCompare(String(b.delivery_date)))[0];
+    const lastAct = list
+        .slice()
+        .sort((a, b) => new Date(b.updated_at || 0) - new Date(a.updated_at || 0))[0];
+
     return {
-        pending,
+        pending: active,
+        active,
         delivered,
         lastDelivery: last?.delivered_at || null,
+        nextDelivery: upcoming?.delivery_date || null,
+        nextDeliveryTitle: upcoming?.name || null,
+        lastActivity: lastAct?.updated_at || null,
         productivity: Math.round((delivered / total) * 100)
     };
 }

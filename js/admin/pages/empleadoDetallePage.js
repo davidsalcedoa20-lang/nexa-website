@@ -1,11 +1,15 @@
 /* ==========================================================
-   NEXA HUB — Detalle empleado + Espacio de trabajo (videos)
+   NEXA HUB — Detalle empleado + asignación de videos
    ========================================================== */
 import {
     getEmployee, getEmployeeStats, listEmployeeProjects, createEmployeeProject,
     listProjectTasks, createProjectTask, updateProjectTask,
     deleteProjectTask, reorderProjectTasks, subscribeEmployeeChannel
 } from '../../services/employeeService.js';
+import {
+    statusLabel, normalizeTaskStatus, folderDisplayName,
+    compressImageFile, formatTaskDate
+} from '../../services/employeeTaskHelpers.js';
 import { escapeHtml } from '../../components/projectUi.js';
 
 const params = new URLSearchParams(location.search);
@@ -17,19 +21,11 @@ let projects = [];
 let activeProjectId = null;
 let tasks = [];
 let unsub = [];
+let draftCover = null;
+let draftCoverCleared = false;
 
 function initials(first, last) {
     return `${(first || '?')[0]}${(last || '?')[0]}`.toUpperCase();
-}
-
-function statusLabel(s) {
-    return ({ pendiente: 'Pendiente', en_edicion: 'En edición', entregado: 'Entregado' })[s] || s;
-}
-
-function formatDate(iso) {
-    if (!iso) return '—';
-    const d = iso.length <= 10 ? new Date(`${iso}T12:00:00`) : new Date(iso);
-    return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 function folderUrl(task) {
@@ -49,10 +45,7 @@ function nextDays(count = 14) {
 }
 
 function ymd(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 async function init() {
@@ -60,21 +53,18 @@ async function init() {
         if (root) root.innerHTML = '<p class="emp-empty">Empleado no encontrado.</p>';
         return;
     }
-
     root.innerHTML = '<div class="admin-state" style="display:flex"><div class="admin-spinner"></div><span>Cargando…</span></div>';
-
     try {
         employee = await getEmployee(employeeId);
         if (!employee) throw new Error('Empleado no encontrado');
         projects = await listEmployeeProjects(employeeId);
         if (!projects.length) {
-            const created = await createEmployeeProject({
+            projects = [await createEmployeeProject({
                 employee_id: employeeId,
                 title: 'Proyecto principal',
                 instructions: '',
                 drive_url: null
-            });
-            projects = [created];
+            })];
         }
         activeProjectId = projects[0].id;
         await refreshTasks();
@@ -118,14 +108,14 @@ async function render() {
             </div>
 
             <div class="emp-stats">
+                <div class="emp-stat"><span>Activos</span><strong>${stats.active ?? stats.pending}</strong></div>
+                <div class="emp-stat"><span>Terminados</span><strong>${stats.delivered}</strong></div>
+                <div class="emp-stat"><span>Próxima entrega</span><strong style="font-size:15px">${escapeHtml(formatTaskDate(stats.nextDelivery))}</strong></div>
                 <div class="emp-stat"><span>Productividad</span><strong>${stats.productivity}%</strong></div>
-                <div class="emp-stat"><span>Videos pendientes</span><strong>${stats.pending}</strong></div>
-                <div class="emp-stat"><span>Videos entregados</span><strong>${stats.delivered}</strong></div>
-                <div class="emp-stat"><span>Última entrega</span><strong style="font-size:16px">${escapeHtml(formatDate(stats.lastDelivery))}</strong></div>
             </div>
 
             <div class="emp-workspace-title">Espacio de trabajo</div>
-            <div class="emp-projects-row" id="empProjectTabs">
+            <div class="emp-projects-row">
                 ${projects.map((p) => `
                     <button type="button" class="emp-project-tab${p.id === activeProjectId ? ' is-active' : ''}" data-project="${p.id}">${escapeHtml(p.title)}</button>
                 `).join('')}
@@ -133,15 +123,14 @@ async function render() {
             </div>
 
             <div class="emp-workspace emp-workspace--videos">
-                <section class="emp-ws-card span-2" id="cardVideos">
+                <section class="emp-ws-card span-2">
                     <div class="emp-ws-head">
-                        <div><h2>Videos a editar</h2><p>Asigna material, instrucciones y fecha límite</p></div>
+                        <div><h2>Videos a editar</h2><p>Asigna material, portada e instrucciones</p></div>
                         <button type="button" class="admin-btn-primary" id="empAddVideo">+ Nuevo video</button>
                     </div>
                     <div class="emp-video-list" id="empVideoList">${renderVideos()}</div>
                 </section>
-
-                <section class="emp-ws-card span-2" id="cardCalendar">
+                <section class="emp-ws-card span-2">
                     <div class="emp-ws-head">
                         <div><h2>Calendario de entregas</h2><p>Se actualiza en vivo cuando el editor mueve una fecha</p></div>
                     </div>
@@ -151,39 +140,75 @@ async function render() {
         </div>
 
         <div class="admin-modal-overlay" id="empVideoModal">
-            <div class="admin-modal emp-modal" style="width:min(560px,94vw)">
+            <div class="admin-modal emp-modal emp-modal--workspace">
                 <div class="admin-modal-header">
                     <h3 id="empVideoModalTitle">Nuevo video</h3>
                     <button type="button" class="admin-modal-close" id="empVideoModalClose">✕</button>
                 </div>
-                <form id="empVideoForm" class="admin-form" style="padding:18px 20px 22px;display:grid;gap:14px;grid-template-columns:1fr">
+                <form id="empVideoForm" class="emp-assign-layout">
                     <input type="hidden" name="id">
-                    <div class="admin-field">
-                        <label>Título del video</label>
-                        <input name="name" required placeholder="Ej. Reel Fachada">
+                    <div class="emp-assign-form">
+                        <div class="emp-assign-block">
+                            <h4>Información principal</h4>
+                            <div class="admin-field">
+                                <label>Título del video</label>
+                                <input name="name" required placeholder="Ej. Reel Fachada" data-live>
+                            </div>
+                            <div class="admin-field">
+                                <label>Descripción / indicaciones</label>
+                                <textarea name="description" rows="7" placeholder="Instrucciones detalladas para el editor…" data-live></textarea>
+                            </div>
+                            <div class="admin-field">
+                                <label>Fecha límite de entrega</label>
+                                <input name="delivery_date" type="date" data-live>
+                            </div>
+                        </div>
+
+                        <div class="emp-assign-block">
+                            <h4>Material del Proyecto</h4>
+                            <div class="admin-field">
+                                <label>Enlace de Google Drive</label>
+                                <input name="drive_url" type="url" placeholder="https://drive.google.com/..." data-live>
+                            </div>
+                            <div class="admin-field">
+                                <label>Nombre de la carpeta</label>
+                                <input name="drive_folder_name" placeholder="Ej. Material Reel Fachada" data-live>
+                            </div>
+                            <div class="emp-material-actions">
+                                <button type="button" class="admin-btn-secondary" id="empClearDrive">Quitar carpeta</button>
+                                <a class="emp-link-btn emp-link-btn--sm" id="empPreviewOpenDrive" href="#" target="_blank" rel="noopener" style="pointer-events:none;opacity:.4">Abrir carpeta</a>
+                            </div>
+                        </div>
+
+                        <div class="emp-assign-block">
+                            <h4>Imagen del Proyecto</h4>
+                            <div class="emp-cover-uploader">
+                                <div class="emp-cover-preview" id="empCoverPreview">
+                                    <span>Sin imagen</span>
+                                </div>
+                                <div class="emp-cover-actions">
+                                    <label class="admin-btn-secondary emp-file-label">
+                                        Subir imagen
+                                        <input type="file" id="empCoverInput" accept="image/*" hidden>
+                                    </label>
+                                    <button type="button" class="admin-btn-secondary" id="empCoverChange">Cambiar</button>
+                                    <button type="button" class="admin-btn-secondary is-danger-text" id="empCoverRemove">Eliminar</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <span class="admin-form-error" id="empVideoError"></span>
+                        <div class="admin-modal-actions">
+                            <button type="button" class="admin-btn-secondary" id="empVideoCancel">Cancelar</button>
+                            <button type="submit" class="admin-btn-primary">Guardar</button>
+                        </div>
                     </div>
-                    <div class="admin-field">
-                        <label>Descripción / instrucciones</label>
-                        <textarea name="description" rows="8" placeholder="Indicaciones para el editor. Puedes usar saltos de línea y listas."></textarea>
-                    </div>
-                    <div class="admin-field">
-                        <label>Carpeta del material (Google Drive)</label>
-                        <input name="drive_url" type="url" placeholder="https://drive.google.com/...">
-                    </div>
-                    <div class="admin-field">
-                        <label>Fecha límite</label>
-                        <input name="delivery_date" type="date">
-                    </div>
-                    <span class="admin-form-error" id="empVideoError"></span>
-                    <div class="admin-modal-actions">
-                        <button type="button" class="admin-btn-secondary" id="empVideoCancel">Cancelar</button>
-                        <button type="submit" class="admin-btn-primary">Guardar</button>
-                    </div>
+
+                    <aside class="emp-assign-preview" id="empLivePreview" aria-live="polite"></aside>
                 </form>
             </div>
         </div>
     `;
-
     bindUi();
 }
 
@@ -191,23 +216,28 @@ function renderVideos() {
     if (!tasks.length) return '<div class="emp-empty">Aún no hay videos. Crea el primero.</div>';
     return tasks.map((t) => {
         const folder = folderUrl(t);
+        const st = normalizeTaskStatus(t.status);
         return `
-        <article class="emp-video emp-video--admin" draggable="true" data-task-id="${t.id}">
-            <div class="emp-video-top">
-                <div>
+        <article class="emp-video emp-video--admin emp-video--rich" draggable="true" data-task-id="${t.id}">
+            <div class="emp-video-cover">${t.cover_url
+                ? `<img src="${escapeHtml(t.cover_url)}" alt="">`
+                : '<div class="emp-video-cover-fallback"></div>'}</div>
+            <div class="emp-video-body">
+                <div class="emp-video-top">
                     <h3>${escapeHtml(t.name)}</h3>
+                    <span class="emp-chip status-${st}">${statusLabel(st)}</span>
                 </div>
-                <span class="emp-chip status-${t.status}">${statusLabel(t.status)}</span>
-            </div>
-            <div class="emp-video-meta">
-                <span class="emp-chip">Fecha límite: ${escapeHtml(formatDate(t.delivery_date))}</span>
-            </div>
-            <div class="emp-video-actions">
-                ${folder
-                    ? `<a class="emp-link-btn emp-link-btn--sm" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir carpeta</a>`
-                    : '<span class="emp-chip">Sin carpeta</span>'}
-                <button type="button" data-edit="${t.id}">Editar</button>
-                <button type="button" class="is-danger" data-del="${t.id}">Eliminar</button>
+                <div class="emp-video-meta">
+                    <span class="emp-chip">Fecha límite: ${escapeHtml(formatTaskDate(t.delivery_date))}</span>
+                    <span class="emp-chip">${escapeHtml(folderDisplayName(t))}</span>
+                </div>
+                <div class="emp-video-actions">
+                    ${folder
+                        ? `<a class="emp-link-btn emp-link-btn--sm" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir carpeta</a>`
+                        : '<span class="emp-chip">Sin carpeta</span>'}
+                    <button type="button" data-edit="${t.id}">Editar</button>
+                    <button type="button" class="is-danger" data-del="${t.id}">Eliminar</button>
+                </div>
             </div>
         </article>`;
     }).join('');
@@ -230,6 +260,58 @@ function renderCalendar() {
             </div>
         `;
     }).join('');
+}
+
+function updateLivePreview() {
+    const form = document.getElementById('empVideoForm');
+    const preview = document.getElementById('empLivePreview');
+    if (!form || !preview) return;
+    const name = form.name.value.trim() || 'Título del video';
+    const date = form.delivery_date.value;
+    const drive = form.drive_url.value.trim();
+    const folderName = form.drive_folder_name.value.trim()
+        || (drive ? folderDisplayName({ drive_url: drive }) : 'Sin carpeta');
+    const editorName = `${employee.first_name} ${employee.last_name}`;
+    const cover = draftCoverCleared ? null : (draftCover || form.dataset.existingCover || '');
+
+    const openBtn = document.getElementById('empPreviewOpenDrive');
+    if (openBtn) {
+        if (drive) {
+            openBtn.href = drive;
+            openBtn.style.pointerEvents = '';
+            openBtn.style.opacity = '1';
+        } else {
+            openBtn.href = '#';
+            openBtn.style.pointerEvents = 'none';
+            openBtn.style.opacity = '.4';
+        }
+    }
+
+    preview.innerHTML = `
+        <div class="emp-live-card">
+            <span class="emp-kicker">Resumen</span>
+            <div class="emp-live-cover">${cover
+                ? `<img src="${escapeHtml(cover)}" alt="">`
+                : '<div class="emp-live-cover-empty">Portada</div>'}</div>
+            <h3>${escapeHtml(name)}</h3>
+            <dl class="emp-live-meta">
+                <div><dt>Editor</dt><dd>${escapeHtml(editorName)}</dd></div>
+                <div><dt>Fecha límite</dt><dd>${escapeHtml(formatTaskDate(date))}</dd></div>
+                <div><dt>Estado</dt><dd><span class="emp-chip status-pendiente">Pendiente</span></dd></div>
+                <div><dt>Carpeta Drive</dt><dd>${escapeHtml(folderName)}</dd></div>
+            </dl>
+        </div>
+    `;
+}
+
+function setCoverPreview(url) {
+    const box = document.getElementById('empCoverPreview');
+    if (!box) return;
+    if (url) {
+        box.innerHTML = `<img src="${escapeHtml(url)}" alt="Portada">`;
+    } else {
+        box.innerHTML = '<span>Sin imagen</span>';
+    }
 }
 
 function bindUi() {
@@ -255,9 +337,44 @@ function bindUi() {
     document.getElementById('empVideoModalClose')?.addEventListener('click', closeVideoModal);
     document.getElementById('empVideoCancel')?.addEventListener('click', closeVideoModal);
 
-    document.getElementById('empVideoForm')?.addEventListener('submit', async (e) => {
+    const form = document.getElementById('empVideoForm');
+    form?.querySelectorAll('[data-live]').forEach((el) => {
+        el.addEventListener('input', updateLivePreview);
+        el.addEventListener('change', updateLivePreview);
+    });
+
+    document.getElementById('empClearDrive')?.addEventListener('click', () => {
+        if (!form) return;
+        form.drive_url.value = '';
+        form.drive_folder_name.value = '';
+        updateLivePreview();
+    });
+
+    const coverInput = document.getElementById('empCoverInput');
+    const pickCover = () => coverInput?.click();
+    document.getElementById('empCoverChange')?.addEventListener('click', pickCover);
+    coverInput?.addEventListener('change', async () => {
+        const file = coverInput.files?.[0];
+        if (!file) return;
+        try {
+            draftCover = await compressImageFile(file);
+            draftCoverCleared = false;
+            setCoverPreview(draftCover);
+            updateLivePreview();
+        } catch (err) {
+            window.alert(err.message);
+        }
+        coverInput.value = '';
+    });
+    document.getElementById('empCoverRemove')?.addEventListener('click', () => {
+        draftCover = null;
+        draftCoverCleared = true;
+        setCoverPreview(null);
+        updateLivePreview();
+    });
+
+    form?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const form = e.target;
         const errEl = document.getElementById('empVideoError');
         if (errEl) { errEl.textContent = ''; errEl.classList.remove('active'); }
         const id = form.id.value;
@@ -265,8 +382,12 @@ function bindUi() {
             name: form.name.value.trim(),
             description: form.description.value,
             drive_url: form.drive_url.value.trim() || null,
+            drive_folder_name: form.drive_folder_name.value.trim() || null,
             delivery_date: form.delivery_date.value || null
         };
+        if (draftCoverCleared) payload.cover_url = null;
+        else if (draftCover) payload.cover_url = draftCover;
+
         if (!payload.name) return;
         try {
             if (id) {
@@ -280,6 +401,8 @@ function bindUi() {
                     status: 'pendiente',
                     priority: 'media',
                     duration_label: '',
+                    checklist: {},
+                    editor_notes: '',
                     ...payload
                 });
             }
@@ -321,7 +444,13 @@ function openVideoModal(task = null) {
     form.name.value = task?.name || '';
     form.description.value = task?.description || '';
     form.drive_url.value = task?.drive_url || '';
+    form.drive_folder_name.value = task?.drive_folder_name || '';
     form.delivery_date.value = task?.delivery_date || '';
+    draftCover = null;
+    draftCoverCleared = false;
+    form.dataset.existingCover = task?.cover_url || '';
+    setCoverPreview(task?.cover_url || null);
+    updateLivePreview();
     modal.classList.add('active');
 }
 
@@ -338,7 +467,6 @@ function setupDnD() {
             dragId = el.getAttribute('data-task-id');
             el.classList.add('is-dragging');
             e.dataTransfer.setData('text/task-id', dragId);
-            e.dataTransfer.effectAllowed = 'move';
         });
         el.addEventListener('dragend', () => el.classList.remove('is-dragging'));
     });
@@ -361,10 +489,7 @@ function setupDnD() {
     });
 
     document.querySelectorAll('.emp-day').forEach((day) => {
-        day.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            day.classList.add('is-over');
-        });
+        day.addEventListener('dragover', (e) => { e.preventDefault(); day.classList.add('is-over'); });
         day.addEventListener('dragleave', () => day.classList.remove('is-over'));
         day.addEventListener('drop', async (e) => {
             e.preventDefault();

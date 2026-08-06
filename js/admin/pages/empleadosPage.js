@@ -76,16 +76,24 @@ async function load() {
         }
 
         const cards = await Promise.all(employees.map(async (emp) => {
-            const stats = await getEmployeeStats(emp.id).catch(() => ({ pending: 0, delivered: 0, productivity: 0 }));
+            const stats = await getEmployeeStats(emp.id).catch(() => ({
+                active: 0, delivered: 0, nextDelivery: null, lastActivity: null, productivity: 0
+            }));
             const name = `${emp.first_name} ${emp.last_name}`;
             const role = emp.employee_roles?.label || emp.role_key;
             const email = emp.profiles?.email || '';
             const avatar = emp.photo_url
                 ? `<img src="${escapeHtml(emp.photo_url)}" alt="">`
                 : escapeHtml(initials(emp.first_name, emp.last_name));
+            const nextDate = stats.nextDelivery
+                ? new Date(`${stats.nextDelivery}T12:00:00`).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
+                : '—';
+            const lastAct = stats.lastActivity
+                ? new Date(stats.lastActivity).toLocaleDateString('es-CO', { day: '2-digit', month: 'short' })
+                : '—';
 
             return `
-                <a class="emp-card" href="empleado.html?id=${emp.id}" style="--emp-color:${escapeHtml(emp.color_hex || '#2D8CFF')}">
+                <a class="emp-card emp-card--dash" href="empleado.html?id=${emp.id}" style="--emp-color:${escapeHtml(emp.color_hex || '#2D8CFF')}">
                     <div class="emp-card-top">
                         <div class="emp-avatar">${avatar}</div>
                         <div>
@@ -97,10 +105,11 @@ async function load() {
                         <span class="emp-pill ${emp.status === 'active' ? 'is-active' : 'is-inactive'}">${emp.status === 'active' ? 'Activo' : 'Inactivo'}</span>
                         <span>${escapeHtml(email)}</span>
                     </div>
-                    <div class="emp-card-meta">
-                        <span>${stats.pending} pendientes</span>
-                        <span>${stats.delivered} entregados</span>
-                        <span>${stats.productivity}% productividad</span>
+                    <div class="emp-dash-grid">
+                        <div><span>Activos</span><strong>${stats.active ?? stats.pending ?? 0}</strong></div>
+                        <div><span>Terminados</span><strong>${stats.delivered ?? 0}</strong></div>
+                        <div><span>Próxima entrega</span><strong>${escapeHtml(nextDate)}</strong></div>
+                        <div><span>Última actividad</span><strong>${escapeHtml(lastAct)}</strong></div>
                     </div>
                 </a>
             `;

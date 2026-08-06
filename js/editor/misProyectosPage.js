@@ -10,6 +10,10 @@ import {
     subscribeEmployeeChannel,
     listEmployeeProjects
 } from '../services/employeeService.js';
+import {
+    TASK_STATUSES, CHECKLIST_ITEMS, statusLabel, normalizeTaskStatus,
+    folderDisplayName, formatTaskDate
+} from '../services/employeeTaskHelpers.js';
 import { escapeHtml } from '../components/projectUi.js';
 
 const root = document.getElementById('editorRoot');
@@ -19,50 +23,42 @@ const userChip = document.getElementById('editorUserChip');
 let employee = null;
 let tasks = [];
 let view = 'trabajo';
+let filter = 'todos';
+let expandedId = null;
 let unsubs = [];
 let calendarCursor = new Date();
 calendarCursor.setDate(1);
 calendarCursor.setHours(0, 0, 0, 0);
-
-function statusLabel(s) {
-    return ({ pendiente: 'Pendiente', en_edicion: 'En edición', entregado: 'Entregado' })[s] || s;
-}
-
-function formatDate(iso) {
-    if (!iso) return 'Sin fecha límite';
-    const d = iso.length <= 10 ? new Date(`${iso}T12:00:00`) : new Date(iso);
-    return d.toLocaleDateString('es-CO', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' });
-}
+let notesTimers = {};
 
 function ymd(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function folderOf(task) {
     return task.folder_url || task.drive_url || task.project_drive_url || null;
 }
 
+function checklistOf(task) {
+    return task.checklist && typeof task.checklist === 'object' ? task.checklist : {};
+}
+
 async function loadTasks() {
-    tasks = await listMyEmployeeTasks();
+    tasks = (await listMyEmployeeTasks()).map((t) => ({
+        ...t,
+        status: normalizeTaskStatus(t.status)
+    }));
 }
 
 async function init() {
     if (!root) return;
     root.innerHTML = '<div class="admin-state" style="display:flex"><div class="admin-spinner"></div><span>Cargando…</span></div>';
-
     employee = await getMyEmployee();
     if (!employee) {
         root.innerHTML = '<div class="emp-empty">No se encontró tu perfil de empleado.</div>';
         return;
     }
-
-    if (userChip) {
-        userChip.textContent = `${employee.first_name || 'Editor'}`;
-    }
-
+    if (userChip) userChip.textContent = employee.first_name || 'Editor';
     await loadTasks();
     bindNav();
     render();
@@ -73,9 +69,7 @@ function bindNav() {
     document.querySelectorAll('[data-editor-view]').forEach((btn) => {
         btn.addEventListener('click', () => {
             view = btn.getAttribute('data-editor-view');
-            document.querySelectorAll('[data-editor-view]').forEach((b) => {
-                b.classList.toggle('active', b === btn);
-            });
+            document.querySelectorAll('[data-editor-view]').forEach((b) => b.classList.toggle('active', b === btn));
             const labels = { trabajo: 'Mi trabajo', calendario: 'Calendario', ajustes: 'Ajustes' };
             if (titleEl) titleEl.textContent = labels[view] || 'Mi trabajo';
             render();
@@ -89,20 +83,36 @@ function render() {
     else renderWorkView();
 }
 
+function filteredTasks() {
+    if (filter === 'todos') return tasks;
+    return tasks.filter((t) => normalizeTaskStatus(t.status) === filter);
+}
+
 function renderWorkView() {
+    const list = filteredTasks();
     root.innerHTML = `
         <div class="emp-page editor-work">
-            <div class="emp-hero">
+            <div class="emp-hero editor-hero">
                 <div>
-                    <span class="emp-kicker">Portal editor</span>
-                    <h1>Mi trabajo</h1>
-                    <p>Hola ${escapeHtml(employee.first_name)}. Aquí están tus videos, el material y las fechas de entrega.</p>
+                    <span class="emp-kicker">Espacio de trabajo</span>
+                    <h1>¡Hola, ${escapeHtml(employee.first_name)}!</h1>
+                    <p>Aquí están tus proyectos audiovisuales, el material y las fechas de entrega.</p>
                 </div>
             </div>
+
+            <div class="editor-section-head">
+                <h2>Mi trabajo</h2>
+                <div class="editor-filters">
+                    ${[['todos', 'Todos'], ...TASK_STATUSES.map((s) => [s.id, s.label])].map(([id, label]) => `
+                        <button type="button" class="editor-filter${filter === id ? ' is-active' : ''}" data-filter="${id}">${label}</button>
+                    `).join('')}
+                </div>
+            </div>
+
             <div class="editor-work-list">
-                ${tasks.length
-                    ? tasks.map(renderWorkCard).join('')
-                    : '<div class="emp-empty">Aún no tienes videos asignados.</div>'}
+                ${list.length
+                    ? list.map(renderWorkCard).join('')
+                    : '<div class="emp-empty">No hay trabajos en este filtro.</div>'}
             </div>
         </div>
     `;
@@ -110,48 +120,151 @@ function renderWorkView() {
 }
 
 function renderWorkCard(t) {
+    const st = normalizeTaskStatus(t.status);
     const folder = folderOf(t);
-    const desc = escapeHtml(t.description || 'Sin instrucciones.').replace(/\n/g, '<br>');
+    const open = expandedId === t.id;
+    const descPreview = (t.description || 'Sin descripción.').slice(0, 160);
+    const checklist = checklistOf(t);
+
     return `
-        <article class="editor-job-card" data-task-id="${t.id}">
-            <div class="editor-job-head">
-                <div>
-                    <span class="emp-kicker">${escapeHtml(t.project_title || 'Proyecto')}</span>
-                    <h2>${escapeHtml(t.name)}</h2>
+        <article class="editor-job-card${open ? ' is-open' : ''}" data-task-id="${t.id}">
+            <div class="editor-job-main">
+                <div class="editor-job-thumb">
+                    ${t.cover_url
+                        ? `<img src="${escapeHtml(t.cover_url)}" alt="">`
+                        : '<div class="editor-job-thumb-fallback"></div>'}
                 </div>
-                <span class="emp-chip status-${t.status}">${statusLabel(t.status)}</span>
+                <div class="editor-job-info">
+                    <div class="editor-job-title-row">
+                        <h2>${escapeHtml(t.name)}</h2>
+                        <span class="emp-chip status-${st}">${statusLabel(st)}</span>
+                    </div>
+                    <p class="editor-job-excerpt">${escapeHtml(descPreview)}${(t.description || '').length > 160 ? '…' : ''}</p>
+                    <div class="editor-job-actions-row">
+                        ${folder
+                            ? `<a class="emp-link-btn" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir carpeta</a>`
+                            : '<span class="emp-chip">Sin carpeta</span>'}
+                        <button type="button" class="admin-btn-secondary" data-expand="${t.id}">${open ? 'Ocultar detalle' : 'Ver detalle'}</button>
+                    </div>
+                </div>
+                <div class="editor-job-side">
+                    <div>
+                        <span class="editor-meta-label">Fecha límite</span>
+                        <strong class="editor-meta-date status-text-${st}">${escapeHtml(formatTaskDate(t.delivery_date))}</strong>
+                    </div>
+                    <div>
+                        <span class="editor-meta-label">Estado</span>
+                        <span class="editor-status-dot status-${st}">${statusLabel(st)}</span>
+                    </div>
+                </div>
             </div>
-            <div class="editor-job-desc">${desc}</div>
-            <div class="editor-job-meta">
-                <span class="emp-chip">Fecha límite: ${escapeHtml(formatDate(t.delivery_date))}</span>
-            </div>
-            <div class="editor-job-actions">
-                ${folder
-                    ? `<a class="emp-link-btn" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir carpeta</a>`
-                    : '<span class="emp-chip">Sin carpeta</span>'}
-                <label class="editor-status-label">
-                    Estado
-                    <select data-status="${t.id}">
-                        <option value="pendiente" ${t.status === 'pendiente' ? 'selected' : ''}>Pendiente</option>
-                        <option value="en_edicion" ${t.status === 'en_edicion' ? 'selected' : ''}>En edición</option>
-                        <option value="entregado" ${t.status === 'entregado' ? 'selected' : ''}>Entregado</option>
-                    </select>
-                </label>
-                <button type="button" class="admin-btn-secondary" data-chat="${t.id}">Comentarios</button>
-            </div>
-            <div class="emp-chat editor-job-chat" id="ed-chat-${t.id}" hidden></div>
+
+            ${open ? `
+            <div class="editor-job-detail">
+                <section>
+                    <h3>Descripción</h3>
+                    <div class="editor-job-desc">${escapeHtml(t.description || 'Sin instrucciones.').replace(/\n/g, '<br>')}</div>
+                </section>
+
+                <section class="editor-material-block">
+                    <h3>Material</h3>
+                    <div class="editor-material-row">
+                        <div>
+                            <strong>Carpeta de Google Drive</strong>
+                            <p>${escapeHtml(folderDisplayName(t))}</p>
+                        </div>
+                        ${folder
+                            ? `<a class="emp-link-btn emp-link-btn--lg" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir Material</a>`
+                            : '<span class="emp-chip">Sin carpeta vinculada</span>'}
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Checklist</h3>
+                    <div class="editor-checklist">
+                        ${CHECKLIST_ITEMS.map((item) => `
+                            <label class="editor-check">
+                                <input type="checkbox" data-check="${t.id}" data-key="${item.id}" ${checklist[item.id] ? 'checked' : ''}>
+                                <span>${item.label}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Notas del Editor</h3>
+                    <textarea class="editor-notes" data-notes="${t.id}" rows="4" placeholder="Observaciones, dudas o avances…">${escapeHtml(t.editor_notes || '')}</textarea>
+                </section>
+
+                <section>
+                    <h3>Estado</h3>
+                    <div class="editor-status-btns">
+                        ${TASK_STATUSES.map((s) => `
+                            <button type="button" class="editor-status-btn${st === s.id ? ' is-active' : ''}" data-set-status="${t.id}" data-value="${s.id}">${s.label}</button>
+                        `).join('')}
+                    </div>
+                </section>
+
+                <section>
+                    <h3>Comentarios</h3>
+                    <button type="button" class="admin-btn-secondary" data-chat="${t.id}">Abrir comentarios</button>
+                    <div class="emp-chat editor-job-chat" id="ed-chat-${t.id}" hidden></div>
+                </section>
+            </div>` : ''}
         </article>
     `;
 }
 
 function bindWorkUi() {
-    document.querySelectorAll('[data-status]').forEach((sel) => {
-        sel.addEventListener('change', async () => {
-            await updateProjectTask(sel.getAttribute('data-status'), { status: sel.value });
-            await loadTasks();
-            render();
+    document.querySelectorAll('[data-filter]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            filter = btn.getAttribute('data-filter');
+            renderWorkView();
         });
     });
+
+    document.querySelectorAll('[data-expand]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const id = btn.getAttribute('data-expand');
+            expandedId = expandedId === id ? null : id;
+            renderWorkView();
+        });
+    });
+
+    document.querySelectorAll('[data-set-status]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+            const id = btn.getAttribute('data-set-status');
+            const value = btn.getAttribute('data-value');
+            await updateProjectTask(id, { status: value });
+            await loadTasks();
+            renderWorkView();
+        });
+    });
+
+    document.querySelectorAll('[data-check]').forEach((input) => {
+        input.addEventListener('change', async () => {
+            const id = input.getAttribute('data-check');
+            const key = input.getAttribute('data-key');
+            const task = tasks.find((t) => t.id === id);
+            const next = { ...checklistOf(task), [key]: input.checked };
+            await updateProjectTask(id, { checklist: next });
+            const idx = tasks.findIndex((t) => t.id === id);
+            if (idx >= 0) tasks[idx].checklist = next;
+        });
+    });
+
+    document.querySelectorAll('[data-notes]').forEach((area) => {
+        area.addEventListener('input', () => {
+            const id = area.getAttribute('data-notes');
+            clearTimeout(notesTimers[id]);
+            notesTimers[id] = setTimeout(async () => {
+                await updateProjectTask(id, { editor_notes: area.value });
+                const idx = tasks.findIndex((t) => t.id === id);
+                if (idx >= 0) tasks[idx].editor_notes = area.value;
+            }, 500);
+        });
+    });
+
     document.querySelectorAll('[data-chat]').forEach((btn) => {
         btn.addEventListener('click', () => toggleChat(btn.getAttribute('data-chat')));
     });
@@ -184,11 +297,9 @@ function renderCalendarView() {
     const firstDow = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     const cells = [];
-
     for (let i = 0; i < firstDow; i++) cells.push({ empty: true });
     for (let day = 1; day <= daysInMonth; day++) {
-        const date = new Date(year, month, day);
-        const key = ymd(date);
+        const key = ymd(new Date(year, month, day));
         cells.push({
             empty: false,
             day,
@@ -196,7 +307,6 @@ function renderCalendarView() {
             items: tasks.filter((t) => t.delivery_date === key)
         });
     }
-
     const unscheduled = tasks.filter((t) => !t.delivery_date);
 
     root.innerHTML = `
@@ -205,44 +315,37 @@ function renderCalendarView() {
                 <div>
                     <span class="emp-kicker">Planificación</span>
                     <h1>Calendario</h1>
-                    <p>Arrastra un video a otro día para indicar cuándo planeas entregarlo. El administrador lo verá al instante.</p>
+                    <p>Arrastra un video a otro día para indicar cuándo planeas entregarlo.</p>
                 </div>
                 <div class="editor-cal-nav">
+                    <button type="button" class="admin-btn-secondary" id="calToday">Hoy</button>
                     <button type="button" class="admin-btn-secondary" id="calPrev">←</button>
                     <strong>${escapeHtml(monthLabel)}</strong>
                     <button type="button" class="admin-btn-secondary" id="calNext">→</button>
                 </div>
             </div>
-
-            <div class="editor-cal-grid" id="editorCalGrid">
+            <div class="editor-cal-grid">
                 ${['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d) => `<div class="editor-cal-dow">${d}</div>`).join('')}
                 ${cells.map((cell) => {
                     if (cell.empty) return '<div class="editor-cal-cell is-empty"></div>';
                     return `
                         <div class="editor-cal-cell emp-day" data-date="${cell.key}">
                             <div class="editor-cal-daynum">${cell.day}</div>
-                            ${cell.items.map((t) => `
-                                <div class="emp-day-task" draggable="true" data-task-id="${t.id}" style="--emp-color:${escapeHtml(employee.color_hex || '#8C52FF')}">
-                                    ${escapeHtml(t.name)}
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
+                            ${cell.items.map((t) => {
+                                const st = normalizeTaskStatus(t.status);
+                                return `<div class="emp-day-task status-cal-${st}" draggable="true" data-task-id="${t.id}">${escapeHtml(t.name)}</div>`;
+                            }).join('')}
+                        </div>`;
                 }).join('')}
             </div>
-
+            <p class="editor-cal-hint">Arrastra y suelta las tareas en el día deseado para reprogramar la fecha límite. El administrador lo verá al instante.</p>
             ${unscheduled.length ? `
                 <section class="emp-ws-card" style="margin-top:16px">
-                    <div class="emp-ws-head"><div><h2>Sin fecha programada</h2><p>Arrástralos al calendario</p></div></div>
-                    <div class="editor-unscheduled" id="editorUnscheduled">
-                        ${unscheduled.map((t) => `
-                            <div class="emp-day-task" draggable="true" data-task-id="${t.id}" style="--emp-color:${escapeHtml(employee.color_hex || '#8C52FF')}">
-                                ${escapeHtml(t.name)}
-                            </div>
-                        `).join('')}
+                    <div class="emp-ws-head"><div><h2>Sin fecha programada</h2></div></div>
+                    <div class="editor-unscheduled">
+                        ${unscheduled.map((t) => `<div class="emp-day-task" draggable="true" data-task-id="${t.id}">${escapeHtml(t.name)}</div>`).join('')}
                     </div>
-                </section>
-            ` : ''}
+                </section>` : ''}
         </div>
     `;
 
@@ -254,27 +357,27 @@ function renderCalendarView() {
         calendarCursor.setMonth(calendarCursor.getMonth() + 1);
         renderCalendarView();
     });
+    document.getElementById('calToday')?.addEventListener('click', () => {
+        calendarCursor = new Date();
+        calendarCursor.setDate(1);
+        calendarCursor.setHours(0, 0, 0, 0);
+        renderCalendarView();
+    });
     bindCalendarDnD();
 }
 
 function bindCalendarDnD() {
     let dragId = null;
-
     document.querySelectorAll('.emp-day-task[draggable]').forEach((el) => {
         el.addEventListener('dragstart', (e) => {
             dragId = el.getAttribute('data-task-id');
             e.dataTransfer.setData('text/task-id', dragId);
-            e.dataTransfer.effectAllowed = 'move';
             el.classList.add('is-dragging');
         });
         el.addEventListener('dragend', () => el.classList.remove('is-dragging'));
     });
-
     document.querySelectorAll('.editor-cal-cell[data-date]').forEach((day) => {
-        day.addEventListener('dragover', (e) => {
-            e.preventDefault();
-            day.classList.add('is-over');
-        });
+        day.addEventListener('dragover', (e) => { e.preventDefault(); day.classList.add('is-over'); });
         day.addEventListener('dragleave', () => day.classList.remove('is-over'));
         day.addEventListener('drop', async (e) => {
             e.preventDefault();
