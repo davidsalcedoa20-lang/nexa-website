@@ -1,5 +1,5 @@
 /* ==========================================================
-   Portal Editor — Mi trabajo / Calendario / Ajustes
+   Portal Editor — Mi trabajo (sin calendario independiente)
    ========================================================== */
 import {
     getMyEmployee,
@@ -11,8 +11,9 @@ import {
     listEmployeeProjects
 } from '../services/employeeService.js';
 import {
-    TASK_STATUSES, CHECKLIST_ITEMS, statusLabel, normalizeTaskStatus,
-    folderDisplayName, formatTaskDate
+    TASK_STATUSES, statusLabel, normalizeTaskStatus, priorityLabel,
+    folderDisplayName, normalizeChecklist, checklistProgress,
+    deliveryUrgency, formatDeliveryShort
 } from '../services/employeeTaskHelpers.js';
 import { escapeHtml } from '../components/projectUi.js';
 
@@ -24,29 +25,17 @@ let employee = null;
 let tasks = [];
 let view = 'trabajo';
 let filter = 'todos';
-let expandedId = null;
 let unsubs = [];
-let calendarCursor = new Date();
-calendarCursor.setDate(1);
-calendarCursor.setHours(0, 0, 0, 0);
-let notesTimers = {};
-
-function ymd(d) {
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 function folderOf(task) {
     return task.folder_url || task.drive_url || task.project_drive_url || null;
 }
 
-function checklistOf(task) {
-    return task.checklist && typeof task.checklist === 'object' ? task.checklist : {};
-}
-
 async function loadTasks() {
     tasks = (await listMyEmployeeTasks()).map((t) => ({
         ...t,
-        status: normalizeTaskStatus(t.status)
+        status: normalizeTaskStatus(t.status),
+        checklist: normalizeChecklist(t.checklist)
     }));
 }
 
@@ -68,18 +57,16 @@ async function init() {
 function bindNav() {
     document.querySelectorAll('[data-editor-view]').forEach((btn) => {
         btn.addEventListener('click', () => {
-            view = btn.getAttribute('data-editor-view');
+            view = btn.getAttribute('data-editor-view') || 'trabajo';
             document.querySelectorAll('[data-editor-view]').forEach((b) => b.classList.toggle('active', b === btn));
-            const labels = { trabajo: 'Mi trabajo', calendario: 'Calendario', ajustes: 'Ajustes' };
-            if (titleEl) titleEl.textContent = labels[view] || 'Mi trabajo';
+            if (titleEl) titleEl.textContent = view === 'ajustes' ? 'Ajustes' : 'Mi trabajo';
             render();
         });
     });
 }
 
 function render() {
-    if (view === 'calendario') renderCalendarView();
-    else if (view === 'ajustes') renderSettingsView();
+    if (view === 'ajustes') renderSettingsView();
     else renderWorkView();
 }
 
@@ -96,7 +83,7 @@ function renderWorkView() {
                 <div>
                     <span class="emp-kicker">Espacio de trabajo</span>
                     <h1>¡Hola, ${escapeHtml(employee.first_name)}!</h1>
-                    <p>Aquí están tus proyectos audiovisuales, el material y las fechas de entrega.</p>
+                    <p>Tus videos, material e indicaciones. Todo organizado por fecha de entrega.</p>
                 </div>
             </div>
 
@@ -122,95 +109,105 @@ function renderWorkView() {
 function renderWorkCard(t) {
     const st = normalizeTaskStatus(t.status);
     const folder = folderOf(t);
-    const open = expandedId === t.id;
-    const descPreview = (t.description || 'Sin descripción.').slice(0, 160);
-    const checklist = checklistOf(t);
+    const checklist = normalizeChecklist(t.checklist);
+    const progress = checklistProgress(checklist);
+    const urgency = deliveryUrgency(t.delivery_date);
+    const desc = escapeHtml(t.description || '').replace(/\n/g, '<br>');
+    const instructions = escapeHtml(t.instructions || '').replace(/\n/g, '<br>');
 
     return `
-        <article class="editor-job-card${open ? ' is-open' : ''}" data-task-id="${t.id}">
-            <div class="editor-job-main">
-                <div class="editor-job-thumb">
+        <article class="ew-card" data-task-id="${t.id}">
+            <div class="ew-card-top">
+                <div class="ew-cover">
                     ${t.cover_url
                         ? `<img src="${escapeHtml(t.cover_url)}" alt="">`
-                        : '<div class="editor-job-thumb-fallback"></div>'}
+                        : `<div class="ew-cover-ph"><span>Sin imagen</span></div>`}
                 </div>
-                <div class="editor-job-info">
-                    <div class="editor-job-title-row">
-                        <h2>${escapeHtml(t.name)}</h2>
+                <div class="ew-info">
+                    <div class="ew-info-head">
+                        <div>
+                            <span class="ew-client">${escapeHtml(t.client_name || 'Sin cliente')}</span>
+                            <h2>${escapeHtml(t.name)}</h2>
+                        </div>
+                        <div class="ew-delivery urgency-${urgency}">
+                            <span>Entrega</span>
+                            <strong>${escapeHtml(formatDeliveryShort(t.delivery_date))}</strong>
+                        </div>
+                    </div>
+                    <div class="ew-badges">
                         <span class="emp-chip status-${st}">${statusLabel(st)}</span>
+                        <span class="emp-chip priority-${t.priority || 'media'}">Prioridad ${escapeHtml(priorityLabel(t.priority || 'media'))}</span>
                     </div>
-                    <p class="editor-job-excerpt">${escapeHtml(descPreview)}${(t.description || '').length > 160 ? '…' : ''}</p>
-                    <div class="editor-job-actions-row">
-                        ${folder
-                            ? `<a class="emp-link-btn" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir carpeta</a>`
-                            : '<span class="emp-chip">Sin carpeta</span>'}
-                        <button type="button" class="admin-btn-secondary" data-expand="${t.id}">${open ? 'Ocultar detalle' : 'Ver detalle'}</button>
-                    </div>
-                </div>
-                <div class="editor-job-side">
-                    <div>
-                        <span class="editor-meta-label">Fecha límite</span>
-                        <strong class="editor-meta-date status-text-${st}">${escapeHtml(formatTaskDate(t.delivery_date))}</strong>
-                    </div>
-                    <div>
-                        <span class="editor-meta-label">Estado</span>
-                        <span class="editor-status-dot status-${st}">${statusLabel(st)}</span>
-                    </div>
+                    ${t.description ? `
+                        <div class="ew-block">
+                            <h3>Descripción</h3>
+                            <div class="ew-text">${desc}</div>
+                        </div>` : ''}
+                    ${t.instructions ? `
+                        <div class="ew-block">
+                            <h3>Indicaciones</h3>
+                            <div class="ew-text">${instructions}</div>
+                        </div>` : ''}
                 </div>
             </div>
 
-            ${open ? `
-            <div class="editor-job-detail">
-                <section>
-                    <h3>Descripción</h3>
-                    <div class="editor-job-desc">${escapeHtml(t.description || 'Sin instrucciones.').replace(/\n/g, '<br>')}</div>
-                </section>
-
-                <section class="editor-material-block">
-                    <h3>Material</h3>
-                    <div class="editor-material-row">
-                        <div>
-                            <strong>Carpeta de Google Drive</strong>
-                            <p>${escapeHtml(folderDisplayName(t))}</p>
-                        </div>
-                        ${folder
-                            ? `<a class="emp-link-btn emp-link-btn--lg" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir Material</a>`
-                            : '<span class="emp-chip">Sin carpeta vinculada</span>'}
+            <div class="ew-section ew-material">
+                <div class="ew-material-left">
+                    <div class="ew-drive-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none"><path d="M4 18l4-8h8l4 8H4Zm4-8 4-7 4 7H8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
                     </div>
-                </section>
+                    <div>
+                        <h3>Material del Proyecto</h3>
+                        <p>${escapeHtml(folderDisplayName(t))}</p>
+                    </div>
+                </div>
+                ${folder
+                    ? `<a class="emp-link-btn emp-link-btn--lg" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir carpeta</a>`
+                    : '<span class="emp-chip">Sin carpeta vinculada</span>'}
+            </div>
 
-                <section>
-                    <h3>Checklist</h3>
-                    <div class="editor-checklist">
-                        ${CHECKLIST_ITEMS.map((item) => `
-                            <label class="editor-check">
-                                <input type="checkbox" data-check="${t.id}" data-key="${item.id}" ${checklist[item.id] ? 'checked' : ''}>
-                                <span>${item.label}</span>
+            <div class="ew-section">
+                <div class="ew-section-head">
+                    <h3>Lista de tareas</h3>
+                    <span class="ew-progress-label">${progress}%</span>
+                </div>
+                <div class="ew-progress" role="progressbar" aria-valuenow="${progress}" aria-valuemin="0" aria-valuemax="100">
+                    <div class="ew-progress-bar" style="width:${progress}%"></div>
+                </div>
+                <div class="ew-progress-marks">
+                    <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+                </div>
+                <div class="editor-checklist">
+                    ${checklist.length
+                        ? checklist.map((item) => `
+                            <label class="editor-check${item.done ? ' is-done' : ''}">
+                                <input type="checkbox" data-check="${t.id}" data-key="${escapeHtml(item.id)}" ${item.done ? 'checked' : ''}>
+                                <span>${escapeHtml(item.label)}</span>
                             </label>
-                        `).join('')}
-                    </div>
-                </section>
+                        `).join('')
+                        : '<p class="ew-muted">El administrador aún no definió checklist.</p>'}
+                </div>
+            </div>
 
-                <section>
-                    <h3>Notas del Editor</h3>
-                    <textarea class="editor-notes" data-notes="${t.id}" rows="4" placeholder="Observaciones, dudas o avances…">${escapeHtml(t.editor_notes || '')}</textarea>
-                </section>
+            <div class="ew-section">
+                <h3>Estado</h3>
+                <div class="editor-status-btns">
+                    ${TASK_STATUSES.map((s) => `
+                        <button type="button" class="editor-status-btn${st === s.id ? ' is-active' : ''}" data-set-status="${t.id}" data-value="${s.id}">${s.label}</button>
+                    `).join('')}
+                </div>
+            </div>
 
-                <section>
-                    <h3>Estado</h3>
-                    <div class="editor-status-btns">
-                        ${TASK_STATUSES.map((s) => `
-                            <button type="button" class="editor-status-btn${st === s.id ? ' is-active' : ''}" data-set-status="${t.id}" data-value="${s.id}">${s.label}</button>
-                        `).join('')}
-                    </div>
-                </section>
-
-                <section>
-                    <h3>Comentarios</h3>
-                    <button type="button" class="admin-btn-secondary" data-chat="${t.id}">Abrir comentarios</button>
-                    <div class="emp-chat editor-job-chat" id="ed-chat-${t.id}" hidden></div>
-                </section>
-            </div>` : ''}
+            <div class="ew-section">
+                <h3>Comentarios del proyecto</h3>
+                <div class="ew-chat" id="ed-chat-${t.id}">
+                    <div class="ew-chat-loading">Cargando…</div>
+                </div>
+                <form class="emp-chat-form ew-chat-form" data-chat-form="${t.id}">
+                    <input name="body" required placeholder="Escribe un avance o pregunta…">
+                    <button type="submit" class="emp-mini-btn">Enviar</button>
+                </form>
+            </div>
         </article>
     `;
 }
@@ -219,14 +216,6 @@ function bindWorkUi() {
     document.querySelectorAll('[data-filter]').forEach((btn) => {
         btn.addEventListener('click', () => {
             filter = btn.getAttribute('data-filter');
-            renderWorkView();
-        });
-    });
-
-    document.querySelectorAll('[data-expand]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            const id = btn.getAttribute('data-expand');
-            expandedId = expandedId === id ? null : id;
             renderWorkView();
         });
     });
@@ -246,150 +235,46 @@ function bindWorkUi() {
             const id = input.getAttribute('data-check');
             const key = input.getAttribute('data-key');
             const task = tasks.find((t) => t.id === id);
-            const next = { ...checklistOf(task), [key]: input.checked };
+            const next = normalizeChecklist(task?.checklist).map((item) => (
+                item.id === key ? { ...item, done: input.checked } : item
+            ));
             await updateProjectTask(id, { checklist: next });
             const idx = tasks.findIndex((t) => t.id === id);
             if (idx >= 0) tasks[idx].checklist = next;
+            renderWorkView();
         });
     });
 
-    document.querySelectorAll('[data-notes]').forEach((area) => {
-        area.addEventListener('input', () => {
-            const id = area.getAttribute('data-notes');
-            clearTimeout(notesTimers[id]);
-            notesTimers[id] = setTimeout(async () => {
-                await updateProjectTask(id, { editor_notes: area.value });
-                const idx = tasks.findIndex((t) => t.id === id);
-                if (idx >= 0) tasks[idx].editor_notes = area.value;
-            }, 500);
+    document.querySelectorAll('[data-chat-form]').forEach((form) => {
+        const taskId = form.getAttribute('data-chat-form');
+        loadChat(taskId);
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = e.target.body.value.trim();
+            if (!body) return;
+            await addTaskComment(taskId, body);
+            e.target.reset();
+            loadChat(taskId);
         });
-    });
-
-    document.querySelectorAll('[data-chat]').forEach((btn) => {
-        btn.addEventListener('click', () => toggleChat(btn.getAttribute('data-chat')));
     });
 }
 
-async function toggleChat(taskId) {
+async function loadChat(taskId) {
     const box = document.getElementById(`ed-chat-${taskId}`);
     if (!box) return;
-    if (!box.hidden) { box.hidden = true; return; }
-    box.hidden = false;
-    const comments = await listTaskComments(taskId);
-    box.innerHTML = `
-        ${comments.map((c) => `<div class="emp-chat-msg"><strong>${escapeHtml(c.profiles?.full_name || 'Usuario')}</strong><div>${escapeHtml(c.body)}</div></div>`).join('') || '<div class="emp-chat-msg">Sin comentarios.</div>'}
-        <form class="emp-chat-form"><input name="body" required placeholder="Escribir comentario…"><button type="submit" class="emp-mini-btn">Enviar</button></form>
-    `;
-    box.querySelector('form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const body = e.target.body.value.trim();
-        if (!body) return;
-        await addTaskComment(taskId, body);
-        box.hidden = true;
-        toggleChat(taskId);
-    });
-}
-
-function renderCalendarView() {
-    const year = calendarCursor.getFullYear();
-    const month = calendarCursor.getMonth();
-    const monthLabel = calendarCursor.toLocaleDateString('es-CO', { month: 'long', year: 'numeric' });
-    const firstDow = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const cells = [];
-    for (let i = 0; i < firstDow; i++) cells.push({ empty: true });
-    for (let day = 1; day <= daysInMonth; day++) {
-        const key = ymd(new Date(year, month, day));
-        cells.push({
-            empty: false,
-            day,
-            key,
-            items: tasks.filter((t) => t.delivery_date === key)
-        });
+    try {
+        const comments = await listTaskComments(taskId);
+        box.innerHTML = comments.length
+            ? comments.map((c) => `
+                <div class="emp-chat-msg">
+                    <strong>${escapeHtml(c.profiles?.full_name || 'Usuario')}</strong>
+                    <div>${escapeHtml(c.body)}</div>
+                </div>
+            `).join('')
+            : '<div class="emp-chat-msg">Sin comentarios aún. Escribe el primero.</div>';
+    } catch {
+        box.innerHTML = '<div class="emp-chat-msg">No se pudieron cargar los comentarios.</div>';
     }
-    const unscheduled = tasks.filter((t) => !t.delivery_date);
-
-    root.innerHTML = `
-        <div class="emp-page editor-cal-page">
-            <div class="emp-hero">
-                <div>
-                    <span class="emp-kicker">Planificación</span>
-                    <h1>Calendario</h1>
-                    <p>Arrastra un video a otro día para indicar cuándo planeas entregarlo.</p>
-                </div>
-                <div class="editor-cal-nav">
-                    <button type="button" class="admin-btn-secondary" id="calToday">Hoy</button>
-                    <button type="button" class="admin-btn-secondary" id="calPrev">←</button>
-                    <strong>${escapeHtml(monthLabel)}</strong>
-                    <button type="button" class="admin-btn-secondary" id="calNext">→</button>
-                </div>
-            </div>
-            <div class="editor-cal-grid">
-                ${['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'].map((d) => `<div class="editor-cal-dow">${d}</div>`).join('')}
-                ${cells.map((cell) => {
-                    if (cell.empty) return '<div class="editor-cal-cell is-empty"></div>';
-                    return `
-                        <div class="editor-cal-cell emp-day" data-date="${cell.key}">
-                            <div class="editor-cal-daynum">${cell.day}</div>
-                            ${cell.items.map((t) => {
-                                const st = normalizeTaskStatus(t.status);
-                                return `<div class="emp-day-task status-cal-${st}" draggable="true" data-task-id="${t.id}">${escapeHtml(t.name)}</div>`;
-                            }).join('')}
-                        </div>`;
-                }).join('')}
-            </div>
-            <p class="editor-cal-hint">Arrastra y suelta las tareas en el día deseado para reprogramar la fecha límite. El administrador lo verá al instante.</p>
-            ${unscheduled.length ? `
-                <section class="emp-ws-card" style="margin-top:16px">
-                    <div class="emp-ws-head"><div><h2>Sin fecha programada</h2></div></div>
-                    <div class="editor-unscheduled">
-                        ${unscheduled.map((t) => `<div class="emp-day-task" draggable="true" data-task-id="${t.id}">${escapeHtml(t.name)}</div>`).join('')}
-                    </div>
-                </section>` : ''}
-        </div>
-    `;
-
-    document.getElementById('calPrev')?.addEventListener('click', () => {
-        calendarCursor.setMonth(calendarCursor.getMonth() - 1);
-        renderCalendarView();
-    });
-    document.getElementById('calNext')?.addEventListener('click', () => {
-        calendarCursor.setMonth(calendarCursor.getMonth() + 1);
-        renderCalendarView();
-    });
-    document.getElementById('calToday')?.addEventListener('click', () => {
-        calendarCursor = new Date();
-        calendarCursor.setDate(1);
-        calendarCursor.setHours(0, 0, 0, 0);
-        renderCalendarView();
-    });
-    bindCalendarDnD();
-}
-
-function bindCalendarDnD() {
-    let dragId = null;
-    document.querySelectorAll('.emp-day-task[draggable]').forEach((el) => {
-        el.addEventListener('dragstart', (e) => {
-            dragId = el.getAttribute('data-task-id');
-            e.dataTransfer.setData('text/task-id', dragId);
-            el.classList.add('is-dragging');
-        });
-        el.addEventListener('dragend', () => el.classList.remove('is-dragging'));
-    });
-    document.querySelectorAll('.editor-cal-cell[data-date]').forEach((day) => {
-        day.addEventListener('dragover', (e) => { e.preventDefault(); day.classList.add('is-over'); });
-        day.addEventListener('dragleave', () => day.classList.remove('is-over'));
-        day.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            day.classList.remove('is-over');
-            const id = e.dataTransfer.getData('text/task-id') || dragId;
-            const date = day.getAttribute('data-date');
-            if (!id || !date) return;
-            await updateProjectTask(id, { delivery_date: date });
-            await loadTasks();
-            renderCalendarView();
-        });
-    });
 }
 
 function renderSettingsView() {
@@ -426,7 +311,7 @@ function bindRealtime() {
         unsubs = projects.map((p) =>
             subscribeEmployeeChannel(`editor-tasks-${p.id}`, 'employee_tasks', `project_id=eq.${p.id}`, async () => {
                 await loadTasks();
-                render();
+                if (view === 'trabajo') renderWorkView();
             })
         );
     }).catch(() => {});

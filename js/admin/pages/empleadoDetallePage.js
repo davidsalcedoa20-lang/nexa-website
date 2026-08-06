@@ -4,11 +4,12 @@
 import {
     getEmployee, getEmployeeStats, listEmployeeProjects, createEmployeeProject,
     listProjectTasks, createProjectTask, updateProjectTask,
-    deleteProjectTask, reorderProjectTasks, subscribeEmployeeChannel
+    deleteProjectTask, reorderProjectTasks, subscribeEmployeeChannel,
+    listTaskComments, addTaskComment
 } from '../../services/employeeService.js';
 import {
-    statusLabel, normalizeTaskStatus, folderDisplayName,
-    compressImageFile, formatTaskDate
+    statusLabel, normalizeTaskStatus, folderDisplayName, priorityLabel,
+    compressImageFile, formatTaskDate, normalizeChecklist, newChecklistId
 } from '../../services/employeeTaskHelpers.js';
 import { escapeHtml } from '../../components/projectUi.js';
 
@@ -23,6 +24,7 @@ let tasks = [];
 let unsub = [];
 let draftCover = null;
 let draftCoverCleared = false;
+let draftChecklist = [];
 
 function initials(first, last) {
     return `${(first || '?')[0]}${(last || '?')[0]}`.toUpperCase();
@@ -125,14 +127,14 @@ async function render() {
             <div class="emp-workspace emp-workspace--videos">
                 <section class="emp-ws-card span-2">
                     <div class="emp-ws-head">
-                        <div><h2>Videos a editar</h2><p>Asigna material, portada e instrucciones</p></div>
-                        <button type="button" class="admin-btn-primary" id="empAddVideo">+ Nuevo video</button>
+                        <div><h2>Trabajos asignados</h2><p>Creación rápida · editor: ${escapeHtml(name)}</p></div>
+                        <button type="button" class="admin-btn-primary" id="empAddVideo">+ Nuevo trabajo</button>
                     </div>
                     <div class="emp-video-list" id="empVideoList">${renderVideos()}</div>
                 </section>
                 <section class="emp-ws-card span-2">
                     <div class="emp-ws-head">
-                        <div><h2>Calendario de entregas</h2><p>Se actualiza en vivo cuando el editor mueve una fecha</p></div>
+                        <div><h2>Fechas de entrega</h2><p>Se actualiza cuando el editor cambia el estado o tú editas la fecha</p></div>
                     </div>
                     <div class="emp-calendar" id="empCalendar">${renderCalendar()}</div>
                 </section>
@@ -140,71 +142,76 @@ async function render() {
         </div>
 
         <div class="admin-modal-overlay" id="empVideoModal">
-            <div class="admin-modal emp-modal emp-modal--workspace">
+            <div class="admin-modal emp-modal emp-modal--fast">
                 <div class="admin-modal-header">
-                    <h3 id="empVideoModalTitle">Nuevo video</h3>
+                    <h3 id="empVideoModalTitle">Nuevo trabajo</h3>
                     <button type="button" class="admin-modal-close" id="empVideoModalClose">✕</button>
                 </div>
-                <form id="empVideoForm" class="emp-assign-layout">
+                <form id="empVideoForm" class="admin-form emp-fast-form">
                     <input type="hidden" name="id">
-                    <div class="emp-assign-form">
-                        <div class="emp-assign-block">
-                            <h4>Información principal</h4>
-                            <div class="admin-field">
-                                <label>Título del video</label>
-                                <input name="name" required placeholder="Ej. Reel Fachada" data-live>
-                            </div>
-                            <div class="admin-field">
-                                <label>Descripción / indicaciones</label>
-                                <textarea name="description" rows="7" placeholder="Instrucciones detalladas para el editor…" data-live></textarea>
-                            </div>
-                            <div class="admin-field">
-                                <label>Fecha límite de entrega</label>
-                                <input name="delivery_date" type="date" data-live>
-                            </div>
-                        </div>
 
-                        <div class="emp-assign-block">
-                            <h4>Material del Proyecto</h4>
-                            <div class="admin-field">
-                                <label>Enlace de Google Drive</label>
-                                <input name="drive_url" type="url" placeholder="https://drive.google.com/..." data-live>
+                    <div class="emp-assign-block">
+                        <h4>Imagen del proyecto</h4>
+                        <div class="emp-cover-uploader">
+                            <div class="emp-cover-preview" id="empCoverPreview"><span>Sin imagen</span></div>
+                            <div class="emp-cover-actions">
+                                <label class="admin-btn-secondary emp-file-label">
+                                    Subir imagen
+                                    <input type="file" id="empCoverInput" accept="image/*" hidden>
+                                </label>
+                                <button type="button" class="admin-btn-secondary" id="empCoverChange">Cambiar</button>
+                                <button type="button" class="admin-btn-secondary is-danger-text" id="empCoverRemove">Eliminar</button>
                             </div>
-                            <div class="admin-field">
-                                <label>Nombre de la carpeta</label>
-                                <input name="drive_folder_name" placeholder="Ej. Material Reel Fachada" data-live>
-                            </div>
-                            <div class="emp-material-actions">
-                                <button type="button" class="admin-btn-secondary" id="empClearDrive">Quitar carpeta</button>
-                                <a class="emp-link-btn emp-link-btn--sm" id="empPreviewOpenDrive" href="#" target="_blank" rel="noopener" style="pointer-events:none;opacity:.4">Abrir carpeta</a>
-                            </div>
-                        </div>
-
-                        <div class="emp-assign-block">
-                            <h4>Imagen del Proyecto</h4>
-                            <div class="emp-cover-uploader">
-                                <div class="emp-cover-preview" id="empCoverPreview">
-                                    <span>Sin imagen</span>
-                                </div>
-                                <div class="emp-cover-actions">
-                                    <label class="admin-btn-secondary emp-file-label">
-                                        Subir imagen
-                                        <input type="file" id="empCoverInput" accept="image/*" hidden>
-                                    </label>
-                                    <button type="button" class="admin-btn-secondary" id="empCoverChange">Cambiar</button>
-                                    <button type="button" class="admin-btn-secondary is-danger-text" id="empCoverRemove">Eliminar</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <span class="admin-form-error" id="empVideoError"></span>
-                        <div class="admin-modal-actions">
-                            <button type="button" class="admin-btn-secondary" id="empVideoCancel">Cancelar</button>
-                            <button type="submit" class="admin-btn-primary">Guardar</button>
                         </div>
                     </div>
 
-                    <aside class="emp-assign-preview" id="empLivePreview" aria-live="polite"></aside>
+                    <div class="admin-field">
+                        <label>Título</label>
+                        <input name="name" required placeholder="Ej. Reel Fachada">
+                    </div>
+                    <div class="admin-field">
+                        <label>Cliente</label>
+                        <input name="client_name" placeholder="Nombre del cliente">
+                    </div>
+                    <div class="admin-field">
+                        <label>Descripción</label>
+                        <textarea name="description" rows="3" placeholder="Resumen del trabajo"></textarea>
+                    </div>
+                    <div class="admin-field">
+                        <label>Indicaciones</label>
+                        <textarea name="instructions" rows="5" placeholder="Indicaciones detalladas para el editor"></textarea>
+                    </div>
+                    <div class="emp-assign-block">
+                        <h4>Carpeta de Google Drive</h4>
+                        <div class="admin-field" style="margin:0 0 10px">
+                            <label>Enlace</label>
+                            <input name="drive_url" type="url" placeholder="https://drive.google.com/...">
+                        </div>
+                        <div class="admin-field" style="margin:0">
+                            <label>Nombre visible</label>
+                            <input name="drive_folder_name" placeholder="Ej. Material Reel Fachada">
+                        </div>
+                    </div>
+                    <div class="admin-field">
+                        <label>Fecha límite</label>
+                        <input name="delivery_date" type="date">
+                    </div>
+
+                    <div class="emp-assign-block">
+                        <div class="ew-section-head" style="margin-bottom:8px">
+                            <h4 style="margin:0">Checklist</h4>
+                            <button type="button" class="admin-btn-secondary" id="empAddCheckItem">+ Ítem</button>
+                        </div>
+                        <div id="empChecklistBuilder" class="emp-check-builder"></div>
+                    </div>
+
+                    <p class="ew-muted" style="margin:0">Editor asignado: <strong style="color:#fff">${escapeHtml(name)}</strong></p>
+
+                    <span class="admin-form-error" id="empVideoError"></span>
+                    <div class="admin-modal-actions">
+                        <button type="button" class="admin-btn-secondary" id="empVideoCancel">Cancelar</button>
+                        <button type="submit" class="admin-btn-primary">Guardar</button>
+                    </div>
                 </form>
             </div>
         </div>
@@ -213,7 +220,7 @@ async function render() {
 }
 
 function renderVideos() {
-    if (!tasks.length) return '<div class="emp-empty">Aún no hay videos. Crea el primero.</div>';
+    if (!tasks.length) return '<div class="emp-empty">Aún no hay trabajos. Crea el primero.</div>';
     return tasks.map((t) => {
         const folder = folderUrl(t);
         const st = normalizeTaskStatus(t.status);
@@ -224,11 +231,15 @@ function renderVideos() {
                 : '<div class="emp-video-cover-fallback"></div>'}</div>
             <div class="emp-video-body">
                 <div class="emp-video-top">
-                    <h3>${escapeHtml(t.name)}</h3>
+                    <div>
+                        <div class="ew-client" style="margin-bottom:4px">${escapeHtml(t.client_name || 'Sin cliente')}</div>
+                        <h3>${escapeHtml(t.name)}</h3>
+                    </div>
                     <span class="emp-chip status-${st}">${statusLabel(st)}</span>
                 </div>
                 <div class="emp-video-meta">
-                    <span class="emp-chip">Fecha límite: ${escapeHtml(formatTaskDate(t.delivery_date))}</span>
+                    <span class="emp-chip">Fecha: ${escapeHtml(formatTaskDate(t.delivery_date))}</span>
+                    <span class="emp-chip priority-${t.priority || 'media'}">${escapeHtml(priorityLabel(t.priority || 'media'))}</span>
                     <span class="emp-chip">${escapeHtml(folderDisplayName(t))}</span>
                 </div>
                 <div class="emp-video-actions">
@@ -237,6 +248,14 @@ function renderVideos() {
                         : '<span class="emp-chip">Sin carpeta</span>'}
                     <button type="button" data-edit="${t.id}">Editar</button>
                     <button type="button" class="is-danger" data-del="${t.id}">Eliminar</button>
+                </div>
+                <div class="ew-section" style="padding:14px 0 0;border-top:1px solid rgba(255,255,255,.06);margin-top:14px">
+                    <h3>Comentarios</h3>
+                    <div class="ew-chat" id="adm-chat-${t.id}"><div class="ew-chat-loading">Cargando…</div></div>
+                    <form class="emp-chat-form ew-chat-form" data-adm-chat="${t.id}">
+                        <input name="body" required placeholder="Responder al editor…">
+                        <button type="submit" class="emp-mini-btn">Enviar</button>
+                    </form>
                 </div>
             </div>
         </article>`;
@@ -253,7 +272,7 @@ function renderCalendar() {
             <div class="emp-day" data-date="${key}">
                 <div class="emp-day-label">${escapeHtml(label)}<strong>${d.getDate()}</strong></div>
                 ${dayTasks.map((t) => `
-                    <div class="emp-day-task" draggable="true" data-task-id="${t.id}" style="--emp-color:${escapeHtml(color)}">
+                    <div class="emp-day-task" data-task-id="${t.id}" style="--emp-color:${escapeHtml(color)}">
                         ${escapeHtml(t.name)}
                     </div>
                 `).join('')}
@@ -262,56 +281,41 @@ function renderCalendar() {
     }).join('');
 }
 
-function updateLivePreview() {
-    const form = document.getElementById('empVideoForm');
-    const preview = document.getElementById('empLivePreview');
-    if (!form || !preview) return;
-    const name = form.name.value.trim() || 'Título del video';
-    const date = form.delivery_date.value;
-    const drive = form.drive_url.value.trim();
-    const folderName = form.drive_folder_name.value.trim()
-        || (drive ? folderDisplayName({ drive_url: drive }) : 'Sin carpeta');
-    const editorName = `${employee.first_name} ${employee.last_name}`;
-    const cover = draftCoverCleared ? null : (draftCover || form.dataset.existingCover || '');
-
-    const openBtn = document.getElementById('empPreviewOpenDrive');
-    if (openBtn) {
-        if (drive) {
-            openBtn.href = drive;
-            openBtn.style.pointerEvents = '';
-            openBtn.style.opacity = '1';
-        } else {
-            openBtn.href = '#';
-            openBtn.style.pointerEvents = 'none';
-            openBtn.style.opacity = '.4';
-        }
+function renderChecklistBuilder() {
+    const box = document.getElementById('empChecklistBuilder');
+    if (!box) return;
+    if (!draftChecklist.length) {
+        box.innerHTML = '<p class="ew-muted">Agrega ítems que el editor irá marcando.</p>';
+        return;
     }
-
-    preview.innerHTML = `
-        <div class="emp-live-card">
-            <span class="emp-kicker">Resumen</span>
-            <div class="emp-live-cover">${cover
-                ? `<img src="${escapeHtml(cover)}" alt="">`
-                : '<div class="emp-live-cover-empty">Portada</div>'}</div>
-            <h3>${escapeHtml(name)}</h3>
-            <dl class="emp-live-meta">
-                <div><dt>Editor</dt><dd>${escapeHtml(editorName)}</dd></div>
-                <div><dt>Fecha límite</dt><dd>${escapeHtml(formatTaskDate(date))}</dd></div>
-                <div><dt>Estado</dt><dd><span class="emp-chip status-pendiente">Pendiente</span></dd></div>
-                <div><dt>Carpeta Drive</dt><dd>${escapeHtml(folderName)}</dd></div>
-            </dl>
+    box.innerHTML = draftChecklist.map((item, idx) => `
+        <div class="emp-check-row" data-idx="${idx}">
+            <input type="text" value="${escapeHtml(item.label)}" data-check-label="${idx}" placeholder="Ej. Buscar tomas">
+            <button type="button" class="admin-btn-secondary is-danger-text" data-check-remove="${idx}">✕</button>
         </div>
-    `;
+    `).join('');
+
+    box.querySelectorAll('[data-check-label]').forEach((input) => {
+        input.addEventListener('input', () => {
+            const i = Number(input.getAttribute('data-check-label'));
+            if (draftChecklist[i]) draftChecklist[i].label = input.value;
+        });
+    });
+    box.querySelectorAll('[data-check-remove]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+            const i = Number(btn.getAttribute('data-check-remove'));
+            draftChecklist.splice(i, 1);
+            renderChecklistBuilder();
+        });
+    });
 }
 
 function setCoverPreview(url) {
     const box = document.getElementById('empCoverPreview');
     if (!box) return;
-    if (url) {
-        box.innerHTML = `<img src="${escapeHtml(url)}" alt="Portada">`;
-    } else {
-        box.innerHTML = '<span>Sin imagen</span>';
-    }
+    box.innerHTML = url
+        ? `<img src="${escapeHtml(url)}" alt="Portada">`
+        : '<span>Sin imagen</span>';
 }
 
 function bindUi() {
@@ -337,22 +341,13 @@ function bindUi() {
     document.getElementById('empVideoModalClose')?.addEventListener('click', closeVideoModal);
     document.getElementById('empVideoCancel')?.addEventListener('click', closeVideoModal);
 
-    const form = document.getElementById('empVideoForm');
-    form?.querySelectorAll('[data-live]').forEach((el) => {
-        el.addEventListener('input', updateLivePreview);
-        el.addEventListener('change', updateLivePreview);
-    });
-
-    document.getElementById('empClearDrive')?.addEventListener('click', () => {
-        if (!form) return;
-        form.drive_url.value = '';
-        form.drive_folder_name.value = '';
-        updateLivePreview();
+    document.getElementById('empAddCheckItem')?.addEventListener('click', () => {
+        draftChecklist.push({ id: newChecklistId(), label: '', done: false });
+        renderChecklistBuilder();
     });
 
     const coverInput = document.getElementById('empCoverInput');
-    const pickCover = () => coverInput?.click();
-    document.getElementById('empCoverChange')?.addEventListener('click', pickCover);
+    document.getElementById('empCoverChange')?.addEventListener('click', () => coverInput?.click());
     coverInput?.addEventListener('change', async () => {
         const file = coverInput.files?.[0];
         if (!file) return;
@@ -360,7 +355,6 @@ function bindUi() {
             draftCover = await compressImageFile(file);
             draftCoverCleared = false;
             setCoverPreview(draftCover);
-            updateLivePreview();
         } catch (err) {
             window.alert(err.message);
         }
@@ -370,26 +364,35 @@ function bindUi() {
         draftCover = null;
         draftCoverCleared = true;
         setCoverPreview(null);
-        updateLivePreview();
     });
 
-    form?.addEventListener('submit', async (e) => {
+    document.getElementById('empVideoForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
+        const form = e.target;
         const errEl = document.getElementById('empVideoError');
         if (errEl) { errEl.textContent = ''; errEl.classList.remove('active'); }
-        const id = form.id.value;
+
+        const checklist = draftChecklist
+            .map((item) => ({ ...item, label: item.label.trim() }))
+            .filter((item) => item.label);
+
         const payload = {
             name: form.name.value.trim(),
+            client_name: form.client_name.value.trim(),
             description: form.description.value,
+            instructions: form.instructions.value,
             drive_url: form.drive_url.value.trim() || null,
             drive_folder_name: form.drive_folder_name.value.trim() || null,
-            delivery_date: form.delivery_date.value || null
+            delivery_date: form.delivery_date.value || null,
+            priority: 'media',
+            checklist
         };
         if (draftCoverCleared) payload.cover_url = null;
         else if (draftCover) payload.cover_url = draftCover;
 
         if (!payload.name) return;
         try {
+            const id = form.id.value;
             if (id) {
                 await updateProjectTask(id, payload);
             } else {
@@ -399,9 +402,7 @@ function bindUi() {
                     number,
                     sort_order: tasks.length,
                     status: 'pendiente',
-                    priority: 'media',
                     duration_label: '',
-                    checklist: {},
                     editor_notes: '',
                     ...payload
                 });
@@ -426,31 +427,72 @@ function bindUi() {
 
     document.querySelectorAll('[data-del]').forEach((btn) => {
         btn.addEventListener('click', async () => {
-            if (!window.confirm('¿Eliminar este video?')) return;
+            if (!window.confirm('¿Eliminar este trabajo?')) return;
             await deleteProjectTask(btn.getAttribute('data-del'));
             await refreshTasks();
             render();
         });
     });
 
+    document.querySelectorAll('[data-adm-chat]').forEach((form) => {
+        const taskId = form.getAttribute('data-adm-chat');
+        loadAdminChat(taskId);
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const body = e.target.body.value.trim();
+            if (!body) return;
+            await addTaskComment(taskId, body);
+            e.target.reset();
+            loadAdminChat(taskId);
+        });
+    });
+
     setupDnD();
+}
+
+async function loadAdminChat(taskId) {
+    const box = document.getElementById(`adm-chat-${taskId}`);
+    if (!box) return;
+    try {
+        const comments = await listTaskComments(taskId);
+        box.innerHTML = comments.length
+            ? comments.map((c) => `
+                <div class="emp-chat-msg">
+                    <strong>${escapeHtml(c.profiles?.full_name || 'Usuario')}</strong>
+                    <div>${escapeHtml(c.body)}</div>
+                </div>
+            `).join('')
+            : '<div class="emp-chat-msg">Sin comentarios aún.</div>';
+    } catch {
+        box.innerHTML = '<div class="emp-chat-msg">No se pudieron cargar los comentarios.</div>';
+    }
 }
 
 function openVideoModal(task = null) {
     const modal = document.getElementById('empVideoModal');
     const form = document.getElementById('empVideoForm');
-    document.getElementById('empVideoModalTitle').textContent = task ? 'Editar video' : 'Nuevo video';
+    document.getElementById('empVideoModalTitle').textContent = task ? 'Editar trabajo' : 'Nuevo trabajo';
     form.id.value = task?.id || '';
     form.name.value = task?.name || '';
+    form.client_name.value = task?.client_name || '';
     form.description.value = task?.description || '';
+    form.instructions.value = task?.instructions || '';
     form.drive_url.value = task?.drive_url || '';
     form.drive_folder_name.value = task?.drive_folder_name || '';
     form.delivery_date.value = task?.delivery_date || '';
     draftCover = null;
     draftCoverCleared = false;
-    form.dataset.existingCover = task?.cover_url || '';
     setCoverPreview(task?.cover_url || null);
-    updateLivePreview();
+    draftChecklist = normalizeChecklist(task?.checklist).map((item) => ({ ...item }));
+    if (!draftChecklist.length && !task) {
+        draftChecklist = [
+            { id: newChecklistId(), label: 'Buscar tomas', done: false },
+            { id: newChecklistId(), label: 'Sincronizar audio', done: false },
+            { id: newChecklistId(), label: 'Corrección de color', done: false },
+            { id: newChecklistId(), label: 'Exportar', done: false }
+        ];
+    }
+    renderChecklistBuilder();
     modal.classList.add('active');
 }
 
@@ -461,7 +503,6 @@ function closeVideoModal() {
 function setupDnD() {
     const list = document.getElementById('empVideoList');
     let dragId = null;
-
     list?.querySelectorAll('.emp-video').forEach((el) => {
         el.addEventListener('dragstart', (e) => {
             dragId = el.getAttribute('data-task-id');
@@ -470,7 +511,6 @@ function setupDnD() {
         });
         el.addEventListener('dragend', () => el.classList.remove('is-dragging'));
     });
-
     list?.addEventListener('dragover', (e) => e.preventDefault());
     list?.addEventListener('drop', async (e) => {
         e.preventDefault();
@@ -486,27 +526,6 @@ function setupDnD() {
         await reorderProjectTasks(ids);
         await refreshTasks();
         render();
-    });
-
-    document.querySelectorAll('.emp-day').forEach((day) => {
-        day.addEventListener('dragover', (e) => { e.preventDefault(); day.classList.add('is-over'); });
-        day.addEventListener('dragleave', () => day.classList.remove('is-over'));
-        day.addEventListener('drop', async (e) => {
-            e.preventDefault();
-            day.classList.remove('is-over');
-            const id = e.dataTransfer.getData('text/task-id') || dragId;
-            if (!id) return;
-            await updateProjectTask(id, { delivery_date: day.getAttribute('data-date') });
-            await refreshTasks();
-            render();
-        });
-    });
-
-    document.querySelectorAll('.emp-day-task').forEach((el) => {
-        el.addEventListener('dragstart', (e) => {
-            dragId = el.getAttribute('data-task-id');
-            e.dataTransfer.setData('text/task-id', dragId);
-        });
     });
 }
 
