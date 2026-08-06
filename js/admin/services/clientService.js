@@ -15,10 +15,10 @@
        la Edge Function "create-client" (ver
        supabase/functions/create-client/index.ts), que sí corre
        en el servidor con esos privilegios.
-     - updateClient() y deleteClient() SÍ se hacen directo desde
-       aquí, porque solo modifican/borran filas ya existentes y
-       el admin autenticado ya tiene permiso vía RLS
-       (profiles_admin_all / workspaces_admin_all).
+     - updateClient() y deleteClient():
+         · updateClient() llama a la Edge Function "update-client"
+           (puede cambiar correo en Auth + profiles).
+         · deleteClient() borra el workspace directo vía RLS.
    ========================================================== */
 
 import { supabase } from '../supabase/client.js';
@@ -145,39 +145,27 @@ export async function resetClientPassword(payload) {
 }
 
 /**
- * Actualiza los datos editables de un cliente ya existente.
- * El correo NO se puede editar aquí (cambiar el email de Auth
- * requiere la Admin API); se mantiene el que ya tiene.
+ * Actualiza los datos editables de un cliente ya existente,
+ * incluyendo el correo de acceso (Auth + profiles) vía la
+ * Edge Function "update-client".
  *
- * @param {{workspaceId:string, profileId:string, company:string, contact:string, phone?:string, city?:string, notes?:string}} payload
+ * @param {{workspaceId:string, profileId:string, company:string, contact:string, email:string, phone?:string, city?:string, notes?:string}} payload
  */
 export async function updateClient(payload) {
-    const { workspaceId, profileId, company, contact, phone, city, notes } = payload;
+    const { data, error } = await supabase.functions.invoke('update-client', {
+        body: payload
+    });
 
-    const { error: workspaceError } = await supabase
-        .from('workspaces')
-        .update({
-            name: company,
-            city: city || null,
-            notes: notes || null
-        })
-        .eq('id', workspaceId);
-
-    if (workspaceError) {
-        throw workspaceError;
+    if (error) {
+        const serverMessage = data && data.error;
+        throw new Error(serverMessage || error.message || 'No se pudo actualizar el cliente.');
     }
 
-    const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-            full_name: contact,
-            phone: phone || null
-        })
-        .eq('id', profileId);
-
-    if (profileError) {
-        throw profileError;
+    if (data && data.error) {
+        throw new Error(data.error);
     }
+
+    return data;
 }
 
 /**

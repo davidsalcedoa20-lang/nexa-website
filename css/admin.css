@@ -1,24 +1,24 @@
 /* ==========================================================
-   NEXA HUB ? Panel Administrativo
+   NEXA HUB — Panel Administrativo
    ==========================================================
    Hoja de estilos EXCLUSIVA del Panel Administrativo (/admin).
-   No se reutiliza en el sitio p?blico ni en el Portal de
+   No se reutiliza en el sitio público ni en el Portal de
    Clientes (esos usan css/style.css y css/portal.css, que no
-   se modifican aqu?).
+   se modifican aquí).
 
-   ?ndice:
+   Índice:
      1. Base / estructura general
      2. Sidebar
      3. Topbar
-     4. Men? de usuario (dropdown)
+     4. Menú de usuario (dropdown)
      5. Contenido principal / saludo
-     6. Tarjetas de estad?sticas
-     7. Secciones (encabezado + bot?n primario)
-     8. Tabla ? Clientes recientes
+     6. Tarjetas de estadísticas
+     7. Secciones (encabezado + botón primario)
+     8. Tabla — Clientes recientes
      9. Badges de estado
-    10. Tarjeta ? Actividad reciente
-    11. M?dulo Clientes (tabla, estados, modal)
-    12. M?dulo Proyectos (grid, detalle, bloques, tareas, tabs)
+    10. Tarjeta — Actividad reciente
+    11. Módulo Clientes (tabla, estados, modal)
+    12. Módulo Proyectos (grid, detalle, bloques, tareas, tabs)
     13. Responsive
    ========================================================== */
 
@@ -117,21 +117,6 @@ body.admin-page{
     color:white;
     background:linear-gradient(135deg, rgba(45,140,255,.16), rgba(140,82,255,.10));
     border:1px solid rgba(45,140,255,.3);
-}
-
-.admin-nav-item.is-soon{
-    cursor:default;
-}
-
-.admin-nav-item .admin-soon-tag{
-    margin-left:auto;
-    font-size:9.5px;
-    font-weight:700;
-    letter-spacing:1px;
-    color:#8a8a8a;
-    border:1px solid rgba(255,255,255,.14);
-    padding:2px 7px;
-    border-radius:100px;
 }
 
 .admin-logout{
@@ -1004,7 +989,7 @@ body.admin-page{
     background:rgba(255,255,255,.06);
 }
 
-/* ---- Estados de carga / vac?o / error ---- */
+/* ---- Estados de carga / vacío / error ---- */
 .admin-state{
     display:none;
     flex-direction:column;
@@ -1259,7 +1244,7 @@ body.admin-page{
 .admin-select:focus{ outline:none; border-color:var(--blue); }
 
 /* Variante compacta para <select> embebidos dentro de filas de tabla
-   (ej. cambio r?pido de estado en admin/tareas.html). */
+   (ej. cambio rápido de estado en admin/tareas.html). */
 .admin-select--compact{
     padding:6px 10px;
     border-radius:8px;
@@ -1866,7 +1851,7 @@ body.admin-page{
 
 .admin-comment-form textarea:focus{ outline:none; border-color:var(--blue); }
 
-/* ---- Cronolog?a ---- */
+/* ---- Cronología ---- */
 .admin-timeline{
     display:flex;
     flex-direction:column;
@@ -2072,7 +2057,7 @@ body.admin-page{
 /* ==========================================================
    PROYECTO ? VISTA "PLANTILLA OFICIAL" (pd- = project detail)
    ==========================================================
-   Redise?o de admin/proyecto-detalle.html para replicar la
+   Rediseño de admin/proyecto-detalle.html para replicar la
    plantilla oficial (imagen de referencia). Reutiliza colores,
    tipograf?a y componentes ya definidos arriba (admin-btn-*,
    admin-badge, admin-icon-btn, admin-modal-*, --gradient, etc.)
@@ -2092,7 +2077,7 @@ body.admin-page{
 .pd-breadcrumb span{ color:#4a4a4a; }
 .pd-breadcrumb strong{ color:#d8d8d8; font-weight:500; }
 
-/* ----- Acciones superiores (la portada reemplaza el t?tulo) ----- */
+/* ----- Acciones superiores (la portada reemplaza el título) ----- */
 .pd-header-top{
     display:flex;
     align-items:flex-start;
@@ -2550,7 +2535,7 @@ body.admin-page{
 .pd-stage-progress-name{ flex:1; font-size:12.5px; color:#d8d8d8; }
 .pd-stage-progress-percent{ font-size:12.5px; font-weight:700; color:white; }
 
-/* ----- Secci?n gen?rica con header ----- */
+/* ----- Sección genérica con header ----- */
 .pd-section{ display:flex; flex-direction:column; gap:14px; }
 .pd-section-header{
     display:flex;
@@ -2561,7 +2546,7 @@ body.admin-page{
 .pd-section-header h2{ font-size:15px; font-weight:600; color:white; }
 .pd-small-btn{ padding:8px 16px; font-size:12.5px; }
 
-/* ----- L?nea de tiempo (etapas) ----- */
+/* ----- Línea de tiempo (etapas) ----- */
 .pd-timeline-track{
     display:flex;
     align-items:stretch;
@@ -3173,7 +3158,7 @@ body.admin-page{
     font-size:14px;
 }
 
-/* Widget Pr?ximo Evento (dashboard) */
+/* Widget Próximo Evento (dashboard) */
 .admin-next-event{
     display:flex;
     flex-direction:column;
@@ -3307,7 +3292,7 @@ body.admin-page{
 }
 
 /* ==========================================================
-   WORKSPACE (antes Mi Agenda) ? estilos de p?gina ?nicamente
+   WORKSPACE (antes Mi Agenda) ? estilos de página ?nicamente
    ========================================================== */
 .agenda-page{ gap:22px; }
 
@@ -3328,7 +3313,7 @@ body.admin-page{
     box-shadow:0 10px 28px rgba(140,82,255,.28);
 }
 
-/* Enfoque del d?a (sidebar, solo Workspace) */
+/* Enfoque del día (sidebar, solo Workspace) */
 .ws-focus-card{
     margin-top:auto;
     margin-bottom:14px;

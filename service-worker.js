@@ -1,11 +1,12 @@
 /* ==========================================================
    NEXA HUB — Service Worker (solo estáticos)
    ========================================================== */
-const CACHE_VERSION = 'nexa-hub-static-v1';
+const CACHE_VERSION = 'nexa-hub-static-v2';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
   '/manifest.json',
+  '/robots.txt',
   '/assets/icons/icon-192.png',
   '/assets/icons/icon-512.png',
   '/assets/icons/apple-touch-icon.png',

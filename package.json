@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "vercel dev",
+    "dev:local": "node scripts/local-dev.mjs",
     "supabase:login": "supabase login",
     "supabase:link": "supabase link --project-ref aeulqdihlxsvznviyozk",
     "db:push": "supabase db push"

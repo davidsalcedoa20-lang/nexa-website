@@ -107,6 +107,7 @@ async function handleUpdate(client, payload) {
         profileId: client.profileId,
         company: payload.company,
         contact: payload.contact,
+        email: payload.email,
         phone: payload.phone,
         city: payload.city,
         notes: payload.notes

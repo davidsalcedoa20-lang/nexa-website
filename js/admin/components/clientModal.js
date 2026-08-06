@@ -101,8 +101,9 @@ export function openClientModal(options) {
         if (field) field.disabled = isView;
     });
 
-    // El correo solo se puede definir al crear (cambiarlo requiere la Admin API).
-    getField('email').disabled = isView || isEdit;
+    // El correo se define al crear y también se puede corregir al editar
+    // (la Edge Function update-client sincroniza Auth + profiles).
+    getField('email').disabled = isView;
 
     // La contraseña temporal SOLO se define al crear el cliente. Cambiarla
     // después es una acción aparte ("Regenerar contraseña temporal" en la
@@ -173,7 +174,7 @@ if (form) {
             notes: getField('notes').value.trim()
         };
 
-        if (!payload.company || !payload.contact || (currentMode === 'create' && !payload.email)) {
+        if (!payload.company || !payload.contact || !payload.email) {
             showModalError('Empresa, contacto y correo son obligatorios.');
             return;
         }
