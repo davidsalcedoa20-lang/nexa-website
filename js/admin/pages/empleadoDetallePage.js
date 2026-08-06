@@ -1,11 +1,10 @@
 /* ==========================================================
-   NEXA HUB — Detalle empleado + Espacio de trabajo
+   NEXA HUB — Detalle empleado + Espacio de trabajo (videos)
    ========================================================== */
 import {
     getEmployee, getEmployeeStats, listEmployeeProjects, createEmployeeProject,
-    updateEmployeeProject, listProjectTasks, createProjectTask, updateProjectTask,
-    deleteProjectTask, reorderProjectTasks, listTaskComments, addTaskComment,
-    subscribeEmployeeChannel
+    listProjectTasks, createProjectTask, updateProjectTask,
+    deleteProjectTask, reorderProjectTasks, subscribeEmployeeChannel
 } from '../../services/employeeService.js';
 import { escapeHtml } from '../../components/projectUi.js';
 
@@ -27,13 +26,14 @@ function statusLabel(s) {
     return ({ pendiente: 'Pendiente', en_edicion: 'En edición', entregado: 'Entregado' })[s] || s;
 }
 
-function priorityLabel(p) {
-    return ({ alta: 'Alta', media: 'Media', baja: 'Baja' })[p] || p;
-}
-
 function formatDate(iso) {
     if (!iso) return '—';
-    return new Date(iso).toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+    const d = iso.length <= 10 ? new Date(`${iso}T12:00:00`) : new Date(iso);
+    return d.toLocaleDateString('es-CO', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+
+function folderUrl(task) {
+    return task?.drive_url || activeProject()?.drive_url || null;
 }
 
 function nextDays(count = 14) {
@@ -49,7 +49,10 @@ function nextDays(count = 14) {
 }
 
 function ymd(d) {
-    return d.toISOString().slice(0, 10);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
 }
 
 async function init() {
@@ -100,7 +103,6 @@ async function render() {
     const avatar = employee.photo_url
         ? `<img src="${escapeHtml(employee.photo_url)}" alt="">`
         : escapeHtml(initials(employee.first_name, employee.last_name));
-    const project = activeProject();
 
     root.innerHTML = `
         <div class="emp-page">
@@ -130,46 +132,18 @@ async function render() {
                 <button type="button" class="emp-project-tab" id="empAddProject">+ Proyecto</button>
             </div>
 
-            <div class="emp-workspace">
-                <section class="emp-ws-card" id="cardMaterial">
+            <div class="emp-workspace emp-workspace--videos">
+                <section class="emp-ws-card span-2" id="cardVideos">
                     <div class="emp-ws-head">
-                        <div><h2>Material</h2><p>Enlace de Google Drive del proyecto</p></div>
-                    </div>
-                    <div class="emp-drive">
-                        <div class="emp-drive-icon">
-                            <svg viewBox="0 0 24 24" fill="none"><path d="M4 18l4-8h8l4 8H4Zm4-8 4-7 4 7H8Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
-                        </div>
-                        <input id="empDriveUrl" type="url" placeholder="https://drive.google.com/..." value="${escapeHtml(project?.drive_url || '')}">
-                        <button type="button" class="emp-link-btn" id="empSaveDrive">Guardar</button>
-                        <a id="empOpenDrive" class="emp-link-btn" href="${escapeHtml(project?.drive_url || '#')}" target="_blank" rel="noopener" ${project?.drive_url ? '' : 'style="opacity:.4;pointer-events:none"'}>Abrir carpeta</a>
-                    </div>
-                    <input id="empProjectTitle" value="${escapeHtml(project?.title || '')}" style="background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:12px;color:#fff;padding:10px 12px;font:inherit" placeholder="Nombre del proyecto">
-                </section>
-
-                <section class="emp-ws-card" id="cardInstructions">
-                    <div class="emp-ws-head">
-                        <div><h2>Instrucciones</h2><p>Briefing para el editor</p></div>
-                        <button type="button" class="admin-btn-secondary" id="empSaveInstructions">Guardar</button>
-                    </div>
-                    <div class="emp-toolbar">
-                        <button type="button" data-cmd="bold"><b>B</b></button>
-                        <button type="button" data-cmd="insertUnorderedList">• Lista</button>
-                        <button type="button" data-cmd="insertOrderedList">1. Lista</button>
-                    </div>
-                    <div class="emp-editor" id="empInstructions" contenteditable="true" data-placeholder="Escribe las instrucciones del proyecto…">${project?.instructions || ''}</div>
-                </section>
-
-                <section class="emp-ws-card" id="cardVideos">
-                    <div class="emp-ws-head">
-                        <div><h2>Videos a editar</h2><p>Arrastra para reordenar o al calendario</p></div>
+                        <div><h2>Videos a editar</h2><p>Asigna material, instrucciones y fecha límite</p></div>
                         <button type="button" class="admin-btn-primary" id="empAddVideo">+ Nuevo video</button>
                     </div>
                     <div class="emp-video-list" id="empVideoList">${renderVideos()}</div>
                 </section>
 
-                <section class="emp-ws-card" id="cardCalendar">
+                <section class="emp-ws-card span-2" id="cardCalendar">
                     <div class="emp-ws-head">
-                        <div><h2>Calendario del editor</h2><p>Próximos días · suelta un video para fijar entrega</p></div>
+                        <div><h2>Calendario de entregas</h2><p>Se actualiza en vivo cuando el editor mueve una fecha</p></div>
                     </div>
                     <div class="emp-calendar" id="empCalendar">${renderCalendar()}</div>
                 </section>
@@ -182,16 +156,23 @@ async function render() {
                     <h3 id="empVideoModalTitle">Nuevo video</h3>
                     <button type="button" class="admin-modal-close" id="empVideoModalClose">✕</button>
                 </div>
-                <form id="empVideoForm" class="admin-form" style="padding:18px 20px 22px;display:grid;gap:12px">
+                <form id="empVideoForm" class="admin-form" style="padding:18px 20px 22px;display:grid;gap:14px;grid-template-columns:1fr">
                     <input type="hidden" name="id">
-                    <div class="admin-field"><label>Nombre</label><input name="name" required></div>
-                    <div class="admin-field"><label>Descripción</label><textarea name="description" rows="3"></textarea></div>
-                    <div class="admin-field"><label>Prioridad</label>
-                        <select name="priority"><option value="alta">Alta</option><option value="media" selected>Media</option><option value="baja">Baja</option></select>
+                    <div class="admin-field">
+                        <label>Título del video</label>
+                        <input name="name" required placeholder="Ej. Reel Fachada">
                     </div>
-                    <div class="admin-field"><label>Duración</label><input name="duration_label" placeholder="Ej. 45 segundos"></div>
-                    <div class="admin-field"><label>Estado</label>
-                        <select name="status"><option value="pendiente">Pendiente</option><option value="en_edicion">En edición</option><option value="entregado">Entregado</option></select>
+                    <div class="admin-field">
+                        <label>Descripción / instrucciones</label>
+                        <textarea name="description" rows="8" placeholder="Indicaciones para el editor. Puedes usar saltos de línea y listas."></textarea>
+                    </div>
+                    <div class="admin-field">
+                        <label>Carpeta del material (Google Drive)</label>
+                        <input name="drive_url" type="url" placeholder="https://drive.google.com/...">
+                    </div>
+                    <div class="admin-field">
+                        <label>Fecha límite</label>
+                        <input name="delivery_date" type="date">
                     </div>
                     <span class="admin-form-error" id="empVideoError"></span>
                     <div class="admin-modal-actions">
@@ -208,29 +189,28 @@ async function render() {
 
 function renderVideos() {
     if (!tasks.length) return '<div class="emp-empty">Aún no hay videos. Crea el primero.</div>';
-    return tasks.map((t) => `
-        <article class="emp-video" draggable="true" data-task-id="${t.id}">
+    return tasks.map((t) => {
+        const folder = folderUrl(t);
+        return `
+        <article class="emp-video emp-video--admin" draggable="true" data-task-id="${t.id}">
             <div class="emp-video-top">
                 <div>
-                    <div class="emp-video-num">Video ${String(t.number).padStart(2, '0')}</div>
                     <h3>${escapeHtml(t.name)}</h3>
-                    <p>${escapeHtml(t.description || '')}</p>
                 </div>
+                <span class="emp-chip status-${t.status}">${statusLabel(t.status)}</span>
             </div>
             <div class="emp-video-meta">
-                <span class="emp-chip priority-${t.priority}">${priorityLabel(t.priority)}</span>
-                <span class="emp-chip">${escapeHtml(t.duration_label || '—')}</span>
-                <span class="emp-chip status-${t.status}">${statusLabel(t.status)}</span>
-                ${t.delivery_date ? `<span class="emp-chip">📅 ${escapeHtml(t.delivery_date)}</span>` : ''}
+                <span class="emp-chip">Fecha límite: ${escapeHtml(formatDate(t.delivery_date))}</span>
             </div>
             <div class="emp-video-actions">
+                ${folder
+                    ? `<a class="emp-link-btn emp-link-btn--sm" href="${escapeHtml(folder)}" target="_blank" rel="noopener">Abrir carpeta</a>`
+                    : '<span class="emp-chip">Sin carpeta</span>'}
                 <button type="button" data-edit="${t.id}">Editar</button>
                 <button type="button" class="is-danger" data-del="${t.id}">Eliminar</button>
-                <button type="button" data-chat="${t.id}">Comentarios</button>
             </div>
-            <div class="emp-chat" id="chat-${t.id}" hidden></div>
-        </article>
-    `).join('');
+        </article>`;
+    }).join('');
 }
 
 function renderCalendar() {
@@ -271,30 +251,6 @@ function bindUi() {
         });
     });
 
-    document.getElementById('empSaveDrive')?.addEventListener('click', async () => {
-        const drive_url = document.getElementById('empDriveUrl').value.trim() || null;
-        const title = document.getElementById('empProjectTitle').value.trim() || 'Proyecto';
-        await updateEmployeeProject(activeProjectId, { drive_url, title });
-        const idx = projects.findIndex((p) => p.id === activeProjectId);
-        if (idx >= 0) projects[idx] = { ...projects[idx], drive_url, title };
-        render();
-    });
-
-    document.querySelectorAll('.emp-toolbar [data-cmd]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            document.execCommand(btn.getAttribute('data-cmd'), false, null);
-            document.getElementById('empInstructions')?.focus();
-        });
-    });
-
-    document.getElementById('empSaveInstructions')?.addEventListener('click', async () => {
-        const instructions = document.getElementById('empInstructions').innerHTML;
-        await updateEmployeeProject(activeProjectId, { instructions });
-        const idx = projects.findIndex((p) => p.id === activeProjectId);
-        if (idx >= 0) projects[idx].instructions = instructions;
-        window.alert('Instrucciones guardadas');
-    });
-
     document.getElementById('empAddVideo')?.addEventListener('click', () => openVideoModal());
     document.getElementById('empVideoModalClose')?.addEventListener('click', closeVideoModal);
     document.getElementById('empVideoCancel')?.addEventListener('click', closeVideoModal);
@@ -302,29 +258,40 @@ function bindUi() {
     document.getElementById('empVideoForm')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const form = e.target;
+        const errEl = document.getElementById('empVideoError');
+        if (errEl) { errEl.textContent = ''; errEl.classList.remove('active'); }
         const id = form.id.value;
         const payload = {
             name: form.name.value.trim(),
-            description: form.description.value.trim(),
-            priority: form.priority.value,
-            duration_label: form.duration_label.value.trim(),
-            status: form.status.value
+            description: form.description.value,
+            drive_url: form.drive_url.value.trim() || null,
+            delivery_date: form.delivery_date.value || null
         };
         if (!payload.name) return;
-        if (id) {
-            await updateProjectTask(id, payload);
-        } else {
-            const number = (tasks.reduce((m, t) => Math.max(m, t.number || 0), 0) || 0) + 1;
-            await createProjectTask({
-                project_id: activeProjectId,
-                number,
-                sort_order: tasks.length,
-                ...payload
-            });
+        try {
+            if (id) {
+                await updateProjectTask(id, payload);
+            } else {
+                const number = (tasks.reduce((m, t) => Math.max(m, t.number || 0), 0) || 0) + 1;
+                await createProjectTask({
+                    project_id: activeProjectId,
+                    number,
+                    sort_order: tasks.length,
+                    status: 'pendiente',
+                    priority: 'media',
+                    duration_label: '',
+                    ...payload
+                });
+            }
+            closeVideoModal();
+            await refreshTasks();
+            render();
+        } catch (err) {
+            if (errEl) {
+                errEl.textContent = err.message || 'No se pudo guardar.';
+                errEl.classList.add('active');
+            }
         }
-        closeVideoModal();
-        await refreshTasks();
-        render();
     });
 
     document.querySelectorAll('[data-edit]').forEach((btn) => {
@@ -343,10 +310,6 @@ function bindUi() {
         });
     });
 
-    document.querySelectorAll('[data-chat]').forEach((btn) => {
-        btn.addEventListener('click', () => toggleChat(btn.getAttribute('data-chat')));
-    });
-
     setupDnD();
 }
 
@@ -357,44 +320,13 @@ function openVideoModal(task = null) {
     form.id.value = task?.id || '';
     form.name.value = task?.name || '';
     form.description.value = task?.description || '';
-    form.priority.value = task?.priority || 'media';
-    form.duration_label.value = task?.duration_label || '';
-    form.status.value = task?.status || 'pendiente';
+    form.drive_url.value = task?.drive_url || '';
+    form.delivery_date.value = task?.delivery_date || '';
     modal.classList.add('active');
 }
 
 function closeVideoModal() {
     document.getElementById('empVideoModal')?.classList.remove('active');
-}
-
-async function toggleChat(taskId) {
-    const box = document.getElementById(`chat-${taskId}`);
-    if (!box) return;
-    const showing = !box.hidden;
-    box.hidden = showing;
-    if (showing) return;
-
-    const comments = await listTaskComments(taskId);
-    box.innerHTML = `
-        ${comments.map((c) => `
-            <div class="emp-chat-msg">
-                <strong>${escapeHtml(c.profiles?.full_name || 'Usuario')}</strong>
-                <div>${escapeHtml(c.body)}</div>
-            </div>
-        `).join('') || '<div class="emp-chat-msg">Sin comentarios aún.</div>'}
-        <form class="emp-chat-form" data-chat-form="${taskId}">
-            <input name="body" placeholder="Escribe un comentario…" required>
-            <button type="submit" class="emp-mini-btn">Enviar</button>
-        </form>
-    `;
-    box.querySelector('form')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const body = e.target.body.value.trim();
-        if (!body) return;
-        await addTaskComment(taskId, body);
-        toggleChat(taskId);
-        toggleChat(taskId);
-    });
 }
 
 function setupDnD() {

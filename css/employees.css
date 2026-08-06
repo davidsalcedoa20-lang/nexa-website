@@ -213,15 +213,100 @@
     border:1px dashed rgba(255,255,255,.12);
 }
 
-@media (max-width:1100px){
-    .emp-workspace{ grid-template-columns:1fr; }
-    .emp-ws-card.span-2{ grid-column: span 1; }
-    .emp-stats{ grid-template-columns:1fr 1fr; }
-    .emp-calendar{ grid-template-columns:repeat(2, 1fr); }
+.emp-workspace--videos{
+    grid-template-columns:1fr;
+}
+.emp-link-btn--sm{
+    padding:8px 12px; font-size:12px; display:inline-flex; align-items:center;
+}
+.emp-video--admin{ cursor:grab; }
+.emp-video--admin h3{ margin:0; font-size:16px; }
+.emp-video p, .editor-job-desc{
+    white-space:pre-wrap;
+}
+
+/* ---- Portal editor ---- */
+.editor-shell .admin-layout,
+.editor-layout{
+    display:flex; min-height:100vh;
+}
+.editor-sidebar .admin-nav-item{
+    width:100%; text-align:left; font:inherit; cursor:pointer;
+    background:transparent; border:none;
+}
+.editor-sidebar .admin-nav-item.active{
+    color:#fff;
+    background:linear-gradient(135deg, rgba(45,140,255,.16), rgba(140,82,255,.10));
+    border:1px solid rgba(45,140,255,.3);
+}
+.editor-work-list{
+    display:flex; flex-direction:column; gap:18px;
+}
+.editor-job-card{
+    padding:22px 24px; border-radius:22px;
+    background:linear-gradient(165deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+    border:1px solid rgba(255,255,255,.08);
+    display:flex; flex-direction:column; gap:14px;
+}
+.editor-job-head{
+    display:flex; justify-content:space-between; gap:12px; align-items:flex-start; flex-wrap:wrap;
+}
+.editor-job-head h2{
+    margin:4px 0 0; color:#fff; font-size:22px; font-weight:700; letter-spacing:-.02em;
+}
+.editor-job-desc{
+    color:#c8c8c8; font-size:14px; line-height:1.7;
+    padding:14px 16px; border-radius:14px;
+    background:rgba(0,0,0,.22); border:1px solid rgba(255,255,255,.06);
+}
+.editor-job-meta{ display:flex; flex-wrap:wrap; gap:8px; }
+.editor-job-actions{
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+}
+.editor-status-label{
+    display:inline-flex; align-items:center; gap:8px;
+    color:#9a9a9a; font-size:12px; font-weight:600;
+}
+.editor-status-label select{
+    background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.12);
+    color:#fff; border-radius:10px; padding:8px 10px; font:inherit;
+}
+.editor-job-chat{ max-height:240px; }
+
+.editor-cal-nav{
+    display:flex; align-items:center; gap:10px;
+}
+.editor-cal-nav strong{
+    color:#fff; text-transform:capitalize; min-width:160px; text-align:center;
+}
+.editor-cal-grid{
+    display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:8px;
+}
+.editor-cal-dow{
+    text-align:center; font-size:11px; font-weight:700; letter-spacing:.06em;
+    text-transform:uppercase; color:#7a7a7a; padding:6px 0;
+}
+.editor-cal-cell{
+    min-height:120px; border-radius:14px; padding:10px;
+    background:rgba(255,255,255,.025); border:1px dashed rgba(255,255,255,.1);
+    transition:border-color .15s, background .15s;
+}
+.editor-cal-cell.is-empty{ opacity:.35; border-style:solid; }
+.editor-cal-cell.is-over{
+    border-color:rgba(45,140,255,.55); background:rgba(45,140,255,.1);
+}
+.editor-cal-daynum{
+    font-size:13px; font-weight:700; color:#fff; margin-bottom:8px;
+}
+.editor-unscheduled{
+    display:flex; flex-wrap:wrap; gap:8px;
+}
+
+@media (max-width:900px){
+    .editor-cal-grid{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .editor-cal-dow{ display:none; }
 }
 @media (max-width:720px){
-    .emp-stats{ grid-template-columns:1fr; }
-    .emp-modal .admin-form{ grid-template-columns:1fr; }
-    .emp-modal .admin-field.span-2{ grid-column: span 1; }
-    .emp-calendar{ grid-template-columns:1fr; }
+    .editor-job-head h2{ font-size:18px; }
+    .editor-cal-grid{ grid-template-columns:1fr; }
 }

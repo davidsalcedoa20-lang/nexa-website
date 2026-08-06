@@ -87,7 +87,7 @@ export function openDriveFolderSelector({ projectId, onLinked } = {}) {
         upBtn.hidden = state.stack.length <= 1;
         listEl.innerHTML = `<div class="pd-drive-skeleton">${skeletonRows(5)}</div>`;
         try {
-            const data = await listDriveFolders(current.id);
+            const data = await listDriveFolders(current.id, { projectId });
             const folders = data.folders || [];
             if (!folders.length) {
                 listEl.innerHTML = '<p class="pd-drive-empty">No hay subcarpetas aquí.</p>';

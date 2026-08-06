@@ -44,7 +44,7 @@ export async function getMyEmployee() {
     if (!user) return null;
     const { data, error } = await supabase
         .from('employees')
-        .select(`*, employee_roles ( key, label )`)
+        .select(`*, employee_roles ( key, label ), profiles:profile_id ( id, email, full_name )`)
         .eq('profile_id', user.id)
         .maybeSingle();
     if (error) throw error;
@@ -157,6 +157,28 @@ export async function listProjectTasks(projectId) {
         .order('number', { ascending: true });
     if (error) throw error;
     return data || [];
+}
+
+/** Todas las tareas del empleado autenticado (todos sus proyectos). */
+export async function listMyEmployeeTasks() {
+    const me = await getMyEmployee();
+    if (!me) return [];
+    const projects = await listEmployeeProjects(me.id);
+    if (!projects.length) return [];
+    const projectIds = projects.map((p) => p.id);
+    const { data, error } = await supabase
+        .from('employee_tasks')
+        .select('*, employee_projects!inner ( id, title, drive_url, employee_id )')
+        .in('project_id', projectIds)
+        .order('delivery_date', { ascending: true })
+        .order('sort_order', { ascending: true });
+    if (error) throw error;
+    return (data || []).map((row) => ({
+        ...row,
+        project_title: row.employee_projects?.title || '',
+        project_drive_url: row.employee_projects?.drive_url || null,
+        folder_url: row.drive_url || row.employee_projects?.drive_url || null
+    }));
 }
 
 export async function createProjectTask(payload) {

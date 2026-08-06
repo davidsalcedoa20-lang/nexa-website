@@ -31,8 +31,8 @@ export async function getDriveConfigStatus() {
     return invokeDrive('configStatus');
 }
 
-export async function getDriveConnectionStatus() {
-    return invokeDrive('connectionStatus');
+export async function getDriveConnectionStatus(projectId = null) {
+    return invokeDrive('connectionStatus', projectId ? { projectId } : {});
 }
 
 export async function getGoogleAuthUrl({ projectId = null, returnUrl = null } = {}) {
@@ -47,8 +47,11 @@ export async function disconnectGoogleAccount() {
     return invokeDrive('disconnectAccount');
 }
 
-export async function listDriveFolders(folderId = 'root') {
-    return invokeDrive('listFolders', { folderId });
+export async function listDriveFolders(folderId = 'root', { projectId = null } = {}) {
+    return invokeDrive('listFolders', {
+        folderId,
+        ...(projectId ? { projectId } : {})
+    });
 }
 
 export async function linkProjectDriveFolder(projectId, folderId) {

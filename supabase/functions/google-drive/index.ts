@@ -143,7 +143,9 @@ async function getValidAccessToken(db: ReturnType<typeof adminDb>, userId: strin
 
     const expiresAt = conn.token_expires_at ? new Date(conn.token_expires_at).getTime() : 0;
     const stillValid = conn.access_token && expiresAt > Date.now() + 60_000;
-    if (stillValid) return { accessToken: conn.access_token as string, connection: conn };
+    if (stillValid) {
+        return { accessToken: conn.access_token as string, connection: conn, tokenOwnerId: userId };
+    }
 
     const refreshed = await refreshAccessToken(conn.refresh_token);
     const tokenExpiresAt = new Date(Date.now() + (refreshed.expires_in || 3600) * 1000).toISOString();
@@ -154,7 +156,40 @@ async function getValidAccessToken(db: ReturnType<typeof adminDb>, userId: strin
         updated_at: new Date().toISOString()
     }).eq('user_id', userId);
 
-    return { accessToken: refreshed.access_token, connection: { ...conn, access_token: refreshed.access_token } };
+    return {
+        accessToken: refreshed.access_token,
+        connection: { ...conn, access_token: refreshed.access_token },
+        tokenOwnerId: userId
+    };
+}
+
+/**
+ * Misma regla para listar / vincular / ver archivos:
+ * 1) tokens del admin actual
+ * 2) si hay projectId, tokens de projects.drive_connected_by
+ */
+async function resolveDriveAccessForAdmin(
+    db: ReturnType<typeof adminDb>,
+    profileId: string,
+    projectId?: string | null
+) {
+    const own = await getValidAccessToken(db, profileId);
+    if (own) {
+        return {
+            ...own,
+            project: projectId ? await getProject(db, projectId) : null
+        };
+    }
+
+    if (!projectId) return null;
+
+    const project = await getProject(db, projectId);
+    const linkerId = project?.drive_connected_by as string | null | undefined;
+    if (!linkerId || linkerId === profileId) return null;
+
+    const linker = await getValidAccessToken(db, linkerId);
+    if (!linker) return null;
+    return { ...linker, project };
 }
 
 async function driveFetch(accessToken: string, path: string, params: Record<string, string> = {}) {
@@ -397,16 +432,45 @@ Deno.serve(async (req) => {
         }
 
         if (action === 'connectionStatus') {
-            if (!isAdmin) return json({ connected: false });
+            if (!isAdmin) return json({ connected: false, configured: !requireGoogleConfig() });
+
             const { data: conn } = await db
                 .from('google_drive_connections')
                 .select('google_email, updated_at')
                 .eq('user_id', profile.id)
                 .maybeSingle();
+
+            let connected = !!conn;
+            let googleEmail = conn?.google_email || null;
+            let updatedAt = conn?.updated_at || null;
+            let tokenSource: 'self' | 'project_linker' | null = conn ? 'self' : null;
+
+            // Misma regla que listFiles/listFolders: si el proyecto ya fue vinculado
+            // por otro admin, esa conexión cuenta como usable para este proyecto.
+            const projectId = payload.projectId ? String(payload.projectId) : null;
+            if (!connected && projectId) {
+                const project = await getProject(db, projectId);
+                const linkerId = project?.drive_connected_by as string | null | undefined;
+                if (linkerId && linkerId !== profile.id) {
+                    const { data: linkerConn } = await db
+                        .from('google_drive_connections')
+                        .select('google_email, updated_at')
+                        .eq('user_id', linkerId)
+                        .maybeSingle();
+                    if (linkerConn) {
+                        connected = true;
+                        googleEmail = linkerConn.google_email || null;
+                        updatedAt = linkerConn.updated_at || null;
+                        tokenSource = 'project_linker';
+                    }
+                }
+            }
+
             return json({
-                connected: !!conn,
-                googleEmail: conn?.google_email || null,
-                updatedAt: conn?.updated_at || null,
+                connected,
+                googleEmail,
+                updatedAt,
+                tokenSource,
                 configured: !requireGoogleConfig()
             });
         }
@@ -419,8 +483,11 @@ Deno.serve(async (req) => {
 
         if (action === 'listFolders') {
             if (!isAdmin) return json({ error: 'Solo un administrador puede explorar carpetas.' }, 403);
-            const tokenPack = await getValidAccessToken(db, profile.id);
-            if (!tokenPack) return json({ error: 'Conecta tu cuenta de Google Drive primero.' }, 400);
+            const projectId = payload.projectId ? String(payload.projectId) : null;
+            const tokenPack = await resolveDriveAccessForAdmin(db, profile.id, projectId);
+            if (!tokenPack?.accessToken) {
+                return json({ error: 'Conecta tu cuenta de Google Drive primero.' }, 400);
+            }
 
             const parentId = payload.folderId || 'root';
             const data = await driveFetch(tokenPack.accessToken, 'files', {
@@ -443,8 +510,10 @@ Deno.serve(async (req) => {
             const folderId = payload.folderId;
             if (!projectId || !folderId) return json({ error: 'Faltan projectId/folderId.' }, 400);
 
-            const tokenPack = await getValidAccessToken(db, profile.id);
-            if (!tokenPack) return json({ error: 'Conecta tu cuenta de Google Drive primero.' }, 400);
+            const tokenPack = await resolveDriveAccessForAdmin(db, profile.id, projectId);
+            if (!tokenPack?.accessToken) {
+                return json({ error: 'Conecta tu cuenta de Google Drive primero.' }, 400);
+            }
 
             const meta = await driveFetch(tokenPack.accessToken, `files/${folderId}`, {
                 fields: 'id,name,webViewLink,mimeType',
@@ -456,12 +525,14 @@ Deno.serve(async (req) => {
 
             const counts = await countChildren(tokenPack.accessToken, folderId);
             const now = new Date().toISOString();
+            // Preferir al admin actual si tiene tokens propios; si no, conservar el linker.
+            const connectedBy = tokenPack.tokenOwnerId || profile.id;
             const { data: project, error } = await db.from('projects').update({
                 drive_folder_id: meta.id,
                 drive_folder_name: meta.name,
                 drive_folder_url: meta.webViewLink || `https://drive.google.com/drive/folders/${meta.id}`,
                 drive_connected: true,
-                drive_connected_by: profile.id,
+                drive_connected_by: connectedBy,
                 drive_connected_at: now,
                 drive_files_count: counts.files,
                 drive_folders_count: counts.folders,
@@ -500,10 +571,16 @@ Deno.serve(async (req) => {
 
             if (!isAdmin) await assertClientOwnsProject(db, projectId, profile.id);
 
-            const tokenOwnerId = project.drive_connected_by || (isAdmin ? profile.id : null);
-            if (!tokenOwnerId) return json({ error: 'No hay cuenta Google asociada a esta carpeta.' }, 400);
-            const tokenPack = await getValidAccessToken(db, tokenOwnerId);
-            if (!tokenPack) return json({ error: 'La cuenta Google del administrador ya no está conectada.' }, 400);
+            const tokenPack = isAdmin
+                ? await resolveDriveAccessForAdmin(db, profile.id, projectId)
+                : await (async () => {
+                    const tokenOwnerId = project.drive_connected_by;
+                    if (!tokenOwnerId) return null;
+                    return getValidAccessToken(db, tokenOwnerId);
+                })();
+            if (!tokenPack?.accessToken) {
+                return json({ error: 'La cuenta Google del administrador ya no está conectada.' }, 400);
+            }
 
             const counts = await countChildren(tokenPack.accessToken, project.drive_folder_id);
             const now = new Date().toISOString();
@@ -525,10 +602,16 @@ Deno.serve(async (req) => {
             }
             if (!isAdmin) await assertClientOwnsProject(db, projectId, profile.id);
 
-            const tokenOwnerId = project.drive_connected_by || (isAdmin ? profile.id : null);
-            if (!tokenOwnerId) return json({ error: 'No hay cuenta Google asociada a esta carpeta.' }, 400);
-            const tokenPack = await getValidAccessToken(db, tokenOwnerId);
-            if (!tokenPack) return json({ error: 'La cuenta Google del administrador ya no está conectada.' }, 400);
+            const tokenPack = isAdmin
+                ? await resolveDriveAccessForAdmin(db, profile.id, projectId)
+                : await (async () => {
+                    const tokenOwnerId = project.drive_connected_by;
+                    if (!tokenOwnerId) return null;
+                    return getValidAccessToken(db, tokenOwnerId);
+                })();
+            if (!tokenPack?.accessToken) {
+                return json({ error: 'La cuenta Google del administrador ya no está conectada.' }, 400);
+            }
 
             const folderId = payload.folderId || project.drive_folder_id;
             await assertFolderInProjectTree(tokenPack.accessToken, project.drive_folder_id, folderId);

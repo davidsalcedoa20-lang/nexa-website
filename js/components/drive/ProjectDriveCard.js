@@ -35,7 +35,7 @@ export async function mountProjectDriveCard(container, {
 
     if (isAdmin) {
         try {
-            accountStatus = await getDriveConnectionStatus();
+            accountStatus = await getDriveConnectionStatus(current.id);
         } catch (_) {
             accountStatus = { connected: false, configured: false, googleEmail: null };
         }
@@ -43,8 +43,31 @@ export async function mountProjectDriveCard(container, {
 
     render();
 
+    async function refreshAccountStatus() {
+        if (!isAdmin) return accountStatus;
+        try {
+            accountStatus = await getDriveConnectionStatus(current.id);
+        } catch (_) {
+            accountStatus = { connected: false, configured: false, googleEmail: null };
+        }
+        return accountStatus;
+    }
+
+    function openFolderPicker() {
+        openDriveFolderSelector({
+            projectId: current.id,
+            onLinked: (updated) => {
+                current = { ...current, ...updated };
+                onProjectChange?.(current);
+                render();
+            }
+        });
+    }
+
     function render() {
-        const connected = !!(current.drive_connected && current.drive_folder_id);
+        const folderLinked = !!(current.drive_connected && current.drive_folder_id);
+        // Misma señal de "API usable" que connectionStatus / listFolders / listFiles
+        const driveApiReady = !!accountStatus.connected;
         container.innerHTML = '';
         container.className = 'pd-drive-card';
 
@@ -55,17 +78,17 @@ export async function mountProjectDriveCard(container, {
                 ${DRIVE_ICON_SVG}
                 <div>
                     <h3>Documentos del proyecto</h3>
-                    <p class="pd-drive-card-subtitle">${connected ? 'Google Drive' : 'Integración con Google Drive'}</p>
+                    <p class="pd-drive-card-subtitle">${folderLinked ? 'Google Drive' : 'Integración con Google Drive'}</p>
                 </div>
             </div>
-            <span class="pd-drive-status-badge ${connected ? 'is-connected' : 'is-disconnected'}">
+            <span class="pd-drive-status-badge ${folderLinked ? 'is-connected' : 'is-disconnected'}">
                 <span class="pd-drive-status-dot"></span>
-                ${connected ? 'Conectado' : 'Sin conectar'}
+                ${folderLinked ? 'Conectado' : 'Sin conectar'}
             </span>
         `;
         container.appendChild(header);
 
-        if (!connected) {
+        if (!folderLinked) {
             const empty = document.createElement('div');
             empty.className = 'pd-drive-empty-state';
             empty.innerHTML = `<p>Esta carpeta aún no está vinculada.</p>`;
@@ -74,7 +97,7 @@ export async function mountProjectDriveCard(container, {
                 actions.className = 'pd-drive-card-actions';
                 if (!accountStatus.configured) {
                     actions.innerHTML = `<p class="pd-drive-hint">Configura GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET / GOOGLE_REDIRECT_URI en los secrets de Supabase para activar OAuth.</p>`;
-                } else if (!accountStatus.connected) {
+                } else if (!driveApiReady) {
                     actions.appendChild(renderDriveConnectionButton({
                         label: 'Conectar Google Drive',
                         projectId: current.id,
@@ -85,16 +108,7 @@ export async function mountProjectDriveCard(container, {
                     pickBtn.type = 'button';
                     pickBtn.className = 'admin-btn-primary';
                     pickBtn.textContent = 'Seleccionar carpeta';
-                    pickBtn.addEventListener('click', () => {
-                        openDriveFolderSelector({
-                            projectId: current.id,
-                            onLinked: (updated) => {
-                                current = { ...current, ...updated };
-                                onProjectChange?.(current);
-                                render();
-                            }
-                        });
-                    });
+                    pickBtn.addEventListener('click', () => openFolderPicker());
                     actions.appendChild(pickBtn);
                     if (accountStatus.googleEmail) {
                         const note = document.createElement('p');
@@ -166,22 +180,24 @@ export async function mountProjectDriveCard(container, {
             changeBtn.className = 'admin-btn-secondary';
             changeBtn.textContent = 'Cambiar carpeta';
             changeBtn.addEventListener('click', async () => {
-                if (!accountStatus.connected) {
-                    const connectBtn = renderDriveConnectionButton({
-                        projectId: current.id,
-                        returnUrl: window.location.href.split('#')[0]
-                    });
-                    connectBtn.click();
-                    return;
-                }
-                openDriveFolderSelector({
-                    projectId: current.id,
-                    onLinked: (updated) => {
-                        current = { ...current, ...updated };
-                        onProjectChange?.(current);
-                        render();
+                changeBtn.disabled = true;
+                try {
+                    // Misma fuente de verdad que listFolders/listFiles (con projectId).
+                    const status = await refreshAccountStatus();
+                    if (!status.connected) {
+                        const connectBtn = renderDriveConnectionButton({
+                            projectId: current.id,
+                            returnUrl: window.location.href.split('#')[0]
+                        });
+                        connectBtn.click();
+                        return;
                     }
-                });
+                    // Abrir selector: listFolders usa la misma resolución de tokens
+                    // (admin actual o drive_connected_by) que "Ver archivos".
+                    openFolderPicker();
+                } finally {
+                    changeBtn.disabled = false;
+                }
             });
             actions.appendChild(changeBtn);
 
