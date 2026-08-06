@@ -23,16 +23,29 @@
         <a href="mi-agenda.html" class="admin-nav-item">Workspace</a>
         <a href="contabilidad.html" class="admin-nav-item">Finanzas</a>
         <a href="calendario.html" class="admin-nav-item">Calendario</a>
-        <div class="emp-nav-group">
-            <div class="emp-nav-label"><svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/><path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Empleados</div>
-            <div class="emp-nav-sub">
-                <a href="empleados.html" class="is-active">Todos los empleados</a>
-                <a href="empleados.html?nuevo=1">Crear empleado</a>
-                <a href="empleados-calendario.html" class="">Calendario de entregas</a>
-                <a href="empleados-rendimiento.html" class="">Rendimiento</a>
-            </div>
-        </div>
-        <a href="usuarios-permisos.html" class="admin-nav-item">Usuarios y Permisos</a>
+                <div class="emp-nav-group" data-emp-accordion>
+                    <button type="button" class="emp-nav-toggle" aria-expanded="false" aria-controls="empNavSubpanel">
+                        <span class="emp-nav-toggle-left">
+                            <svg class="emp-nav-icon" viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                                <circle cx="9" cy="7" r="4"/>
+                                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <span class="emp-nav-title">Empleados</span>
+                        </span>
+                        <svg class="emp-nav-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="m6 9 6 6 6-6"/>
+                        </svg>
+                    </button>
+                    <div class="emp-nav-sub" id="empNavSubpanel">
+                        <a href="empleados.html">Todos los empleados</a>
+                        <a href="empleados.html?nuevo=1">Crear empleado</a>
+                        <a href="empleados-calendario.html">Calendario de entregas</a>
+                        <a href="empleados-rendimiento.html">Rendimiento</a>
+                    </div>
+                </div>
+                <a href="usuarios-permisos.html" class="admin-nav-item">Usuarios y Permisos</a>
         <a href="configuracion.html" class="admin-nav-item">Configuración</a>
     </nav>
     <button type="button" class="admin-logout" data-logout>Cerrar sesión</button>

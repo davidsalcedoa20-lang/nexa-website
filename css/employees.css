@@ -1,21 +1,7 @@
 /* ==========================================================
    NEXA HUB — Empleados (estilos propios, no reutiliza Clientes)
+   Acordeón del sidebar: ver css/admin.css (.emp-nav-*)
    ========================================================== */
-
-.emp-nav-group{ margin:6px 0 10px; }
-.emp-nav-label{
-    display:flex; align-items:center; gap:10px;
-    padding:10px 16px; color:#cfcfcf; font-size:12px; font-weight:700;
-    letter-spacing:.08em; text-transform:uppercase;
-}
-.emp-nav-label svg{ width:18px; height:18px; opacity:.85; }
-.emp-nav-sub{ display:flex; flex-direction:column; gap:2px; padding:0 8px 6px 28px; }
-.emp-nav-sub a{
-    text-decoration:none; color:#9a9a9a; font-size:13px; padding:8px 12px; border-radius:10px;
-}
-.emp-nav-sub a:hover, .emp-nav-sub a.is-active{
-    color:#fff; background:rgba(45,140,255,.14);
-}
 
 .emp-page{ display:flex; flex-direction:column; gap:20px; }
 .emp-hero{
