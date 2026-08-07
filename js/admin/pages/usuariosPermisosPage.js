@@ -41,9 +41,11 @@ async function init() {
     const ok = await requirePagePermission(['__owner_only__'], { redirectTo: 'index.html' });
     if (!ok) return;
 
-    if (!(await amIOwner())) {
-        if (loadingEl) loadingEl.textContent = 'Solo el Administrador Principal puede gestionar usuarios.';
-        return;
+    // Owner siempre; si aún no hay owner, un admin puede gestionar (fallback del guard).
+    const owner = await amIOwner();
+    if (!owner) {
+        // Permitir continuar solo si el guard ya dejó pasar (sin owner en sistema).
+        console.info('[usuarios-permisos] Entrando como admin (fallback sin owner asignado).');
     }
 
     if (newAdminBtn) {

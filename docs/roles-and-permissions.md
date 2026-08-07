@@ -40,4 +40,18 @@ Edge Function `manage-admin` exige owner.
 
 ## UI
 
-`admin/usuarios-permisos.html` — solo owner.
+`admin/usuarios-permisos.html` — solo el Administrador Principal (`owner`).
+
+## Administrador Principal
+
+Debe existir un perfil con `role = 'owner'`.
+
+Asignado: `davidsalcedoa2.0@gmail.com` (David Salcedo).
+
+```sql
+update public.profiles
+set role = 'owner', project_access_mode = 'all'
+where email = 'CORREO_DEL_PRINCIPAL';
+```
+
+(Si el update lo bloquea un trigger, desactivar temporalmente `restrict_profile_self_update`.)

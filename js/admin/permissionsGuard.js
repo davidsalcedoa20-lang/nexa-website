@@ -5,6 +5,7 @@ import {
     hasAnyPermission, hasPermission, isOwner, getCurrentStaffProfile, loadMyPermissionKeys
 } from '../services/permissionService.js';
 import { PAGE_PERMISSION_MAP, ROLE_LABELS } from '../components/permissions/permissionCatalog.js';
+import { supabase } from '../services/supabaseClient.js';
 
 function pageName() {
     const parts = window.location.pathname.split('/');
@@ -14,6 +15,8 @@ function pageName() {
 /**
  * Bloquea la página si el usuario no tiene ninguno de los permisos.
  * Owner siempre pasa. `__owner_only__` exige Administrador Principal.
+ * Si aún no hay ningún owner en el sistema, permite entrar a un admin
+ * (evita quedar bloqueados fuera de Usuarios y Permisos).
  */
 export async function requirePagePermission(keys = null, { redirectTo = 'index.html' } = {}) {
     const profile = await getCurrentStaffProfile();
@@ -34,6 +37,16 @@ export async function requirePagePermission(keys = null, { redirectTo = 'index.h
     }
 
     if (required.includes('__owner_only__')) {
+        // Fallback de emergencia: sin owner asignado, un admin puede entrar.
+        const { count } = await supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('role', 'owner');
+        const hasOwner = (count || 0) > 0;
+        if (!hasOwner && profile.role === 'admin') {
+            await applyPermissionUI();
+            return true;
+        }
         if (redirectTo) {
             window.location.replace(redirectTo + '?denied=1');
             return false;
@@ -73,6 +86,15 @@ export async function applyPermissionUI() {
     const owner = profile?.role === 'owner';
     const keys = await loadMyPermissionKeys();
 
+    let ownerExists = owner;
+    if (!owner) {
+        const { count } = await supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .eq('role', 'owner');
+        ownerExists = (count || 0) > 0;
+    }
+
     document.querySelectorAll('[data-user-role-label]').forEach((el) => {
         el.textContent = ROLE_LABELS[profile?.role] || 'Administrador';
     });
@@ -80,7 +102,8 @@ export async function applyPermissionUI() {
     const navRules = [
         {
             match: 'usuarios-permisos.html',
-            test: () => owner
+            // Visible para owner; si no hay owner, también para admin (evitar menú oculto bloqueado).
+            test: () => owner || !ownerExists
         },
         {
             match: 'proyectos.html',
