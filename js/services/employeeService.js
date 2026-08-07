@@ -76,6 +76,26 @@ export async function createEmployee(payload) {
     return data;
 }
 
+export async function deleteEmployeeAccount(employeeId) {
+    const { data, error } = await supabase.functions.invoke('delete-employee', {
+        body: { employee_id: employeeId }
+    });
+
+    if (error) {
+        let serverMessage = data && data.error;
+        try {
+            if (!serverMessage && error.context && typeof error.context.json === 'function') {
+                const parsed = await error.context.json();
+                serverMessage = parsed?.error;
+            }
+        } catch (_) { /* ignore */ }
+        throw new Error(serverMessage || error.message || 'No se pudo eliminar el empleado.');
+    }
+
+    if (data?.error) throw new Error(data.error);
+    return data;
+}
+
 export async function updateEmployeeRow(employeeId, patch) {
     const { data, error } = await supabase
         .from('employees')

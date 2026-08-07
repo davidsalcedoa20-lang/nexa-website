@@ -560,3 +560,31 @@
     .ew-info-head{ flex-direction:column; }
     .ew-delivery{ text-align:left; width:100%; }
 }
+
+/* Lista: acciones + eliminar */
+.emp-card--dash{ text-decoration:none; }
+.emp-card-link{ display:flex; flex-direction:column; gap:14px; text-decoration:none; color:inherit; }
+.emp-card-actions{
+    display:flex; flex-wrap:wrap; gap:8px; margin-top:2px;
+    padding-top:12px; border-top:1px solid rgba(255,255,255,.06);
+}
+.emp-btn-danger{
+    border-color:rgba(255,107,129,.35) !important;
+    color:#FF8A9A !important;
+}
+.emp-btn-danger:hover{
+    background:rgba(255,107,129,.12) !important;
+}
+.emp-btn-danger-solid{
+    background:linear-gradient(135deg, #FF4D6A, #C9184A) !important;
+    border:none !important;
+}
+.emp-toast{
+    position:fixed; left:50%; bottom:28px; transform:translateX(-50%) translateY(20px);
+    padding:12px 18px; border-radius:14px; z-index:1200;
+    background:rgba(20,24,36,.94); border:1px solid rgba(74,222,128,.35);
+    color:#fff; font-size:13.5px; font-weight:600;
+    opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+    box-shadow:0 12px 32px rgba(0,0,0,.35);
+}
+.emp-toast.is-visible{ opacity:1; transform:translateX(-50%) translateY(0); }

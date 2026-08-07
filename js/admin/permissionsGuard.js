@@ -83,10 +83,6 @@ export async function applyPermissionUI() {
             test: () => owner
         },
         {
-            match: 'empleados.html',
-            test: () => owner || keys.includes('employees.manage')
-        },
-        {
             match: 'proyectos.html',
             test: () => owner || keys.some((k) => k.startsWith('projects.'))
         }
@@ -102,9 +98,9 @@ export async function applyPermissionUI() {
         link.hidden = !rule.test();
     });
 
-    // Grupo Empleados en sidebar
+    // Grupo Empleados: visible para todo staff (owner/admin).
     document.querySelectorAll('.emp-nav-group').forEach((group) => {
-        group.hidden = !(owner || keys.includes('employees.manage'));
+        group.hidden = false;
     });
 
     document.querySelectorAll('[data-requires-permission]').forEach((el) => {

@@ -54,10 +54,6 @@ export const ROLE_LABELS = {
 /** Mapeo nav/página → permiso mínimo. Vacío = cualquier admin. */
 export const PAGE_PERMISSION_MAP = {
     'usuarios-permisos.html': ['__owner_only__'],
-    'empleados.html': ['employees.manage'],
-    'empleado.html': ['employees.manage'],
-    'empleados-calendario.html': ['employees.manage'],
-    'empleados-rendimiento.html': ['employees.manage'],
     'proyectos.html': ['projects.view_all', 'projects.view_assigned', 'projects.view_own'],
     'proyecto-detalle.html': ['projects.view_all', 'projects.view_assigned', 'projects.view_own']
 };

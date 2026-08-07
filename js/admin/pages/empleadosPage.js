@@ -1,8 +1,8 @@
 /* ==========================================================
-   NEXA HUB — Página: listado Empleados
+   NEXA HUB — Página: listado Empleados (Directores de Edición)
    ========================================================== */
 import {
-    listEmployees, createEmployee, getEmployeeStats
+    listEmployees, createEmployee, getEmployeeStats, deleteEmployeeAccount
 } from '../../services/employeeService.js';
 import { generateTemporaryPassword } from '../../utils/passwordGenerator.js';
 import { escapeHtml } from '../../components/projectUi.js';
@@ -21,12 +21,26 @@ const photoInput = document.getElementById('empPhoto');
 const photoPreview = document.getElementById('empPhotoPreview');
 const passGen = document.getElementById('empPassGenerate');
 const passField = document.getElementById('empPassword');
+const deleteOverlay = document.getElementById('empDeleteOverlay');
+const toastEl = document.getElementById('empToast');
 
 let selectedColor = COLORS[0];
 let photoDataUrl = null;
+let pendingDeleteId = null;
+let pendingDeleteName = '';
 
 function initials(first, last) {
     return `${(first || '?')[0]}${(last || '?')[0]}`.toUpperCase();
+}
+
+function showToast(message) {
+    if (!toastEl) {
+        window.alert(message);
+        return;
+    }
+    toastEl.textContent = message;
+    toastEl.classList.add('is-visible');
+    window.setTimeout(() => toastEl.classList.remove('is-visible'), 3200);
 }
 
 function openModal() {
@@ -48,6 +62,20 @@ function closeModal() {
     overlay?.classList.remove('active');
 }
 
+function openDeleteModal(id, name) {
+    pendingDeleteId = id;
+    pendingDeleteName = name || 'este Director de Edición';
+    const nameEl = document.getElementById('empDeleteName');
+    if (nameEl) nameEl.textContent = pendingDeleteName;
+    deleteOverlay?.classList.add('active');
+}
+
+function closeDeleteModal() {
+    pendingDeleteId = null;
+    pendingDeleteName = '';
+    deleteOverlay?.classList.remove('active');
+}
+
 function renderColors() {
     if (!colorRow) return;
     colorRow.innerHTML = COLORS.map((c) =>
@@ -57,6 +85,16 @@ function renderColors() {
         btn.addEventListener('click', () => {
             selectedColor = btn.getAttribute('data-color');
             renderColors();
+        });
+    });
+}
+
+function bindCardActions() {
+    grid?.querySelectorAll('[data-delete-employee]').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            openDeleteModal(btn.getAttribute('data-delete-employee'), btn.getAttribute('data-employee-name') || '');
         });
     });
 }
@@ -93,29 +131,38 @@ async function load() {
                 : '—';
 
             return `
-                <a class="emp-card emp-card--dash" href="empleado.html?id=${emp.id}" style="--emp-color:${escapeHtml(emp.color_hex || '#2D8CFF')}">
-                    <div class="emp-card-top">
-                        <div class="emp-avatar">${avatar}</div>
-                        <div>
-                            <h3 class="emp-card-name">${escapeHtml(name)}</h3>
-                            <p class="emp-card-role">${escapeHtml(role)}</p>
+                <article class="emp-card emp-card--dash" style="--emp-color:${escapeHtml(emp.color_hex || '#2D8CFF')}">
+                    <a class="emp-card-link" href="empleado.html?id=${emp.id}">
+                        <div class="emp-card-top">
+                            <div class="emp-avatar">${avatar}</div>
+                            <div>
+                                <h3 class="emp-card-name">${escapeHtml(name)}</h3>
+                                <p class="emp-card-role">${escapeHtml(role)}</p>
+                            </div>
                         </div>
+                        <div class="emp-card-meta">
+                            <span class="emp-pill ${emp.status === 'active' ? 'is-active' : 'is-inactive'}">${emp.status === 'active' ? 'Activo' : 'Inactivo'}</span>
+                            <span>${escapeHtml(email)}</span>
+                        </div>
+                        <div class="emp-dash-grid">
+                            <div><span>Activos</span><strong>${stats.active ?? stats.pending ?? 0}</strong></div>
+                            <div><span>Terminados</span><strong>${stats.delivered ?? 0}</strong></div>
+                            <div><span>Próxima entrega</span><strong>${escapeHtml(nextDate)}</strong></div>
+                            <div><span>Última actividad</span><strong>${escapeHtml(lastAct)}</strong></div>
+                        </div>
+                    </a>
+                    <div class="emp-card-actions">
+                        <a class="admin-btn-secondary" href="empleado.html?id=${emp.id}">Ver panel</a>
+                        <button type="button" class="admin-btn-secondary emp-btn-danger"
+                            data-delete-employee="${emp.id}"
+                            data-employee-name="${escapeHtml(name)}">Eliminar empleado</button>
                     </div>
-                    <div class="emp-card-meta">
-                        <span class="emp-pill ${emp.status === 'active' ? 'is-active' : 'is-inactive'}">${emp.status === 'active' ? 'Activo' : 'Inactivo'}</span>
-                        <span>${escapeHtml(email)}</span>
-                    </div>
-                    <div class="emp-dash-grid">
-                        <div><span>Activos</span><strong>${stats.active ?? stats.pending ?? 0}</strong></div>
-                        <div><span>Terminados</span><strong>${stats.delivered ?? 0}</strong></div>
-                        <div><span>Próxima entrega</span><strong>${escapeHtml(nextDate)}</strong></div>
-                        <div><span>Última actividad</span><strong>${escapeHtml(lastAct)}</strong></div>
-                    </div>
-                </a>
+                </article>
             `;
         }));
 
         if (grid) grid.innerHTML = cards.join('');
+        bindCardActions();
     } catch (err) {
         console.error('[empleados]', err);
         if (loading) loading.style.display = 'none';
@@ -130,6 +177,26 @@ newBtn?.addEventListener('click', openModal);
 document.getElementById('empModalClose')?.addEventListener('click', closeModal);
 document.getElementById('empModalCancel')?.addEventListener('click', closeModal);
 overlay?.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+
+document.getElementById('empDeleteClose')?.addEventListener('click', closeDeleteModal);
+document.getElementById('empDeleteCancel')?.addEventListener('click', closeDeleteModal);
+deleteOverlay?.addEventListener('click', (e) => { if (e.target === deleteOverlay) closeDeleteModal(); });
+
+document.getElementById('empDeleteConfirm')?.addEventListener('click', async () => {
+    if (!pendingDeleteId) return;
+    const btn = document.getElementById('empDeleteConfirm');
+    if (btn) btn.disabled = true;
+    try {
+        await deleteEmployeeAccount(pendingDeleteId);
+        closeDeleteModal();
+        await load();
+        showToast('Director de Edición eliminado correctamente.');
+    } catch (err) {
+        window.alert(err.message || 'No se pudo eliminar el empleado.');
+    } finally {
+        if (btn) btn.disabled = false;
+    }
+});
 
 passGen?.addEventListener('click', () => {
     if (passField) {
