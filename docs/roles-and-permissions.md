@@ -29,7 +29,7 @@ Sin permission keys. Cada `finance_books.admin_id` es dueño.
 Compartir: `finance_book_shares`. Owner role ve todas.
 
 ### 3. Administradores
-Solo el Administrador Principal (`role = owner`) puede crear/editar/eliminar admins y permisos.
+Solo el CEO (`role = owner`) puede crear/editar/eliminar admins y permisos.
 Edge Function `manage-admin` exige owner.
 
 ### 4. Empleados
@@ -45,9 +45,9 @@ Edge Function `manage-admin` exige owner.
 
 ## UI
 
-`admin/usuarios-permisos.html` — solo el Administrador Principal (`owner`).
+`admin/usuarios-permisos.html` — solo el CEO (`owner`).
 
-## Administrador Principal
+## CEO
 
 Debe existir un perfil con `role = 'owner'`.
 

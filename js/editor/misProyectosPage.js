@@ -47,7 +47,7 @@ async function init() {
         root.innerHTML = '<div class="emp-empty">No se encontró tu perfil de empleado.</div>';
         return;
     }
-    if (userChip) userChip.textContent = employee.first_name || 'Editor';
+    if (userChip) userChip.textContent = employee.first_name || 'Director';
     await loadTasks();
     bindNav();
     render();
@@ -285,14 +285,14 @@ function renderSettingsView() {
                 <div>
                     <span class="emp-kicker">Cuenta</span>
                     <h1>Ajustes</h1>
-                    <p>Tu perfil de editor en NEXA Hub.</p>
+                    <p>Tu perfil de Director de Edición en NEXA Hub.</p>
                 </div>
             </div>
             <section class="emp-ws-card" style="max-width:560px">
                 <div class="emp-ws-head"><div><h2>Perfil</h2></div></div>
                 <p style="margin:0;color:#cfcfcf;font-size:14px;line-height:1.7">
                     <strong style="color:#fff">${escapeHtml(`${employee.first_name} ${employee.last_name}`)}</strong><br>
-                    ${escapeHtml(employee.employee_roles?.label || 'Editor')}<br>
+                    ${escapeHtml(employee.employee_roles?.label || 'Director de Edición')}<br>
                     ${escapeHtml(email || 'Sin correo visible')}
                 </p>
                 <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">

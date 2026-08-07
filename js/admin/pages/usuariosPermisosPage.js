@@ -1,6 +1,6 @@
 /* ==========================================================
    NEXA HUB — Usuarios y Permisos (modelo simplificado)
-   Solo el Administrador Principal gestiona esta sección.
+   Solo el CEO gestiona esta sección.
    ========================================================== */
 import { listProjects } from '../../services/projectService.js';
 import {
@@ -119,9 +119,9 @@ function renderSimplePermissionCards({
                     </div>
                 </header>
                 <ul class="perm-block-notes">
-                    <li>Solo él y el Administrador Principal la ven por defecto.</li>
+                    <li>Solo él y el CEO la ven por defecto.</li>
                     <li>Puede compartirla con otros desde <strong>Finanzas → Compartir con</strong>.</li>
-                    <li>El Administrador Principal siempre ve todas las contabilidades.</li>
+                    <li>El CEO siempre ve todas las contabilidades.</li>
                 </ul>
             </article>
 
@@ -134,9 +134,9 @@ function renderSimplePermissionCards({
                     </div>
                 </header>
                 <ul class="perm-block-notes">
-                    <li>Solo el Administrador Principal puede crear, editar o eliminar administradores.</li>
+                    <li>Solo el CEO puede crear, editar o eliminar administradores.</li>
                     <li>Ningún otro administrador puede modificar permisos ni roles.</li>
-                    <li>El Administrador Principal nunca pierde sus privilegios.</li>
+                    <li>El CEO nunca pierde sus privilegios.</li>
                 </ul>
             </article>
 

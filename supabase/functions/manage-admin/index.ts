@@ -47,7 +47,7 @@ async function assertOwner(
         .maybeSingle();
 
     if (!profile || profile.role !== 'owner') {
-        return { error: 'Solo el Administrador Principal puede gestionar administradores.', status: 403 as const };
+        return { error: 'Solo el CEO puede gestionar administradores.', status: 403 as const };
     }
     return { profile };
 }

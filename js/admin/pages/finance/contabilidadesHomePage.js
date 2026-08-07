@@ -67,7 +67,7 @@ function render() {
             <div class="fin-page-heading">
                 <span class="fin-kicker">Finanzas</span>
                 <h1>Mis Finanzas</h1>
-                <p>Tu contabilidad privada. Compártela solo si lo necesitas. El Administrador Principal siempre tiene acceso.</p>
+                <p>Tu contabilidad privada. Compártela solo si lo necesitas. El CEO siempre tiene acceso.</p>
             </div>
             <button type="button" class="admin-btn-primary" id="finNewBookBtn">+ Nueva Contabilidad</button>
         </div>
@@ -139,7 +139,7 @@ function render() {
                 </div>
                 <p style="color:rgba(255,255,255,.55);font-size:13px;line-height:1.6;margin:0 0 14px">
                     Selecciona administradores que podrán ver esta contabilidad.
-                    Si no compartes, solo tú y el Administrador Principal la verán.
+                    Si no compartes, solo tú y el CEO la verán.
                 </p>
                 <div id="finShareList" class="perm-project-checks"></div>
                 <div class="admin-modal-actions">

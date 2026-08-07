@@ -101,7 +101,7 @@ async function render() {
             <div class="emp-profile-bar" style="--emp-color:${escapeHtml(color)}">
                 <div class="emp-avatar">${avatar}</div>
                 <div style="flex:1;min-width:180px">
-                    <span class="emp-kicker">Empleado · Editor</span>
+                    <span class="emp-kicker">Director de Edición</span>
                     <h1 style="margin:0;color:#fff;font-size:26px">${escapeHtml(name)}</h1>
                     <p style="margin:4px 0 0;color:#9a9a9a">${escapeHtml(role)} · ${escapeHtml(email)}</p>
                 </div>
@@ -127,14 +127,14 @@ async function render() {
             <div class="emp-workspace emp-workspace--videos">
                 <section class="emp-ws-card span-2">
                     <div class="emp-ws-head">
-                        <div><h2>Trabajos asignados</h2><p>Creación rápida · editor: ${escapeHtml(name)}</p></div>
+                        <div><h2>Trabajos asignados</h2><p>Creación rápida · director: ${escapeHtml(name)}</p></div>
                         <button type="button" class="admin-btn-primary" id="empAddVideo">+ Nuevo trabajo</button>
                     </div>
                     <div class="emp-video-list" id="empVideoList">${renderVideos()}</div>
                 </section>
                 <section class="emp-ws-card span-2">
                     <div class="emp-ws-head">
-                        <div><h2>Fechas de entrega</h2><p>Se actualiza cuando el editor cambia el estado o tú editas la fecha</p></div>
+                        <div><h2>Fechas de entrega</h2><p>Se actualiza cuando el director cambia el estado o tú editas la fecha</p></div>
                     </div>
                     <div class="emp-calendar" id="empCalendar">${renderCalendar()}</div>
                 </section>
@@ -179,7 +179,7 @@ async function render() {
                     </div>
                     <div class="admin-field">
                         <label>Indicaciones</label>
-                        <textarea name="instructions" rows="5" placeholder="Indicaciones detalladas para el editor"></textarea>
+                        <textarea name="instructions" rows="5" placeholder="Indicaciones detalladas para el director de edición"></textarea>
                     </div>
                     <div class="emp-assign-block">
                         <h4>Carpeta de Google Drive</h4>
@@ -205,7 +205,7 @@ async function render() {
                         <div id="empChecklistBuilder" class="emp-check-builder"></div>
                     </div>
 
-                    <p class="ew-muted" style="margin:0">Editor asignado: <strong style="color:#fff">${escapeHtml(name)}</strong></p>
+                    <p class="ew-muted" style="margin:0">Director de Edición asignado: <strong style="color:#fff">${escapeHtml(name)}</strong></p>
 
                     <span class="admin-form-error" id="empVideoError"></span>
                     <div class="admin-modal-actions">
@@ -253,7 +253,7 @@ function renderVideos() {
                     <h3>Comentarios</h3>
                     <div class="ew-chat" id="adm-chat-${t.id}"><div class="ew-chat-loading">Cargando…</div></div>
                     <form class="emp-chat-form ew-chat-form" data-adm-chat="${t.id}">
-                        <input name="body" required placeholder="Responder al editor…">
+                        <input name="body" required placeholder="Responder al director…">
                         <button type="submit" class="emp-mini-btn">Enviar</button>
                     </form>
                 </div>
@@ -285,7 +285,7 @@ function renderChecklistBuilder() {
     const box = document.getElementById('empChecklistBuilder');
     if (!box) return;
     if (!draftChecklist.length) {
-        box.innerHTML = '<p class="ew-muted">Agrega ítems que el editor irá marcando.</p>';
+        box.innerHTML = '<p class="ew-muted">Agrega ítems que el director irá marcando.</p>';
         return;
     }
     box.innerHTML = draftChecklist.map((item, idx) => `

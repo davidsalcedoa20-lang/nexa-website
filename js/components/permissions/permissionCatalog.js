@@ -16,8 +16,8 @@ export const PROJECT_ACCESS_OPTIONS = [
     {
         id: 'selected',
         key: 'projects.view_assigned',
-        label: 'Puede ver únicamente los proyectos asignados por el Administrador Principal',
-        hint: 'El Administrador Principal elige qué proyectos ve. Siempre verá los que él cree.'
+        label: 'Puede ver únicamente los proyectos asignados por el CEO',
+        hint: 'El CEO elige qué proyectos ve. Siempre verá los que él cree.'
     },
     {
         id: 'own',

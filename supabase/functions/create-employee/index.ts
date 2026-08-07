@@ -72,9 +72,9 @@ Deno.serve(async (req) => {
             .from('employee_roles').select('key').eq('key', roleKey).maybeSingle();
         if (!roleRow) return json({ error: 'Cargo no válido.' }, 400);
 
-        // Por ahora solo Editor está habilitado en producto
+        // Por ahora solo Director de Edición (key: editor) está habilitado
         if (roleKey !== 'editor') {
-            return json({ error: 'Por ahora solo el cargo Editor está disponible.' }, 400);
+            return json({ error: 'Por ahora solo el cargo Director de Edición está disponible.' }, 400);
         }
 
         let page = 1;

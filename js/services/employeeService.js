@@ -4,7 +4,7 @@
 import { supabase } from '../admin/supabase/client.js';
 
 const ROLE_LABELS_FALLBACK = {
-    editor: 'Editor',
+    editor: 'Director de Edición',
     designer: 'Diseñador',
     photographer: 'Fotógrafo',
     community: 'Community Manager',
@@ -23,7 +23,7 @@ function mapEmployee(row) {
 export async function listEmployees() {
     const { data, error } = await supabase
         .from('employees')
-        .select('*, profiles:profile_id ( id, email, is_active )')
+        .select('*, employee_roles ( key, label ), profiles:profile_id ( id, email, is_active )')
         .order('created_at', { ascending: false });
     if (error) throw error;
     return (data || []).map(mapEmployee);
@@ -32,7 +32,7 @@ export async function listEmployees() {
 export async function getEmployee(employeeId) {
     const { data, error } = await supabase
         .from('employees')
-        .select('*, profiles:profile_id ( id, email, is_active, full_name )')
+        .select('*, employee_roles ( key, label ), profiles:profile_id ( id, email, is_active, full_name )')
         .eq('id', employeeId)
         .maybeSingle();
     if (error) throw error;
@@ -48,7 +48,7 @@ export async function getMyEmployee() {
         .eq('profile_id', user.id)
         .maybeSingle();
     if (error) throw error;
-    return data;
+    return mapEmployee(data);
 }
 
 export async function createEmployee(payload) {

@@ -252,7 +252,7 @@ form?.addEventListener('submit', async (e) => {
         closeModal();
         await load();
         if (result?.temporaryPassword) {
-            window.alert(`Empleado creado.\nCorreo: ${result.email}\nContraseña temporal: ${result.temporaryPassword}\n\nCópiala y envíasela al editor.`);
+            window.alert(`Director de Edición creado.\nCorreo: ${result.email}\nContraseña temporal: ${result.temporaryPassword}\n\nCópiala y envíasela de forma segura.`);
         }
     } catch (err) {
         console.error('[empleados] create', err);

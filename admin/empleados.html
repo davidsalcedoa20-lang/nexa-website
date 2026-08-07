@@ -74,7 +74,7 @@
 <main class="admin-main">
 <div class="emp-page">
   <div class="emp-hero">
-    <div><span class="emp-kicker">Equipo creativo</span><h1>Empleados</h1><p>Administra editores y su espacio de trabajo.</p></div>
+    <div><span class="emp-kicker">Equipo creativo</span><h1>Empleados</h1><p>Administra Directores de Edición y su espacio de trabajo.</p></div>
     <button type="button" class="admin-btn-primary" id="empNewBtn">+ Nuevo empleado</button>
   </div>
   <div class="admin-state" id="empLoading" style="display:flex"><div class="admin-spinner"></div><span>Cargando empleados…</span></div>
@@ -95,7 +95,7 @@
         <div style="display:flex;gap:8px"><input type="text" name="password" id="empPassword" required minlength="8" style="flex:1"><button type="button" class="admin-btn-secondary" id="empPassGenerate">Generar</button></div>
       </div>
       <div class="admin-field"><label>Cargo</label>
-        <select name="role_key"><option value="editor" selected>Editor</option><option value="designer" disabled>Diseñador (próximamente)</option><option value="photographer" disabled>Fotógrafo (próximamente)</option><option value="community" disabled>Community Manager (próximamente)</option><option value="admin_ops" disabled>Administrador (próximamente)</option></select>
+        <select name="role_key"><option value="editor" selected>Director de Edición</option><option value="designer" disabled>Diseñador (próximamente)</option><option value="photographer" disabled>Fotógrafo (próximamente)</option><option value="community" disabled>Community Manager (próximamente)</option><option value="admin_ops" disabled>Administrador (próximamente)</option></select>
       </div>
       <div class="admin-field"><label>Estado</label><select name="status"><option value="active">Activo</option><option value="inactive">Inactivo</option></select></div>
       <div class="admin-field span-2"><label>Color identificador</label><div class="emp-color-row" id="empColorRow"></div></div>

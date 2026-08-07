@@ -14,7 +14,7 @@ function pageName() {
 
 /**
  * Bloquea la página si el usuario no tiene ninguno de los permisos.
- * Owner siempre pasa. `__owner_only__` exige Administrador Principal.
+ * Owner siempre pasa. `__owner_only__` exige CEO.
  * Si aún no hay ningún owner en el sistema, permite entrar a un admin
  * (evita quedar bloqueados fuera de Usuarios y Permisos).
  */
@@ -51,7 +51,7 @@ export async function requirePagePermission(keys = null, { redirectTo = 'index.h
             window.location.replace(redirectTo + '?denied=1');
             return false;
         }
-        renderDenied('Solo el Administrador Principal puede acceder a esta sección.');
+        renderDenied('Solo el CEO puede acceder a esta sección.');
         return false;
     }
 

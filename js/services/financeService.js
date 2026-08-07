@@ -18,7 +18,7 @@ async function getStaffRole() {
     return data?.role || null;
 }
 
-/** Acceso: dueño, compartido o Administrador Principal. */
+/** Acceso: dueño, compartido o CEO. */
 async function assertBookAccessible(bookId) {
     const { data, error } = await supabase
         .from('finance_books')
