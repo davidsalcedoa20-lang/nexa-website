@@ -8,16 +8,16 @@ export const FINANCE_ASSISTANT = {
         title: 'Tu panorama del mes',
         intro: 'Aquí ves lo importante de un vistazo: cuánto entró, cuánto salió y cuánto te queda.',
         tips: [
-            'La Caja Disponible es tu número estrella: es lo que realmente puedes usar o repartir.',
-            'Si el disponible baja mucho, revisa primero los pagos fijos y los egresos del mes.',
+            'La Caja Disponible solo resta egresos reales: Ingresos − Egresos.',
+            'Los gastos fijos son presupuesto: te dicen cuánto cuesta mantener la empresa, sin tocar la Caja.',
             'Personaliza las tarjetas para dejar solo lo que usas cada día.'
         ],
         examples: [
-            'Entraron $32M, salieron $8.3M y fijos $4.2M → disponible $19.5M.'
+            'Entraron $32M y salieron $8.3M → disponible $23.7M. El presupuesto fijo se muestra aparte.'
         ],
         mistakes: [
-            'Olvidar registrar un gasto chico: al final del mes sí se nota.',
-            'Tener empleados activos con porcentajes que no suman cerca de 100%.'
+            'Olvidar registrar un egreso cuando pagas un gasto fijo o un sueldo.',
+            'Mezclar sueldos de empleados con el reparto porcentual de socios.'
         ]
     },
     ingresos: {
@@ -39,69 +39,85 @@ export const FINANCE_ASSISTANT = {
     },
     egresos: {
         title: '¿Qué es un egreso?',
-        intro: 'Un egreso es dinero que sale: compras, herramientas, transporte o gastos del mes.',
+        intro: 'Un egreso es una salida real de dinero. Solo aquí baja la Caja.',
         tips: [
             'Anota también los gastos pequeños.',
-            'Si es un gasto que se repite todos los meses, mejor va en Pagos Fijos.',
+            'Cuando pagues un gasto fijo, un sueldo o una liquidación a socio, regístralo como egreso.',
             'Usa una categoría clara para entender en qué se va el dinero.'
         ],
         examples: [
-            '“Materiales de oficina” · $180.000',
-            '“Publicidad Meta Ads” · $650.000'
+            '“Pago arriendo marzo” · $2.500.000',
+            '“Sueldo — Ana López” · $3.200.000'
         ],
         mistakes: [
-            'Duplicar un pago fijo también como egreso (elige un solo lugar).',
+            'Creer que los gastos fijos ya descontaron la Caja solos.',
             'Olvidar la fecha real del gasto.'
         ]
     },
     fijos: {
-        title: 'Pagos que se repiten',
-        intro: 'Son cuentas que pagas casi todos los meses: hosting, internet, Adobe, arriendo…',
+        title: 'Presupuesto mensual',
+        intro: 'Son cuentas recurrentes para saber cuánto cuesta mantener NEXA: arriendo, internet, software… No descuentan la Caja.',
         tips: [
-            'Márcalos Activos solo si realmente los pagas este mes.',
+            'Úsalos como presupuesto informativo del mes.',
             'Si cancelas una suscripción, pásala a Inactivo.',
-            'El Dashboard suma automáticamente los activos para decirte cuánto necesitas.'
+            'Al pagar el ítem, registra un Egreso para que sí baje la Caja.'
         ],
         examples: [
-            'Hosting $120.000 · día 5',
-            'Google Workspace $280.000 · día 1'
+            'Arriendo $2.500.000 · día 5',
+            'Internet $120.000 · día 1'
         ],
         mistakes: [
-            'Dejar activos pagos que ya no usas.',
-            'Registrar el mismo ítem otra vez en Egresos cada mes.'
+            'Pensar que al crear un gasto fijo ya salió el dinero de la Caja.',
+            'Dejar activos pagos que ya no usas.'
         ]
     },
     empleados: {
-        title: 'Reparto por porcentaje',
-        intro: 'En NEXA no usamos salario fijo aquí. Cada persona tiene un % de la utilidad disponible.',
+        title: 'Sueldos fijos',
+        intro: 'Los empleados reciben un sueldo mensual fijo. No hay porcentaje aquí.',
         tips: [
-            'Disponible = Ingresos − Egresos − Pagos fijos.',
-            'Luego: Disponible × porcentaje de cada persona.',
-            'La suma de porcentajes debería acercarse a 100%.'
+            'El sueldo forma parte del presupuesto fijo del mes (informativo).',
+            'Cuando pagues el sueldo, regístralo como Egreso para descontar la Caja.',
+            'Los socios (porcentaje) viven en su propia sección.'
         ],
         examples: [
-            'Disponible $20M · David 50% = $10M · Diego 30% = $6M · Andrés 20% = $4M'
+            'Ana · Editora · $3.200.000 · día 30 · Activo'
         ],
         mistakes: [
-            'Dejar personas inactivas como Activas (siguen recibiendo cálculo).',
-            'Cambiar porcentajes a mitad de mes sin avisar al equipo.'
+            'Ponerle porcentaje a un empleado (eso es de Socios).',
+            'Olvidar registrar el egreso al pagar el sueldo.'
+        ]
+    },
+    socios: {
+        title: 'Reparto por porcentaje',
+        intro: 'Los socios reciben un porcentaje del dinero disponible. No tienen sueldo fijo aquí.',
+        tips: [
+            'Disponible = Ingresos − Egresos.',
+            'Luego: Disponible × porcentaje de cada socio.',
+            'Al liquidar, registra el pago: se crea un egreso y queda en el historial.'
+        ],
+        examples: [
+            'Disponible $20M · David 50% = $10M · Diego 30% = $6M'
+        ],
+        mistakes: [
+            'Mezclar empleados (sueldo) con socios (porcentaje).',
+            'Dejar socios inactivos como Activos.'
         ]
     },
     prestamos: {
         title: 'Préstamos, sin enredos',
-        intro: 'Aquí registras lo que te prestaron o lo que tú prestaste. El sistema calcula lo que falta.',
+        intro: 'Separan lo que NEXA recibió y lo que NEXA prestó. El progreso de cuotas va de 0/N a N/N.',
         tips: [
             'Actualiza el Abonado cada vez que pagas o te pagan una cuota.',
-            'Revisa la próxima cuota para no olvidar fechas.',
+            'La barra muestra cuántas cuotas ya se pagaron (nunca hacia atrás).',
             'Si ya no debes nada, márcalo como Pagado.'
         ],
         examples: [
-            'Recibido $20M · abonado $5M → pendiente $15M',
+            'Recibido $20M · 8 cuotas · abonado 1 cuota → 1/8',
             'Otorgado $5M · 10 cuotas de $500.000'
         ],
         mistakes: [
             'Registrar un préstamo como ingreso o egreso normal.',
-            'No actualizar el abonado: el saldo quedará mal.'
+            'No actualizar el abonado: el progreso quedará en 0/N.'
         ]
     },
     resumen: {
@@ -109,11 +125,11 @@ export const FINANCE_ASSISTANT = {
         intro: 'El Resumen muestra los números clave del mes, sin tecnicismos.',
         tips: [
             'Úsalo para una revisión rápida al cierre del mes.',
-            'Si algo no cuadra, vuelve a Ingresos, Egresos o Pagos Fijos.',
-            'Pendiente suele referirse a lo que aún falta en préstamos.'
+            'Si algo no cuadra, vuelve a Ingresos o Egresos.',
+            'El presupuesto fijo es informativo; la Caja solo mira egresos.'
         ],
         examples: [
-            'Ingresos, egresos, fijos, disponible, repartido, pendiente y préstamos activos.'
+            'Ingresos, egresos, presupuesto fijo, disponible, socios y préstamos.'
         ],
         mistakes: [
             'Comparar meses distintos sin cambiar el selector de mes.'
@@ -164,13 +180,13 @@ export function tipOfTheMonth(values = {}) {
         return 'Empieza registrando tus primeros ingresos del mes. Con eso el resto del tablero cobra sentido.';
     }
     if (available < 0) {
-        return 'Este mes estás en rojo. Revisa egresos y pagos fijos antes de repartir o gastar más.';
+        return 'Este mes estás en rojo. Revisa los egresos antes de repartir o gastar más.';
     }
     if (fixed > 0 && available < fixed) {
-        return 'Tu disponible es menor que tus pagos fijos. Prioriza cubrir suscripciones y cuentas recurrentes.';
+        return 'Tu Caja es menor que el presupuesto fijo del mes. Prioriza cubrir arriendo, servicios y sueldos con egresos reales.';
     }
     if (available > 0) {
-        return 'Tienes dinero disponible para repartir. Revisa Empleados para ver cuánto le toca a cada persona.';
+        return 'Tienes dinero disponible. Revisa Socios para el reparto por porcentaje, o Empleados para los sueldos fijos.';
     }
     return 'Mantén tus registros al día: unos minutos ahora te ahorran confusiones a fin de mes.';
 }

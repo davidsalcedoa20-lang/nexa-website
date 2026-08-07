@@ -6,8 +6,9 @@ export const FINANCE_SECTIONS = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'ingresos', label: 'Ingresos' },
     { id: 'egresos', label: 'Egresos' },
-    { id: 'fijos', label: 'Pagos Fijos' },
+    { id: 'fijos', label: 'Gastos Fijos' },
     { id: 'empleados', label: 'Empleados' },
+    { id: 'socios', label: 'Socios' },
     { id: 'prestamos', label: 'Préstamos' },
     { id: 'resumen', label: 'Resumen' }
 ];
@@ -16,8 +17,8 @@ export const FINANCE_WIDGETS = [
     { key: 'available', name: 'Caja disponible', color: '#4ADE80', size: 'lg', icon: 'wallet' },
     { key: 'income_total', name: 'Dinero ingresado', color: '#2D8CFF', size: 'md', icon: 'income' },
     { key: 'expense_total', name: 'Dinero gastado', color: '#FF6B81', size: 'md', icon: 'expense' },
-    { key: 'fixed_total', name: 'Pagos fijos del mes', color: '#8C52FF', size: 'md', icon: 'ops' },
-    { key: 'distributed', name: 'Dinero repartido', color: '#C9A8FF', size: 'md', icon: 'pct' },
+    { key: 'fixed_total', name: 'Presupuesto fijo del mes', color: '#8C52FF', size: 'md', icon: 'ops' },
+    { key: 'distributed', name: 'Reparto a socios', color: '#C9A8FF', size: 'md', icon: 'pct' },
     { key: 'pending_loan_balance', name: 'Dinero pendiente', color: '#FF8A3D', size: 'md', icon: 'payable' },
     { key: 'pending_loans', name: 'Préstamos activos', color: '#FFC15F', size: 'md', icon: 'receivable', format: 'count' }
 ];
@@ -39,38 +40,38 @@ export const FINANCE_HELP = {
     },
     expense_total: {
         title: 'Dinero gastado',
-        meaning: 'Todo lo que salió en gastos del mes (sin contar todavía los pagos fijos como ítem aparte en el resumen).',
+        meaning: 'Toda salida real de dinero del mes. Solo los egresos disminuyen la Caja.',
         how: 'Se suman todos los egresos del mes.',
         example: 'Software $200.000 + transporte $150.000 = $350.000.',
-        tip: 'Anota también los gastos pequeños: al final del mes sí se notan.'
+        tip: 'Cuando pagues un gasto fijo o un sueldo, regístralo aquí como egreso.'
     },
     fixed_total: {
-        title: 'Pagos fijos del mes',
-        meaning: 'Lo que necesitas cada mes para cubrir suscripciones y cuentas que se repiten.',
-        how: 'Se suman todos los pagos fijos marcados como Activos.',
-        example: 'Hosting + Internet + Adobe = total fijo del mes.',
-        tip: 'Si cancelas una suscripción, márcala como Inactiva.'
+        title: 'Presupuesto fijo del mes',
+        meaning: 'Cuánto cuesta mantener la empresa cada mes (arriendo, internet, sueldos, software…). Es informativo: no descuenta la Caja.',
+        how: 'Se suman gastos fijos activos + sueldos de empleados activos.',
+        example: 'Arriendo + Internet + Sueldos = presupuesto mensual.',
+        tip: 'Al pagar alguno de estos ítems, crea un Egreso para que sí baje la Caja.'
     },
     available: {
         title: 'Caja disponible',
-        meaning: 'Lo que queda después de restar egresos y pagos fijos a los ingresos. Es el dinero que realmente puedes usar o repartir.',
-        how: 'Ingresos − Egresos − Pagos fijos.',
-        example: 'Entran $32M, gastas $8.3M y fijos $4.2M → disponible $19.5M.',
-        tip: 'Este es el número más importante del mes.'
+        meaning: 'Lo que queda después de restar solo los egresos reales a los ingresos.',
+        how: 'Ingresos − Egresos.',
+        example: 'Entran $32M y gastas $8.3M → disponible $23.7M.',
+        tip: 'Los gastos fijos no se restan solos: solo informan el presupuesto.'
     },
     distributed: {
-        title: 'Dinero repartido',
-        meaning: 'Cómo se reparte el disponible entre las personas según su porcentaje.',
-        how: 'Disponible × porcentaje de cada empleado activo.',
-        example: 'Disponible $10M · 50% = $5M para esa persona.',
-        tip: 'La suma de porcentajes debería acercarse a 100%.'
+        title: 'Reparto a socios',
+        meaning: 'Cómo se reparte el disponible entre los socios según su porcentaje.',
+        how: 'Disponible × porcentaje de cada socio activo.',
+        example: 'Disponible $10M · 50% = $5M para ese socio.',
+        tip: 'La suma de porcentajes debería acercarse a 100%. Los empleados no entran aquí: ellos tienen sueldo fijo.'
     },
     pending_loans: {
         title: 'Préstamos activos',
-        meaning: 'Cuántos préstamos siguen pendientes (por pagar o por cobrar).',
+        meaning: 'Cuántos préstamos siguen pendientes (recibidos u otorgados).',
         how: 'Se cuentan los préstamos que no están marcados como Pagado.',
         example: 'Tienes 2 préstamos pendientes → aquí verás 2.',
-        tip: 'Actualiza lo abonado para ver cuánto falta.'
+        tip: 'Actualiza lo abonado para ver el progreso de cuotas.'
     },
     pending_loan_balance: {
         title: 'Dinero pendiente',

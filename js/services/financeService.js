@@ -359,9 +359,68 @@ export async function deleteExpense(bookId, id) {
     await touchBook(bookId);
 }
 
+/* ---------------- Marcadores (sin cambiar esquema) ---------------- */
+
+const EMP_MARKER = '__NEXA_EMP__';
+const PARTNER_PAY_MARKER = '__NEXA_PARTNER_PAY__:';
+
+export function isEmployeeFixedPayment(row) {
+    return String(row?.notes || '').startsWith(EMP_MARKER);
+}
+
+export function encodeEmployeeNotes(jobTitle = '') {
+    return `${EMP_MARKER}${JSON.stringify({ title: String(jobTitle || '').trim() })}`;
+}
+
+export function parseEmployeeFixedPayment(row) {
+    if (!row || !isEmployeeFixedPayment(row)) return null;
+    let title = '';
+    try {
+        const meta = JSON.parse(String(row.notes).slice(EMP_MARKER.length));
+        title = String(meta?.title || '');
+    } catch (_) {
+        title = '';
+    }
+    return {
+        id: row.id,
+        full_name: row.name,
+        job_title: title,
+        salary: Number(row.amount || 0),
+        payment_day: Number(row.payment_day || 1),
+        is_active: !!row.is_active,
+        notes: row.notes
+    };
+}
+
+export function encodePartnerJobTitle(participation = '', settlementDay = null) {
+    const base = String(participation || '').trim();
+    const day = Number(settlementDay);
+    if (!Number.isFinite(day) || day < 1 || day > 31) return base || null;
+    return `${base}${base ? ' ' : ''}@@pay:${Math.floor(day)}`;
+}
+
+export function parsePartnerJobTitle(jobTitle = '') {
+    const raw = String(jobTitle || '');
+    const match = raw.match(/\s*@@pay:(\d{1,2})\s*$/);
+    return {
+        participation: match ? raw.slice(0, match.index).trim() : raw.trim(),
+        settlement_day: match ? Number(match[1]) : null
+    };
+}
+
+export function mapPartner(row) {
+    if (!row) return row;
+    const meta = parsePartnerJobTitle(row.job_title);
+    return {
+        ...row,
+        participation: meta.participation,
+        settlement_day: meta.settlement_day
+    };
+}
+
 /* ---------------- Pagos fijos ---------------- */
 
-export async function listFixedPayments(bookId) {
+export async function listFixedPayments(bookId, { includeEmployees = true } = {}) {
     await assertBookOwned(bookId);
     const { data, error } = await supabase
         .from('finance_fixed_payments')
@@ -370,7 +429,47 @@ export async function listFixedPayments(bookId) {
         .is('deleted_at', null)
         .order('name', { ascending: true });
     if (error) throw error;
-    return data || [];
+    const rows = data || [];
+    if (includeEmployees) return rows;
+    return rows.filter((r) => !isEmployeeFixedPayment(r));
+}
+
+export async function listSalaryEmployees(bookId) {
+    const rows = await listFixedPayments(bookId, { includeEmployees: true });
+    return rows.map(parseEmployeeFixedPayment).filter(Boolean);
+}
+
+export async function createSalaryEmployee(bookId, payload) {
+    const full_name = String(payload.full_name || '').trim();
+    const salary = Number(payload.salary);
+    if (!full_name) throw new Error('El nombre es obligatorio.');
+    if (!Number.isFinite(salary) || salary < 0) throw new Error('El sueldo no puede ser negativo.');
+    return createFixedPayment(bookId, {
+        name: full_name,
+        amount: salary,
+        payment_day: Number(payload.payment_day) || 1,
+        is_active: payload.is_active !== false,
+        notes: encodeEmployeeNotes(payload.job_title)
+    }).then((row) => parseEmployeeFixedPayment(row));
+}
+
+export async function updateSalaryEmployee(bookId, id, payload) {
+    const full_name = String(payload.full_name || '').trim();
+    const salary = Number(payload.salary);
+    if (!full_name) throw new Error('El nombre es obligatorio.');
+    if (!Number.isFinite(salary) || salary < 0) throw new Error('El sueldo no puede ser negativo.');
+    const row = await updateFixedPayment(bookId, id, {
+        name: full_name,
+        amount: salary,
+        payment_day: Number(payload.payment_day) || 1,
+        is_active: !!payload.is_active,
+        notes: encodeEmployeeNotes(payload.job_title)
+    });
+    return parseEmployeeFixedPayment(row);
+}
+
+export async function deleteSalaryEmployee(bookId, id) {
+    return deleteFixedPayment(bookId, id);
 }
 
 export async function createFixedPayment(bookId, payload) {
@@ -441,7 +540,12 @@ export async function listEmployees(bookId) {
         .is('deleted_at', null)
         .order('full_name', { ascending: true });
     if (error) throw error;
-    return data || [];
+    return (data || []).map(mapPartner);
+}
+
+/** Alias semántico: finance_employees = Socios (reparto %) */
+export async function listPartners(bookId) {
+    return listEmployees(bookId);
 }
 
 export async function createEmployee(bookId, payload) {
@@ -454,13 +558,16 @@ export async function createEmployee(bookId, payload) {
         throw new Error('El porcentaje debe estar entre 0 y 100.');
     }
 
+    const participation = payload.participation ?? payload.job_title;
+    const job_title = encodePartnerJobTitle(participation, payload.settlement_day);
+
     const { data, error } = await supabase
         .from('finance_employees')
         .insert({
             admin_id: adminId,
             book_id: bookId,
             full_name,
-            job_title: payload.job_title?.trim() || null,
+            job_title,
             percentage,
             is_active: payload.is_active !== false
         })
@@ -468,16 +575,21 @@ export async function createEmployee(bookId, payload) {
         .single();
     if (error) throw error;
     await touchBook(bookId);
-    return data;
+    return mapPartner(data);
+}
+
+export async function createPartner(bookId, payload) {
+    return createEmployee(bookId, payload);
 }
 
 export async function updateEmployee(bookId, id, payload) {
     await assertBookOwned(bookId);
+    const participation = payload.participation ?? payload.job_title;
     const { data, error } = await supabase
         .from('finance_employees')
         .update({
             full_name: String(payload.full_name || '').trim(),
-            job_title: payload.job_title?.trim() || null,
+            job_title: encodePartnerJobTitle(participation, payload.settlement_day),
             percentage: Number(payload.percentage),
             is_active: !!payload.is_active
         })
@@ -487,7 +599,11 @@ export async function updateEmployee(bookId, id, payload) {
         .single();
     if (error) throw error;
     await touchBook(bookId);
-    return data;
+    return mapPartner(data);
+}
+
+export async function updatePartner(bookId, id, payload) {
+    return updateEmployee(bookId, id, payload);
 }
 
 export async function deleteEmployee(bookId, id) {
@@ -499,6 +615,29 @@ export async function deleteEmployee(bookId, id) {
         .eq('book_id', bookId);
     if (error) throw error;
     await touchBook(bookId);
+}
+
+export async function deletePartner(bookId, id) {
+    return deleteEmployee(bookId, id);
+}
+
+export async function listPartnerPayments(bookId, partnerId) {
+    const expenses = await listExpenses(bookId, { monthKey: null });
+    const marker = `${PARTNER_PAY_MARKER}${partnerId}`;
+    return expenses.filter((e) => String(e.notes || '').startsWith(marker));
+}
+
+export async function registerPartnerLiquidation(bookId, partner, { amount, entry_date, currency = 'COP' } = {}) {
+    const value = Number(amount);
+    if (!partner?.id) throw new Error('Socio no válido.');
+    if (!Number.isFinite(value) || value <= 0) throw new Error('El valor de liquidación debe ser mayor a 0.');
+    return createExpense(bookId, {
+        entry_date: entry_date || new Date().toISOString().slice(0, 10),
+        concept: `Liquidación socio — ${partner.full_name}`,
+        amount: value,
+        notes: `${PARTNER_PAY_MARKER}${partner.id}`,
+        currency
+    });
 }
 
 /* ---------------- Préstamos ---------------- */
@@ -520,9 +659,17 @@ function enrichLoan(loan) {
     const paid = Number(loan.paid_amount || 0);
     const remaining = Math.max(0, principal - paid);
     const installment = Number(loan.installment_amount || 0);
-    const remainingInstallments = installment > 0
-        ? Math.ceil(remaining / installment)
-        : (remaining > 0 ? loan.installments : 0);
+    const totalInstallments = Math.max(1, Number(loan.installments) || 1);
+
+    let paidInstallments = 0;
+    if (remaining <= 0) {
+        paidInstallments = totalInstallments;
+    } else if (installment > 0) {
+        paidInstallments = Math.min(totalInstallments, Math.floor((paid + 1e-9) / installment));
+    }
+
+    const remainingInstallments = Math.max(0, totalInstallments - paidInstallments);
+    const progressPct = Math.min(100, Math.round((paidInstallments / totalInstallments) * 100));
 
     let status = loan.status;
     if (remaining <= 0) status = 'paid';
@@ -534,6 +681,8 @@ function enrichLoan(loan) {
         ...loan,
         remaining_balance: remaining,
         remaining_installments: remainingInstallments,
+        paid_installments: paidInstallments,
+        progress_pct: progressPct,
         computed_status: status
     };
 }
@@ -614,31 +763,45 @@ export async function deleteLoan(bookId, id) {
 
 export async function getBookSummary(bookId, monthKey = currentMonthKey()) {
     const book = await assertBookOwned(bookId);
-    const [incomes, expenses, fixed, employees, loans] = await Promise.all([
+    const [incomes, expenses, fixedAll, partners, loans] = await Promise.all([
         listIncomes(bookId, { monthKey }),
         listExpenses(bookId, { monthKey }),
-        listFixedPayments(bookId),
-        listEmployees(bookId),
+        listFixedPayments(bookId, { includeEmployees: true }),
+        listPartners(bookId),
         listLoans(bookId)
     ]);
 
     const incomeTotal = incomes.reduce((s, r) => s + Number(r.amount || 0), 0);
     const expenseTotal = expenses.reduce((s, r) => s + Number(r.amount || 0), 0);
-    const fixedActive = fixed.filter((f) => f.is_active);
-    const fixedTotal = fixedActive.reduce((s, r) => s + Number(r.amount || 0), 0);
-    const available = incomeTotal - expenseTotal - fixedTotal;
 
-    const activeEmployees = employees.filter((e) => e.is_active);
-    const shares = activeEmployees.map((e) => ({
+    const fixedOps = fixedAll.filter((f) => f.is_active && !isEmployeeFixedPayment(f));
+    const salaryEmployees = fixedAll.map(parseEmployeeFixedPayment).filter(Boolean);
+    const salaryActive = salaryEmployees.filter((e) => e.is_active);
+    const fixedOpsTotal = fixedOps.reduce((s, r) => s + Number(r.amount || 0), 0);
+    const salaryTotal = salaryActive.reduce((s, r) => s + Number(r.salary || 0), 0);
+    const fixedTotal = fixedOpsTotal + salaryTotal;
+
+    // Caja: solo movimientos reales. Los fijos/sueldos son presupuesto informativo.
+    const available = incomeTotal - expenseTotal;
+
+    const activePartners = partners.filter((e) => e.is_active);
+    const shares = activePartners.map((e) => ({
         id: e.id,
         name: e.full_name,
-        job_title: e.job_title,
+        job_title: e.participation || e.job_title,
+        participation: e.participation || '',
+        settlement_day: e.settlement_day,
         percentage: Number(e.percentage || 0),
         amount: Math.max(0, available) * (Number(e.percentage || 0) / 100)
     }));
     const distributed = shares.reduce((s, r) => s + r.amount, 0);
+
     const activeLoans = loans.filter((l) => l.computed_status !== 'paid');
+    const receivedLoans = activeLoans.filter((l) => l.loan_type === 'received');
+    const grantedLoans = activeLoans.filter((l) => l.loan_type === 'granted');
     const pendingLoanBalance = activeLoans.reduce((s, l) => s + Number(l.remaining_balance || 0), 0);
+    const pendingReceivedBalance = receivedLoans.reduce((s, l) => s + Number(l.remaining_balance || 0), 0);
+    const pendingGrantedBalance = grantedLoans.reduce((s, l) => s + Number(l.remaining_balance || 0), 0);
 
     return {
         book,
@@ -648,20 +811,30 @@ export async function getBookSummary(bookId, monthKey = currentMonthKey()) {
             income_total: incomeTotal,
             expense_total: expenseTotal,
             fixed_total: fixedTotal,
+            fixed_ops_total: fixedOpsTotal,
+            salary_total: salaryTotal,
             available,
             distributed,
             pending_loans: activeLoans.length,
-            pending_loan_balance: pendingLoanBalance
+            pending_loan_balance: pendingLoanBalance,
+            pending_received_balance: pendingReceivedBalance,
+            pending_granted_balance: pendingGrantedBalance
         },
         shares,
-        fixedItems: fixedActive.slice(0, 6),
+        fixedItems: fixedOps.slice(0, 6),
+        salaryEmployees: salaryActive.slice(0, 6),
         activeLoans: activeLoans.slice(0, 4),
+        receivedLoans: receivedLoans.slice(0, 4),
+        grantedLoans: grantedLoans.slice(0, 4),
         counts: {
             incomes: incomes.length,
             expenses: expenses.length,
-            fixed: fixedActive.length,
-            employees: activeEmployees.length,
-            loans: activeLoans.length
+            fixed: fixedOps.length,
+            employees: salaryActive.length,
+            partners: activePartners.length,
+            loans: activeLoans.length,
+            loans_received: receivedLoans.length,
+            loans_granted: grantedLoans.length
         }
     };
 }
