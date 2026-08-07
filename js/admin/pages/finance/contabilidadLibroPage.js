@@ -78,7 +78,7 @@ let partnerPayments = [];
 let loanTab = 'received';
 
 const SECTION_META = {
-    dashboard: { title: 'Dashboard', subtitle: '¿Cuánto tengo? ¿Cuánto debo? ¿Cuánto puedo repartir?' },
+    dashboard: { title: 'Dashboard', subtitle: 'Resumen financiero en tiempo real' },
     ingresos: { title: 'Ingresos', subtitle: 'Registra el dinero que entra.' },
     egresos: { title: 'Egresos', subtitle: 'Toda salida real de dinero. Solo aquí baja la Caja.' },
     fijos: { title: 'Gastos Fijos', subtitle: 'Presupuesto mensual. No descuenta la Caja automáticamente.' },
@@ -184,198 +184,309 @@ function renderSectionBody() {
 
 /* ---------------- Dashboard ---------------- */
 
+function dashIcon(name) {
+    const icons = {
+        wallet: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="3" y="6" width="18" height="13" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M16 13.5h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+        income: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 19V5M12 5l-4 4M12 5l4 4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 19h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+        expense: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M12 19l-4-4M12 19l4-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M5 5h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+        budget: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
+        tip: '<svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.8c.9.7 1.5 1.7 1.5 2.7h4c0-1 .6-2 1.5-2.7A6 6 0 0 0 12 3z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+    };
+    return icons[name] || icons.wallet;
+}
+
 function renderDashboard() {
     const v = summary.values;
     const toShare = Math.max(0, v.available);
     const fixedItems = summary.fixedItems || [];
     const loans = summary.activeLoans || [];
+    const employees = summary.salaryEmployees || [];
+    const empCount = summary.counts.employees || 0;
+    const partnerPct = summary.shares.reduce((s, r) => s + Number(r.percentage || 0), 0);
+    const tips = [
+        tipOfTheMonth(v),
+        'No olvides registrar los egresos cuando pagues un gasto fijo o un sueldo.',
+        'El presupuesto fijo no afecta la Caja.',
+        'Los préstamos activos incrementan tu pasivo.',
+        'La Caja Disponible solo depende de ingresos y egresos.'
+    ].filter((t, i, arr) => arr.indexOf(t) === i).slice(0, 4);
 
     return `
-        <div class="fin-toolbar">
-            <p class="fin-toolbar-note">Responde en segundos: cuánto entró, cuánto salió y cuánto queda.</p>
-            <button type="button" class="admin-btn-secondary" id="finToggleEdit">
-                ${editMode ? 'Listo' : 'Personalizar'}
-            </button>
-        </div>
+        <div class="fin-dash fin-dash-enter">
+            <div class="fin-toolbar fin-dash-toolbar">
+                <div>
+                    <p class="fin-toolbar-note">Resumen financiero en tiempo real</p>
+                </div>
+                <button type="button" class="admin-btn-secondary" id="finToggleEdit">
+                    ${editMode ? 'Listo' : 'Personalizar'}
+                </button>
+            </div>
 
-        <div class="fin-dash-hero-grid">
-            <article class="fin-caja-card">
-                <div class="fin-caja-top">
-                    <div>
-                        <span class="fin-kicker" style="color:#4ADE80">Caja disponible</span>
-                        <strong class="fin-caja-value ${v.available < 0 ? 'is-neg' : ''}">${money(v.available)}</strong>
+            <section class="fin-dash-kpi-row" aria-label="Indicadores principales">
+                <article class="fin-dash-card fin-dash-caja fin-dash-anim">
+                    <div class="fin-dash-card-top">
+                        <span class="fin-dash-ico tone-green">${dashIcon('wallet')}</span>
+                        <button type="button" class="fin-help-btn" data-help="available" title="Qué significa">ⓘ</button>
                     </div>
-                    <button type="button" class="fin-help-btn" data-help="available" title="Qué significa">ⓘ</button>
-                </div>
-                <ul class="fin-caja-breakdown">
-                    <li><span>Ingresos este mes</span><b class="is-pos">${money(v.income_total)}</b></li>
-                    <li><span>Egresos este mes</span><b class="is-neg">− ${money(v.expense_total)}</b></li>
-                </ul>
-                <div class="fin-caja-foot">
-                    <span>Disponible para socios</span>
-                    <strong>${money(toShare)}</strong>
-                </div>
-            </article>
+                    <span class="fin-dash-label">Caja Disponible</span>
+                    <strong class="fin-dash-value tone-green ${v.available < 0 ? 'is-neg' : ''}">${money(v.available)}</strong>
+                    <ul class="fin-dash-caja-lines">
+                        <li><span>Ingresos</span><b class="is-pos">${money(v.income_total)}</b></li>
+                        <li><span>Egresos</span><b class="is-neg">− ${money(v.expense_total)}</b></li>
+                    </ul>
+                    <div class="fin-dash-caja-foot">
+                        <span>Disponible para socios</span>
+                        <strong>${money(toShare)}</strong>
+                    </div>
+                </article>
 
-            <article class="fin-metric-card tone-income">
-                <div class="fin-metric-head">
+                <article class="fin-dash-card fin-dash-anim" style="--d:.05s">
+                    <div class="fin-dash-card-top">
+                        <span class="fin-dash-ico tone-blue">${dashIcon('income')}</span>
+                        <button type="button" class="fin-help-btn" data-help="income_total">ⓘ</button>
+                    </div>
+                    <span class="fin-dash-label">Ingresos</span>
+                    <strong class="fin-dash-value">${money(v.income_total)}</strong>
+                    <span class="fin-dash-sub">${summary.counts.incomes} registro${summary.counts.incomes === 1 ? '' : 's'} este mes</span>
+                </article>
+
+                <article class="fin-dash-card fin-dash-anim" style="--d:.1s">
+                    <div class="fin-dash-card-top">
+                        <span class="fin-dash-ico tone-red">${dashIcon('expense')}</span>
+                        <button type="button" class="fin-help-btn" data-help="expense_total">ⓘ</button>
+                    </div>
+                    <span class="fin-dash-label">Egresos</span>
+                    <strong class="fin-dash-value">${money(v.expense_total)}</strong>
+                    <span class="fin-dash-sub">${summary.counts.expenses} registro${summary.counts.expenses === 1 ? '' : 's'} este mes</span>
+                </article>
+
+                <article class="fin-dash-card fin-dash-anim" style="--d:.15s">
+                    <div class="fin-dash-card-top">
+                        <span class="fin-dash-ico tone-purple">${dashIcon('budget')}</span>
+                        <button type="button" class="fin-help-btn" data-help="fixed_total">ⓘ</button>
+                    </div>
+                    <span class="fin-dash-label">Presupuesto fijo</span>
+                    <strong class="fin-dash-value">${money(v.fixed_total)}</strong>
+                    <span class="fin-dash-badge">No descuenta Caja</span>
+                    <span class="fin-dash-sub">${summary.counts.fixed || 0} gastos · ${empCount} sueldo${empCount === 1 ? '' : 's'}</span>
+                </article>
+            </section>
+
+            <section class="fin-dash-mid-row" aria-label="Reparto, préstamos y acciones">
+                <article class="fin-dash-panel fin-dash-anim" style="--d:.18s">
+                    <div class="fin-dash-panel-head">
+                        <div>
+                            <h3>Reparto a socios</h3>
+                            <p class="fin-dash-sub">Disponible × porcentaje</p>
+                        </div>
+                        <div class="fin-dash-panel-head-right">
+                            <span class="fin-dash-pill">${partnerPct}%</span>
+                            <button type="button" class="fin-help-btn" data-help="distributed">ⓘ</button>
+                        </div>
+                    </div>
+                    ${summary.shares.length ? `
+                        <div class="fin-shares-list">
+                            ${summary.shares.map((s) => `
+                                <div class="fin-share-row">
+                                    <div class="fin-share-person">
+                                        <span class="fin-avatar">${escapeHtml((s.name || '?').slice(0, 1).toUpperCase())}</span>
+                                        <div>
+                                            <strong>${escapeHtml(s.name)}</strong>
+                                            <span>${escapeHtml(s.participation || s.job_title || 'Socio')} · ${s.percentage}%</span>
+                                        </div>
+                                    </div>
+                                    <b>${money(s.amount)}</b>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <a class="fin-dash-link" href="${bookSectionHref(bookId, 'socios', monthKey)}">Ver socios →</a>
+                    ` : `
+                        <p class="fin-muted">Agrega socios con porcentaje para ver el reparto.</p>
+                        <a class="fin-dash-link" href="${bookSectionHref(bookId, 'socios', monthKey)}">Ir a Socios →</a>
+                    `}
+                </article>
+
+                <article class="fin-dash-panel fin-dash-anim" style="--d:.22s">
+                    <div class="fin-dash-panel-head">
+                        <div>
+                            <h3>Préstamos activos</h3>
+                            <p class="fin-dash-sub">${summary.counts.loans || 0} pendiente${(summary.counts.loans || 0) === 1 ? '' : 's'}</p>
+                        </div>
+                        <button type="button" class="fin-help-btn" data-help="pending_loans">ⓘ</button>
+                    </div>
+                    ${loans.length ? `
+                        <div class="fin-loan-preview">
+                            ${loans.map((l) => {
+                                const paidN = Number(l.paid_installments || 0);
+                                const totalN = Math.max(1, Number(l.installments || 1));
+                                const pct = Number(l.progress_pct ?? Math.min(100, Math.round((paidN / totalN) * 100)));
+                                const typeLabel = LOAN_TYPE_LABELS[l.loan_type] || l.loan_type;
+                                const badgeClass = l.loan_type === 'granted' ? 'tone-blue' : 'tone-green';
+                                return `
+                                    <div class="fin-loan-preview-item">
+                                        <div class="fin-loan-preview-top">
+                                            <strong>${escapeHtml(l.counterparty)}</strong>
+                                            <span class="fin-loan-badge ${badgeClass}">${escapeHtml(typeLabel)}</span>
+                                        </div>
+                                        <div class="fin-cuota-labels">
+                                            <span>${paidN}/${totalN} cuotas</span>
+                                            <span>${escapeHtml(l.next_due_date || 'Sin fecha')}</span>
+                                        </div>
+                                        <div class="fin-progress"><i style="width:${pct}%"></i></div>
+                                        <div class="fin-loan-preview-meta">
+                                            <span>Pendiente</span>
+                                            <strong>${money(l.remaining_balance)}</strong>
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                        <a class="fin-dash-link" href="${bookSectionHref(bookId, 'prestamos', monthKey)}">Ver todos →</a>
+                    ` : `
+                        <p class="fin-muted">No hay préstamos activos.</p>
+                        <a class="fin-dash-link" href="${bookSectionHref(bookId, 'prestamos', monthKey)}">Registrar préstamo →</a>
+                    `}
+                </article>
+
+                <article class="fin-dash-panel fin-quick-actions fin-dash-anim" style="--d:.26s">
+                    <div class="fin-dash-panel-head">
+                        <h3>Acciones rápidas</h3>
+                    </div>
+                    <a class="fin-qa tone-income" href="${bookSectionHref(bookId, 'ingresos', monthKey)}">+ Nuevo ingreso</a>
+                    <a class="fin-qa tone-expense" href="${bookSectionHref(bookId, 'egresos', monthKey)}">− Nuevo egreso</a>
+                    <a class="fin-qa tone-fixed" href="${bookSectionHref(bookId, 'fijos', monthKey)}">+ Gasto fijo</a>
+                    <a class="fin-qa tone-loan" href="${bookSectionHref(bookId, 'prestamos', monthKey)}">+ Nuevo préstamo</a>
+                    <a class="fin-qa tone-emp" href="${bookSectionHref(bookId, 'empleados', monthKey)}">+ Nuevo empleado</a>
+                    <a class="fin-qa tone-partner" href="${bookSectionHref(bookId, 'socios', monthKey)}">+ Nuevo socio</a>
+                </article>
+            </section>
+
+            <section class="fin-flow-strip fin-dash-anim" style="--d:.3s" aria-label="Flujo de dinero del mes">
+                <div class="fin-flow-step">
                     <span>Ingresos</span>
-                    <button type="button" class="fin-help-btn" data-help="income_total">ⓘ</button>
+                    <strong class="is-pos">${money(v.income_total)}</strong>
                 </div>
-                <strong>${money(v.income_total)}</strong>
-                <span class="fin-metric-sub">${summary.counts.incomes} registro${summary.counts.incomes === 1 ? '' : 's'}</span>
-            </article>
-
-            <article class="fin-metric-card tone-expense">
-                <div class="fin-metric-head">
+                <span class="fin-flow-op" aria-hidden="true">↓</span>
+                <div class="fin-flow-step">
                     <span>Egresos</span>
-                    <button type="button" class="fin-help-btn" data-help="expense_total">ⓘ</button>
+                    <strong class="is-neg">${money(v.expense_total)}</strong>
                 </div>
-                <strong>${money(v.expense_total)}</strong>
-                <span class="fin-metric-sub">${summary.counts.expenses} registro${summary.counts.expenses === 1 ? '' : 's'}</span>
-            </article>
+                <span class="fin-flow-op" aria-hidden="true">↓</span>
+                <div class="fin-flow-step is-result">
+                    <span>Caja disponible</span>
+                    <strong class="is-pos">${money(toShare)}</strong>
+                </div>
+                <span class="fin-flow-op" aria-hidden="true">↓</span>
+                <div class="fin-flow-step">
+                    <span>Reparto socios</span>
+                    <strong>${money(v.distributed)}</strong>
+                </div>
+            </section>
 
-            <article class="fin-metric-card tone-fixed">
-                <div class="fin-metric-head">
-                    <span>Presupuesto fijo</span>
-                    <button type="button" class="fin-help-btn" data-help="fixed_total">ⓘ</button>
+            <section class="fin-dash-budget fin-dash-anim" style="--d:.34s" aria-label="Presupuesto mensual">
+                <div class="fin-dash-budget-main">
+                    <span class="fin-dash-ico tone-orange">${dashIcon('budget')}</span>
+                    <div>
+                        <span class="fin-dash-label">Presupuesto mensual</span>
+                        <strong class="fin-dash-value">${money(v.fixed_total)}</strong>
+                        <span class="fin-dash-badge">Informativo · no descuenta Caja</span>
+                    </div>
                 </div>
-                <strong>${money(v.fixed_total)}</strong>
-                <span class="fin-metric-sub">Informativo · no descuenta Caja</span>
-                <ul class="fin-mini-list">
-                    ${fixedItems.length
-                        ? fixedItems.slice(0, 3).map((f) => `
-                            <li><span>${escapeHtml(f.name)}</span><b>${money(f.amount)}</b></li>
-                        `).join('')
-                        : '<li class="fin-muted">Sin gastos fijos activos</li>'}
-                    ${Number(v.salary_total) > 0 ? `
-                        <li><span>Sueldos empleados</span><b>${money(v.salary_total)}</b></li>
-                    ` : ''}
-                </ul>
-            </article>
-        </div>
+                <div class="fin-dash-budget-split">
+                    <div class="fin-dash-budget-chip">
+                        <span>Gastos fijos</span>
+                        <strong>${money(v.fixed_ops_total || 0)}</strong>
+                        <ul class="fin-mini-list">
+                            ${fixedItems.length
+                                ? fixedItems.slice(0, 4).map((f) => `
+                                    <li><span>${escapeHtml(f.name)}</span><b>${money(f.amount)}</b></li>
+                                `).join('')
+                                : '<li class="fin-muted">Sin gastos fijos</li>'}
+                        </ul>
+                    </div>
+                    <div class="fin-dash-budget-chip">
+                        <span>Sueldos</span>
+                        <strong>${money(v.salary_total || 0)}</strong>
+                        <p class="fin-dash-sub">${empCount} empleado${empCount === 1 ? '' : 's'} activo${empCount === 1 ? '' : 's'}</p>
+                    </div>
+                </div>
+            </section>
 
-        <div class="fin-dash-mid-grid">
-            <section class="fin-panel fin-shares-panel">
-                <div class="fin-panel-head">
-                    <h3>Reparto a socios</h3>
-                    <button type="button" class="fin-help-btn" data-help="distributed">ⓘ</button>
-                </div>
-                ${summary.shares.length ? `
-                    <div class="fin-shares-list">
-                        ${summary.shares.map((s) => `
-                            <div class="fin-share-row">
-                                <div class="fin-share-person">
-                                    <span class="fin-avatar">${escapeHtml((s.name || '?').slice(0, 1).toUpperCase())}</span>
-                                    <div>
-                                        <strong>${escapeHtml(s.name)}</strong>
-                                        <span>${escapeHtml(s.participation || s.job_title || 'Socio')} · ${s.percentage}%</span>
+            <section class="fin-dash-bottom-row" aria-label="Empleados y tips">
+                <article class="fin-dash-panel fin-dash-anim" style="--d:.38s">
+                    <div class="fin-dash-panel-head">
+                        <div>
+                            <h3>Resumen de empleados</h3>
+                            <p class="fin-dash-sub">Sueldos fijos del mes</p>
+                        </div>
+                        <a class="fin-dash-link" href="${bookSectionHref(bookId, 'empleados', monthKey)}">Ver todos →</a>
+                    </div>
+                    <div class="fin-emp-stats">
+                        <div class="fin-emp-stat">
+                            <span>Empleados</span>
+                            <strong>${empCount}</strong>
+                        </div>
+                        <div class="fin-emp-stat">
+                            <span>Costo mensual</span>
+                            <strong>${money(v.salary_total || 0)}</strong>
+                        </div>
+                        <div class="fin-emp-stat">
+                            <span>Próximos pagos</span>
+                            <strong>${employees.length ? employees.slice(0, 3).map((e) => `Día ${e.payment_day}`).join(' · ') : '—'}</strong>
+                        </div>
+                    </div>
+                    ${employees.length ? `
+                        <div class="fin-emp-list">
+                            ${employees.map((e) => `
+                                <div class="fin-emp-row">
+                                    <div class="fin-share-person">
+                                        <span class="fin-avatar tone-orange">${escapeHtml((e.full_name || '?').slice(0, 1).toUpperCase())}</span>
+                                        <div>
+                                            <strong>${escapeHtml(e.full_name)}</strong>
+                                            <span>${escapeHtml(e.job_title || 'Sin cargo')}</span>
+                                        </div>
+                                    </div>
+                                    <div class="fin-emp-row-right">
+                                        <b>${money(e.salary)}</b>
+                                        <span class="fin-status status-confirmed">${e.is_active ? 'Activo' : 'Inactivo'}</span>
                                     </div>
                                 </div>
-                                <b>${money(s.amount)}</b>
-                            </div>
-                        `).join('')}
+                            `).join('')}
+                        </div>
+                    ` : `
+                        <p class="fin-muted">Todavía no hay empleados con sueldo fijo.
+                            <a href="${bookSectionHref(bookId, 'empleados', monthKey)}">Agregar empleado</a>
+                        </p>
+                    `}
+                </article>
+
+                <article class="fin-dash-tips fin-dash-anim" style="--d:.42s">
+                    <div class="fin-dash-tips-head">
+                        <span class="fin-dash-ico tone-orange">${dashIcon('tip')}</span>
+                        <div>
+                            <span class="fin-kicker" style="color:#FF8A3D">Tips inteligentes</span>
+                            <h3>Recomendaciones</h3>
+                        </div>
                     </div>
-                ` : `
-                    <p class="fin-muted">Agrega socios con porcentaje para ver el reparto.
-                        <a href="${bookSectionHref(bookId, 'socios', monthKey)}">Ir a Socios</a>
-                    </p>
-                `}
+                    <ul class="fin-dash-tips-list">
+                        ${tips.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}
+                    </ul>
+                </article>
             </section>
 
-            <section class="fin-panel">
-                <div class="fin-panel-head">
-                    <h3>Préstamos activos</h3>
-                    <button type="button" class="fin-help-btn" data-help="pending_loans">ⓘ</button>
+            ${editMode ? `
+                <div class="fin-customize-wrap">
+                    <h3>Personalizar tarjetas</h3>
+                    <p class="fin-muted">Arrastra, oculta o cambia el tamaño. Los cambios se guardan solos.</p>
+                    ${renderDashboardGrid({
+                        layout,
+                        values: v,
+                        currency: book.currency || 'COP',
+                        editMode: true
+                    })}
                 </div>
-                ${loans.length ? `
-                    <div class="fin-loan-preview">
-                        ${loans.map((l) => {
-                            const paidN = Number(l.paid_installments || 0);
-                            const totalN = Math.max(1, Number(l.installments || 1));
-                            const pct = Number(l.progress_pct ?? Math.min(100, Math.round((paidN / totalN) * 100)));
-                            return `
-                                <div class="fin-loan-preview-item">
-                                    <div class="fin-loan-preview-top">
-                                        <strong>${escapeHtml(l.counterparty)}</strong>
-                                        <span>${escapeHtml(LOAN_TYPE_LABELS[l.loan_type] || l.loan_type)}</span>
-                                    </div>
-                                    <div class="fin-progress"><i style="width:${pct}%"></i></div>
-                                    <div class="fin-loan-preview-meta">
-                                        <span>${paidN}/${totalN} cuotas · Pendiente ${money(l.remaining_balance)}</span>
-                                        <span>${escapeHtml(l.next_due_date || 'Sin fecha')}</span>
-                                    </div>
-                                </div>
-                            `;
-                        }).join('')}
-                    </div>
-                ` : '<p class="fin-muted">No hay préstamos activos.</p>'}
-            </section>
-
-            <section class="fin-panel fin-quick-actions">
-                <h3>Acciones rápidas</h3>
-                <a class="fin-qa tone-income" href="${bookSectionHref(bookId, 'ingresos', monthKey)}">+ Nuevo ingreso</a>
-                <a class="fin-qa tone-expense" href="${bookSectionHref(bookId, 'egresos', monthKey)}">− Nuevo egreso</a>
-                <a class="fin-qa tone-fixed" href="${bookSectionHref(bookId, 'fijos', monthKey)}">+ Gasto fijo</a>
-                <a class="fin-qa tone-loan" href="${bookSectionHref(bookId, 'prestamos', monthKey)}">+ Nuevo préstamo</a>
-                <a class="fin-qa tone-emp" href="${bookSectionHref(bookId, 'empleados', monthKey)}">+ Nuevo empleado</a>
-                <a class="fin-qa tone-emp" href="${bookSectionHref(bookId, 'socios', monthKey)}">+ Nuevo socio</a>
-            </section>
+            ` : ''}
         </div>
-
-        <section class="fin-flow-strip" aria-label="Flujo de dinero del mes">
-            <div class="fin-flow-step">
-                <span>Ingresos</span>
-                <strong class="is-pos">${money(v.income_total)}</strong>
-            </div>
-            <span class="fin-flow-op">−</span>
-            <div class="fin-flow-step">
-                <span>Egresos</span>
-                <strong class="is-neg">${money(v.expense_total)}</strong>
-            </div>
-            <span class="fin-flow-op">=</span>
-            <div class="fin-flow-step is-result">
-                <span>Caja disponible</span>
-                <strong class="is-pos">${money(toShare)}</strong>
-            </div>
-            <span class="fin-flow-op">→</span>
-            <div class="fin-flow-step">
-                <span>Reparto socios</span>
-                <strong>${money(v.distributed)}</strong>
-            </div>
-        </section>
-
-        <div class="fin-budget-strip">
-            <div>
-                <span class="fin-kicker">Presupuesto del mes (informativo)</span>
-                <strong>${money(v.fixed_total)}</strong>
-            </div>
-            <div class="fin-budget-split">
-                <span>Gastos fijos ${money(v.fixed_ops_total || 0)}</span>
-                <span>Sueldos ${money(v.salary_total || 0)}</span>
-            </div>
-        </div>
-
-        <div class="fin-tip-banner">
-            <span aria-hidden="true">💡</span>
-            <div>
-                <strong>Tip del mes</strong>
-                <p>${escapeHtml(tipOfTheMonth(v))}</p>
-            </div>
-        </div>
-
-        ${editMode ? `
-            <div class="fin-customize-wrap">
-                <h3>Personalizar tarjetas</h3>
-                <p class="fin-muted">Arrastra, oculta o cambia el tamaño. Los cambios se guardan solos.</p>
-                ${renderDashboardGrid({
-                    layout,
-                    values: v,
-                    currency: book.currency || 'COP',
-                    editMode: true
-                })}
-            </div>
-        ` : ''}
     `;
 }
 
