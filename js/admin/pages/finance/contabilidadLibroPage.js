@@ -151,9 +151,9 @@ function render() {
             monthKey,
             showMonth: !['fijos', 'prestamos', 'empleados'].includes(section)
         })}
-        <div class="fin-layout">
+        <div class="fin-layout${section === 'dashboard' ? ' is-dashboard' : ''}">
             <div class="fin-layout-main" id="finSectionBody">${renderSectionBody()}</div>
-            ${renderAssistantPanel(section)}
+            ${section === 'dashboard' ? '' : renderAssistantPanel(section)}
         </div>
         <div id="finModalHost"></div>
     `;
@@ -182,96 +182,142 @@ function renderSectionBody() {
     }
 }
 
-/* ---------------- Dashboard (diseño oficial) ---------------- */
+/* ---------------- Dashboard (diseño oficial — clon visual) ---------------- */
 
 function dashIcon(name) {
     const icons = {
-        wallet: '<svg viewBox="0 0 24 24" fill="none"><rect x="3" y="6" width="18" height="13" rx="2.5" stroke="currentColor" stroke-width="1.7"/><path d="M3 10h18M16 13.5h2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
-        income: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 14l4-4 3 3 6-7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 6h4v4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-        expense: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 10l4 4 3-3 6 7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 18h4v-4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
-        budget: '<svg viewBox="0 0 24 24" fill="none"><rect x="4" y="5" width="16" height="15" rx="2" stroke="currentColor" stroke-width="1.7"/><path d="M8 3v4M16 3v4M4 10h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
-        users: '<svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3" stroke="currentColor" stroke-width="1.7"/><circle cx="17" cy="9" r="2.4" stroke="currentColor" stroke-width="1.7"/><path d="M3.5 18.5c.8-2.6 2.9-4 5.5-4s4.7 1.4 5.5 4M14 18.5c.4-1.6 1.5-2.7 3-2.7 1.4 0 2.5 1 3 2.7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>',
-        tip: '<svg viewBox="0 0 24 24" fill="none"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.8c.9.7 1.5 1.7 1.5 2.7h4c0-1 .6-2 1.5-2.7A6 6 0 0 0 12 3z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>'
+        wallet: '<svg viewBox="0 0 24 24" fill="none"><rect x="2.5" y="6" width="19" height="13.5" rx="2.8" stroke="currentColor" stroke-width="1.6"/><path d="M2.5 10h19M15.5 14h3.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+        income: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 15l5-5 3.2 3.2L20 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5 5H20v5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        expense: '<svg viewBox="0 0 24 24" fill="none"><path d="M4 9l5 5 3.2-3.2L20 19" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><path d="M14.5 19H20v-5.5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        budget: '<svg viewBox="0 0 24 24" fill="none"><rect x="3.5" y="5" width="17" height="15" rx="2.2" stroke="currentColor" stroke-width="1.6"/><path d="M8 3.5v3.5M16 3.5v3.5M3.5 10h17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M8.5 14.2l2.2 2.2 4.3-4.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        users: '<svg viewBox="0 0 24 24" fill="none"><circle cx="9" cy="8" r="3.1" stroke="currentColor" stroke-width="1.6"/><circle cx="17" cy="9.2" r="2.5" stroke="currentColor" stroke-width="1.6"/><path d="M3.2 18.8c.7-2.7 2.8-4.2 5.8-4.2s5.1 1.5 5.8 4.2M14.2 18.8c.35-1.5 1.4-2.6 2.9-2.6 1.4 0 2.4.9 2.9 2.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
+        tip: '<svg viewBox="0 0 24 24" fill="none"><path d="M9 18h6M10 21h4M12 3a6.2 6.2 0 0 0-3.6 11.1c.9.7 1.5 1.7 1.5 2.7h4.2c0-1 .6-2 1.5-2.7A6.2 6.2 0 0 0 12 3z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+        plus: '<svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>',
+        minus: '<svg viewBox="0 0 24 24" fill="none"><path d="M5 12h14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>'
     };
     return icons[name] || icons.wallet;
 }
 
-function buildCashFlowSvg(income, expense, available) {
-    const w = 640;
-    const h = 220;
-    const pad = { t: 18, r: 16, b: 28, l: 16 };
+function smoothPath(points) {
+    if (!points.length) return '';
+    if (points.length === 1) return `M${points[0][0]},${points[0][1]}`;
+    let d = `M${points[0][0].toFixed(1)},${points[0][1].toFixed(1)}`;
+    for (let i = 0; i < points.length - 1; i += 1) {
+        const p0 = points[i - 1] || points[i];
+        const p1 = points[i];
+        const p2 = points[i + 1];
+        const p3 = points[i + 2] || p2;
+        const cp1x = p1[0] + (p2[0] - p0[0]) / 6;
+        const cp1y = p1[1] + (p2[1] - p0[1]) / 6;
+        const cp2x = p2[0] - (p3[0] - p1[0]) / 6;
+        const cp2y = p2[1] - (p3[1] - p1[1]) / 6;
+        d += ` C${cp1x.toFixed(1)},${cp1y.toFixed(1)} ${cp2x.toFixed(1)},${cp2y.toFixed(1)} ${p2[0].toFixed(1)},${p2[1].toFixed(1)}`;
+    }
+    return d;
+}
+
+function buildCashFlowSvg(income, expense, available, moneyFmt) {
+    const w = 720;
+    const h = 260;
+    const pad = { t: 24, r: 20, b: 32, l: 44 };
     const iw = w - pad.l - pad.r;
     const ih = h - pad.t - pad.b;
-    const maxV = Math.max(income, expense, Math.abs(available), 1) * 1.15;
-    const n = 7;
-    const pts = (base, wave) => Array.from({ length: n }, (_, i) => {
+    const maxV = Math.max(income, expense, Math.abs(available), 1) * 1.25;
+    const n = 8;
+    const series = (base, amp, phase) => Array.from({ length: n }, (_, i) => {
         const t = i / (n - 1);
-        const wobble = 1 + wave * Math.sin(t * Math.PI * 1.6 + wave * 2);
-        const v = Math.max(0, base * (0.35 + 0.65 * t) * wobble * (0.85 + 0.15 * t));
+        const wave = 0.72 + 0.28 * Math.sin((t * Math.PI * 1.7) + phase);
+        const ramp = 0.42 + 0.58 * t;
+        const v = Math.max(0, (base || maxV * 0.18) * ramp * (1 + amp * (wave - 1)));
         return [pad.l + t * iw, pad.t + ih - (Math.min(v, maxV) / maxV) * ih];
     });
-    const toPath = (arr) => arr.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-    const incomePts = pts(income || maxV * 0.2, 0.08);
-    const expensePts = pts(expense || maxV * 0.15, -0.06);
-    const cashPts = pts(Math.max(available, 0) || maxV * 0.1, 0.04);
-    const labels = ['1', '5', '10', '15', '20', '25', '30'];
+    const incomePts = series(income, 0.12, 0.2);
+    const expensePts = series(expense, 0.1, 1.4);
+    const cashPts = series(Math.max(available, 0), 0.08, 2.2);
+    const mid = 3;
+    const tipX = incomePts[mid][0];
+    const tipY = Math.min(incomePts[mid][1], expensePts[mid][1], cashPts[mid][1]) - 8;
+    const labels = ['1', '5', '10', '15', '20', '25', '28', '30'];
+    const dots = (pts, color) => pts.map((p) => `
+        <circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.2" fill="#12141a" stroke="${color}" stroke-width="2"/>
+    `).join('');
+
     return `
-        <svg class="ndx-chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
-            ${[0.25, 0.5, 0.75, 1].map((g) => {
-                const y = pad.t + ih * (1 - g);
-                return `<line x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}" stroke="rgba(255,255,255,.06)" />`;
-            }).join('')}
-            <path d="${toPath(incomePts)}" fill="none" stroke="#4ADE80" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="${toPath(expensePts)}" fill="none" stroke="#FF6B81" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="${toPath(cashPts)}" fill="none" stroke="#8C52FF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-            ${labels.map((lb, i) => {
-                const x = pad.l + (i / (n - 1)) * iw;
-                return `<text x="${x}" y="${h - 8}" text-anchor="middle" fill="rgba(255,255,255,.35)" font-size="10">${lb}</text>`;
-            }).join('')}
-        </svg>
+        <div class="ndx-chart-stage">
+            <svg class="ndx-chart-svg" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+                <defs>
+                    <linearGradient id="ndxIncFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#4ADE80" stop-opacity=".18"/>
+                        <stop offset="100%" stop-color="#4ADE80" stop-opacity="0"/>
+                    </linearGradient>
+                    <filter id="ndxGlow"><feGaussianBlur stdDeviation="1.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+                </defs>
+                ${[0, 0.25, 0.5, 0.75, 1].map((g) => {
+                    const y = pad.t + ih * (1 - g);
+                    return `<line x1="${pad.l}" y1="${y}" x2="${w - pad.r}" y2="${y}" stroke="rgba(255,255,255,.06)" stroke-dasharray="4 6"/>`;
+                }).join('')}
+                <path d="${smoothPath(incomePts)} L${incomePts[n - 1][0]},${pad.t + ih} L${incomePts[0][0]},${pad.t + ih} Z" fill="url(#ndxIncFill)"/>
+                <path d="${smoothPath(incomePts)}" fill="none" stroke="#4ADE80" stroke-width="2.6" stroke-linecap="round" filter="url(#ndxGlow)"/>
+                <path d="${smoothPath(expensePts)}" fill="none" stroke="#FF6B81" stroke-width="2.6" stroke-linecap="round" filter="url(#ndxGlow)"/>
+                <path d="${smoothPath(cashPts)}" fill="none" stroke="#8C52FF" stroke-width="2.6" stroke-linecap="round" filter="url(#ndxGlow)"/>
+                ${dots(incomePts, '#4ADE80')}
+                ${dots(expensePts, '#FF6B81')}
+                ${dots(cashPts, '#8C52FF')}
+                <line x1="${tipX}" y1="${pad.t}" x2="${tipX}" y2="${pad.t + ih}" stroke="rgba(255,255,255,.12)" stroke-dasharray="3 5"/>
+                ${labels.map((lb, i) => {
+                    const x = pad.l + (i / (n - 1)) * iw;
+                    return `<text x="${x}" y="${h - 10}" text-anchor="middle" fill="rgba(255,255,255,.34)" font-size="11" font-family="Poppins,sans-serif">${lb}</text>`;
+                }).join('')}
+            </svg>
+            <div class="ndx-chart-tooltip" style="left:${((tipX / w) * 100).toFixed(1)}%; top:${Math.max(8, (tipY / h) * 100 - 4).toFixed(1)}%">
+                <strong>15 del mes</strong>
+                <div><i class="dot tone-green"></i> Ingresos <b>${moneyFmt(income)}</b></div>
+                <div><i class="dot tone-red"></i> Egresos <b>${moneyFmt(expense)}</b></div>
+                <div><i class="dot tone-purple"></i> Caja <b>${moneyFmt(available)}</b></div>
+            </div>
+        </div>
     `;
 }
 
 function buildDonutSvg(segments) {
-    const size = 160;
+    const size = 168;
+    const cx = 84;
+    const cy = 84;
     const r = 58;
-    const cx = 80;
-    const cy = 80;
+    const stroke = 22;
     const total = segments.reduce((s, x) => s + x.value, 0) || 1;
-    let angle = -Math.PI / 2;
+    const c = 2 * Math.PI * r;
+    let offset = 0;
     const arcs = segments.map((seg) => {
-        const sweep = (seg.value / total) * Math.PI * 2;
-        const a2 = angle + sweep;
-        const x1 = cx + r * Math.cos(angle);
-        const y1 = cy + r * Math.sin(angle);
-        const x2 = cx + r * Math.cos(a2);
-        const y2 = cy + r * Math.sin(a2);
-        const large = sweep > Math.PI ? 1 : 0;
-        const d = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`;
-        angle = a2;
-        return `<path d="${d}" fill="${seg.color}"/>`;
+        const len = (seg.value / total) * c;
+        const el = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${seg.color}" stroke-width="${stroke}"
+            stroke-dasharray="${len} ${c - len}" stroke-dashoffset="${-offset}"
+            transform="rotate(-90 ${cx} ${cy})" stroke-linecap="butt"/>`;
+        offset += len;
+        return el;
     }).join('');
     return `
         <svg class="ndx-donut-svg" viewBox="0 0 ${size} ${size}" aria-hidden="true">
+            <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="${stroke}"/>
             ${arcs}
-            <circle cx="${cx}" cy="${cy}" r="36" fill="#121218"/>
+            <circle cx="${cx}" cy="${cy}" r="${r - stroke / 2 - 2}" fill="#15171c"/>
         </svg>
     `;
 }
 
 function buildRingSvg(pct) {
     const p = Math.max(0, Math.min(100, pct));
-    const r = 42;
+    const r = 46;
     const c = 2 * Math.PI * r;
     const offset = c * (1 - p / 100);
     return `
-        <svg class="ndx-ring-svg" viewBox="0 0 108 108" aria-hidden="true">
-            <circle cx="54" cy="54" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="10"/>
-            <circle cx="54" cy="54" r="${r}" fill="none" stroke="#8C52FF" stroke-width="10"
+        <svg class="ndx-ring-svg" viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="${r}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="12"/>
+            <circle cx="60" cy="60" r="${r}" fill="none" stroke="#8C52FF" stroke-width="12"
                 stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${offset}"
-                transform="rotate(-90 54 54)"/>
-            <text x="54" y="50" text-anchor="middle" fill="#fff" font-size="20" font-weight="700">${p}%</text>
-            <text x="54" y="68" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="9">Ahorro</text>
+                transform="rotate(-90 60 60)"/>
+            <text x="60" y="56" text-anchor="middle" fill="#fff" font-size="22" font-weight="700" font-family="Poppins,sans-serif">${p}%</text>
+            <text x="60" y="74" text-anchor="middle" fill="rgba(255,255,255,.45)" font-size="10" font-family="Poppins,sans-serif">Ahorro</text>
         </svg>
     `;
 }
@@ -285,6 +331,7 @@ function renderDashboard() {
     const empCount = summary.counts.employees || 0;
     const partnerPct = summary.shares.reduce((s, r) => s + Number(r.percentage || 0), 0);
     const tipText = tipOfTheMonth(v);
+    const catCount = (summary.counts.fixed || 0) + (Number(v.salary_total) > 0 ? 1 : 0);
 
     const budgetTotal = Number(v.fixed_total || 0);
     const budgetExecuted = Math.min(Number(v.expense_total || 0), budgetTotal || Number(v.expense_total || 0));
@@ -305,9 +352,7 @@ function renderDashboard() {
             color: ['#2D8CFF', '#22D3EE', '#FF8A3D', '#6B7280'][i % 4]
         }))
     ].filter((x) => x.value > 0);
-    if (!distParts.length) {
-        distParts.push({ name: 'Sin datos', value: 1, color: '#3a3a3a' });
-    }
+    if (!distParts.length) distParts.push({ name: 'Sin datos', value: 1, color: '#3a3a3a' });
     const distTotal = distParts.reduce((s, x) => s + x.value, 0) || 1;
 
     const savingsPct = Number(v.income_total) > 0
@@ -317,14 +362,13 @@ function renderDashboard() {
     return `
         <div class="ndx-dash">
             <div class="ndx-dash-toolbar">
-                <p class="fin-toolbar-note">Resumen financiero en tiempo real</p>
-                <button type="button" class="admin-btn-secondary" id="finToggleEdit">
+                <span></span>
+                <button type="button" class="admin-btn-secondary ndx-customize-btn" id="finToggleEdit">
                     ${editMode ? 'Listo' : 'Personalizar'}
                 </button>
             </div>
 
-            <!-- FILA 1: 5 KPIs -->
-            <section class="ndx-kpi-row">
+            <section class="ndx-kpi-row" aria-label="Indicadores">
                 <article class="ndx-kpi">
                     <div class="ndx-kpi-top">
                         <span class="ndx-kpi-ico tone-green">${dashIcon('income')}</span>
@@ -332,10 +376,8 @@ function renderDashboard() {
                     </div>
                     <span class="ndx-kpi-label">Ingresos este mes</span>
                     <strong class="ndx-kpi-value">${money(v.income_total)}</strong>
-                    <div class="ndx-kpi-foot">
-                        <span>${summary.counts.incomes} registro${summary.counts.incomes === 1 ? '' : 's'}</span>
-                        <span class="tone-green">Disponible para usar</span>
-                    </div>
+                    <div class="ndx-kpi-meta">${summary.counts.incomes} registro${summary.counts.incomes === 1 ? '' : 's'}</div>
+                    <div class="ndx-kpi-trend tone-green">↑ vs mes anterior</div>
                 </article>
                 <article class="ndx-kpi">
                     <div class="ndx-kpi-top">
@@ -344,10 +386,8 @@ function renderDashboard() {
                     </div>
                     <span class="ndx-kpi-label">Egresos este mes</span>
                     <strong class="ndx-kpi-value">${money(v.expense_total)}</strong>
-                    <div class="ndx-kpi-foot">
-                        <span>${summary.counts.expenses} registro${summary.counts.expenses === 1 ? '' : 's'}</span>
-                        <span class="tone-red">Salidas reales</span>
-                    </div>
+                    <div class="ndx-kpi-meta">${summary.counts.expenses} registro${summary.counts.expenses === 1 ? '' : 's'}</div>
+                    <div class="ndx-kpi-trend tone-red">↑ salidas del mes</div>
                 </article>
                 <article class="ndx-kpi">
                     <div class="ndx-kpi-top">
@@ -356,10 +396,8 @@ function renderDashboard() {
                     </div>
                     <span class="ndx-kpi-label">Caja disponible</span>
                     <strong class="ndx-kpi-value ${v.available < 0 ? 'is-neg' : ''}">${money(v.available)}</strong>
-                    <div class="ndx-kpi-foot">
-                        <span>Disponible para usar</span>
-                        <span class="tone-green">Ingresos − Egresos</span>
-                    </div>
+                    <div class="ndx-kpi-meta">Disponible para usar</div>
+                    <div class="ndx-kpi-trend tone-green">→ Ingresos − Egresos</div>
                 </article>
                 <article class="ndx-kpi">
                     <div class="ndx-kpi-top">
@@ -368,10 +406,8 @@ function renderDashboard() {
                     </div>
                     <span class="ndx-kpi-label">Presupuesto fijo</span>
                     <strong class="ndx-kpi-value">${money(v.fixed_total)}</strong>
-                    <div class="ndx-kpi-foot">
-                        <span>Costo mensual fijo</span>
-                        <span class="tone-orange">${(summary.counts.fixed || 0) + (empCount ? 1 : 0)} categorías</span>
-                    </div>
+                    <div class="ndx-kpi-meta">Costo mensual fijo</div>
+                    <div class="ndx-kpi-trend tone-orange">${catCount} categorías</div>
                 </article>
                 <article class="ndx-kpi">
                     <div class="ndx-kpi-top">
@@ -380,14 +416,11 @@ function renderDashboard() {
                     </div>
                     <span class="ndx-kpi-label">Reparto a socios</span>
                     <strong class="ndx-kpi-value">${money(v.distributed)}</strong>
-                    <div class="ndx-kpi-foot">
-                        <span>Este mes</span>
-                        <span class="tone-blue">${partnerPct}% distribuido</span>
-                    </div>
+                    <div class="ndx-kpi-meta">Este mes</div>
+                    <div class="ndx-kpi-trend tone-blue">${partnerPct}% distribuido</div>
                 </article>
             </section>
 
-            <!-- FILA 2: Flujo · Préstamos · Acciones -->
             <section class="ndx-row-2">
                 <article class="ndx-card ndx-cashflow">
                     <div class="ndx-card-head">
@@ -401,14 +434,7 @@ function renderDashboard() {
                         </div>
                         <span class="ndx-chip">${escapeHtml(summary.monthLabel || 'Este mes')}</span>
                     </div>
-                    <div class="ndx-chart-wrap">
-                        ${buildCashFlowSvg(Number(v.income_total || 0), Number(v.expense_total || 0), Number(v.available || 0))}
-                    </div>
-                    <div class="ndx-cashflow-stats">
-                        <div><span>Ingresos</span><b class="is-pos">${money(v.income_total)}</b></div>
-                        <div><span>Egresos</span><b class="is-neg">${money(v.expense_total)}</b></div>
-                        <div><span>Caja</span><b class="tone-purple-txt">${money(v.available)}</b></div>
-                    </div>
+                    ${buildCashFlowSvg(Number(v.income_total || 0), Number(v.expense_total || 0), Number(v.available || 0), money)}
                 </article>
 
                 <article class="ndx-card ndx-loans">
@@ -426,8 +452,9 @@ function renderDashboard() {
                                 return `
                                     <div class="ndx-loan-item">
                                         <div class="ndx-loan-main">
-                                            <div>
+                                            <div class="ndx-loan-left">
                                                 <strong>${escapeHtml(l.counterparty)}</strong>
+                                                <div class="ndx-bar tone-orange-bar"><i style="width:${pct}%"></i></div>
                                                 <span>${paidN}/${totalN} cuotas</span>
                                             </div>
                                             <div class="ndx-loan-right">
@@ -435,7 +462,6 @@ function renderDashboard() {
                                                 <span class="ndx-pill ${isGranted ? 'pill-orange' : 'pill-green'}">${escapeHtml(isGranted ? 'Otorgado' : 'Recibido')}</span>
                                             </div>
                                         </div>
-                                        <div class="ndx-bar"><i style="width:${pct}%"></i></div>
                                     </div>
                                 `;
                             }).join('')}
@@ -446,22 +472,20 @@ function renderDashboard() {
                 <article class="ndx-card ndx-actions">
                     <div class="ndx-card-head"><h3>Acciones rápidas</h3></div>
                     <div class="ndx-qa-stack">
-                        <a class="ndx-qa tone-income" href="${bookSectionHref(bookId, 'ingresos', monthKey)}">+ Nuevo ingreso</a>
-                        <a class="ndx-qa tone-expense" href="${bookSectionHref(bookId, 'egresos', monthKey)}">− Nuevo egreso</a>
-                        <a class="ndx-qa tone-fixed" href="${bookSectionHref(bookId, 'fijos', monthKey)}">+ Gasto fijo</a>
-                        <a class="ndx-qa tone-loan" href="${bookSectionHref(bookId, 'prestamos', monthKey)}">+ Nuevo préstamo</a>
-                        <a class="ndx-qa tone-emp" href="${bookSectionHref(bookId, 'empleados', monthKey)}">+ Nuevo empleado</a>
-                        <a class="ndx-qa tone-partner" href="${bookSectionHref(bookId, 'socios', monthKey)}">+ Nuevo socio</a>
+                        <a class="ndx-qa tone-income" href="${bookSectionHref(bookId, 'ingresos', monthKey)}"><span>${dashIcon('plus')}</span> Nuevo ingreso</a>
+                        <a class="ndx-qa tone-expense" href="${bookSectionHref(bookId, 'egresos', monthKey)}"><span>${dashIcon('minus')}</span> Nuevo egreso</a>
+                        <a class="ndx-qa tone-fixed" href="${bookSectionHref(bookId, 'fijos', monthKey)}"><span>${dashIcon('plus')}</span> Gasto fijo</a>
+                        <a class="ndx-qa tone-loan" href="${bookSectionHref(bookId, 'prestamos', monthKey)}"><span>${dashIcon('plus')}</span> Nuevo préstamo</a>
+                        <a class="ndx-qa tone-emp" href="${bookSectionHref(bookId, 'empleados', monthKey)}"><span>${dashIcon('plus')}</span> Nuevo empleado</a>
+                        <a class="ndx-qa tone-partner" href="${bookSectionHref(bookId, 'socios', monthKey)}"><span>${dashIcon('plus')}</span> Nuevo socio</a>
                     </div>
                 </article>
             </section>
 
-            <!-- FILA 3: Presupuesto · Empleados · Tip -->
             <section class="ndx-row-3">
                 <article class="ndx-card ndx-budget">
                     <div class="ndx-card-head">
                         <h3>Presupuesto fijo mensual</h3>
-                        <a class="ndx-link tone-orange-link" href="${bookSectionHref(bookId, 'fijos', monthKey)}">Ver categorías</a>
                     </div>
                     <div class="ndx-budget-top">
                         <div>
@@ -472,23 +496,24 @@ function renderDashboard() {
                             <span>Ejecutado</span>
                             <strong>${money(budgetExecuted)}</strong>
                         </div>
-                        <div class="ndx-budget-pct">
-                            <strong>${budgetPct}%</strong>
-                        </div>
+                        <div class="ndx-budget-pct"><strong>${budgetPct}%</strong></div>
                     </div>
                     <div class="ndx-bar ndx-bar-lg tone-orange-bar"><i style="width:${budgetPct}%"></i></div>
                     <div class="ndx-budget-table">
                         <div class="ndx-budget-thead">
-                            <span>Categoría</span><span>Presupuestado</span><span>Estado</span>
+                            <span>Categoría</span><span>Presupuestado</span><span>Ejecutado</span><span>Estado</span>
                         </div>
                         ${budgetRows.length ? budgetRows.map((row) => {
-                            const rowPct = budgetTotal > 0
-                                ? Math.min(100, Math.round((row.budgeted / budgetTotal) * 100))
+                            const share = budgetTotal > 0 ? row.budgeted / budgetTotal : 0;
+                            const executed = Math.round(budgetExecuted * share);
+                            const rowPct = row.budgeted > 0
+                                ? Math.min(100, Math.round((executed / row.budgeted) * 100))
                                 : 0;
                             return `
                                 <div class="ndx-budget-row">
                                     <span>${escapeHtml(row.name)}</span>
                                     <b>${money(row.budgeted)}</b>
+                                    <b class="muted">${money(executed)}</b>
                                     <div class="ndx-budget-state">
                                         <div class="ndx-bar tone-orange-bar"><i style="width:${rowPct}%"></i></div>
                                         <em>${rowPct}%</em>
@@ -497,12 +522,12 @@ function renderDashboard() {
                             `;
                         }).join('') : `<p class="fin-muted">Sin categorías de presupuesto.</p>`}
                     </div>
+                    <a class="ndx-link tone-orange-link" href="${bookSectionHref(bookId, 'fijos', monthKey)}">Ver todas las categorías</a>
                 </article>
 
                 <article class="ndx-card ndx-emps">
                     <div class="ndx-card-head">
                         <h3>Resumen de empleados</h3>
-                        <a class="ndx-link" href="${bookSectionHref(bookId, 'empleados', monthKey)}">Ver todos</a>
                     </div>
                     <div class="ndx-emp-stats">
                         <div class="ndx-emp-stat">
@@ -519,7 +544,10 @@ function renderDashboard() {
                         </div>
                     </div>
                     <div class="ndx-emp-list">
-                        <div class="ndx-emp-thead">Lista de empleados</div>
+                        <div class="ndx-emp-thead">
+                            <span>Lista de empleados</span>
+                            <span>Sueldo mensual</span>
+                        </div>
                         ${employees.length ? employees.map((e) => `
                             <div class="ndx-emp-row">
                                 <div class="fin-share-person">
@@ -536,6 +564,7 @@ function renderDashboard() {
                             </div>
                         `).join('') : `<p class="fin-muted">Sin empleados registrados.</p>`}
                     </div>
+                    <a class="ndx-link" href="${bookSectionHref(bookId, 'empleados', monthKey)}">Ver todos los empleados</a>
                 </article>
 
                 <article class="ndx-card ndx-tip">
@@ -543,25 +572,25 @@ function renderDashboard() {
                         <span class="ndx-kpi-ico tone-orange">${dashIcon('tip')}</span>
                         <div>
                             <span class="ndx-kpi-label">Tip del mes</span>
-                            <h3>Recomendación</h3>
+                            <h3>Prioriza tu flujo</h3>
                         </div>
                     </div>
                     <p class="ndx-tip-text">${escapeHtml(tipText)}</p>
                     <div class="ndx-tip-art" aria-hidden="true">
-                        <svg viewBox="0 0 220 110" fill="none">
-                            <rect x="20" y="30" width="70" height="48" rx="8" stroke="#8C52FF" stroke-width="1.6" opacity=".7"/>
-                            <circle cx="55" cy="54" r="12" stroke="#8C52FF" stroke-width="1.6" opacity=".8"/>
-                            <path d="M110 78c18-28 34-28 52 0" stroke="#8C52FF" stroke-width="1.6" opacity=".55"/>
-                            <rect x="150" y="28" width="48" height="30" rx="6" stroke="#C9A8FF" stroke-width="1.5" opacity=".7"/>
-                            <path d="M158 70v18M170 62v26M182 66v22M194 58v30" stroke="#8C52FF" stroke-width="3" stroke-linecap="round" opacity=".55"/>
-                            <circle cx="36" cy="88" r="7" stroke="#FF8A3D" stroke-width="1.4" opacity=".7"/>
-                            <circle cx="52" cy="92" r="5" stroke="#FF8A3D" stroke-width="1.4" opacity=".5"/>
+                        <svg viewBox="0 0 240 120" fill="none">
+                            <circle cx="42" cy="78" r="16" stroke="#8C52FF" stroke-width="1.5" opacity=".75"/>
+                            <circle cx="58" cy="86" r="10" stroke="#C9A8FF" stroke-width="1.4" opacity=".55"/>
+                            <rect x="88" y="34" width="58" height="40" rx="8" stroke="#8C52FF" stroke-width="1.5" opacity=".7"/>
+                            <path d="M96 54h42M96 62h28" stroke="#C9A8FF" stroke-width="1.4" opacity=".6"/>
+                            <path d="M160 88c20-34 40-34 60 0" stroke="#8C52FF" stroke-width="1.5" opacity=".55"/>
+                            <path d="M172 70v28M184 58v40M196 64v34M208 50v48" stroke="#8C52FF" stroke-width="3.2" stroke-linecap="round" opacity=".5"/>
+                            <circle cx="210" cy="28" r="10" stroke="#FF8A3D" stroke-width="1.4" opacity=".65"/>
+                            <path d="M210 23v6M207 28h6" stroke="#FF8A3D" stroke-width="1.3" stroke-linecap="round"/>
                         </svg>
                     </div>
                 </article>
             </section>
 
-            <!-- FILA 4: Resumen · Distribución -->
             <section class="ndx-row-4">
                 <article class="ndx-card ndx-summary">
                     <div class="ndx-card-head"><h3>Resumen financiero del mes</h3></div>
