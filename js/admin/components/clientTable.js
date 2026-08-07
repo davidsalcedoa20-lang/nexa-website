@@ -44,7 +44,7 @@ function escapeHtmlSafe(value) {
  *
  * @param {HTMLElement} tbody
  * @param {Array<object>} clients
- * @param {{onView:Function, onEdit:Function, onDelete:Function}} handlers
+ * @param {{onView:Function, onEdit:Function, onDelete:Function, onResetPassword?:Function}} handlers
  */
 export function renderClientTable(tbody, clients, handlers) {
     if (!tbody) return;
@@ -56,31 +56,40 @@ export function renderClientTable(tbody, clients, handlers) {
 
     tbody.innerHTML = clients.map(function (client, index) {
         const status = STATUS_LABELS[client.status] || STATUS_LABELS.active;
+        const isExpress = client.kind === 'express';
+        const companyLabel = isExpress
+            ? (client.company || client.contact || 'Cliente Express')
+            : (client.company || '—');
 
         return (
             '<tr data-row-index="' + index + '">' +
                 '<td><div class="admin-table-company">' +
-                    '<button type="button" class="admin-inline-name-btn" data-action="edit" data-row-index="' + index + '" title="Editar empresa / workspace">' +
-                        '<strong>' + escapeHtmlSafe(client.company) + '</strong>' +
+                    '<button type="button" class="admin-inline-name-btn" data-action="edit" data-row-index="' + index + '" title="Editar">' +
+                        '<strong>' + escapeHtmlSafe(companyLabel) + '</strong>' +
                         '<span class="admin-inline-edit-hint">' + ICON_EDIT + '</span>' +
                     '</button>' +
                     (client.city ? '<span>' + escapeHtmlSafe(client.city) + '</span>' : '') +
                 '</div></td>' +
                 '<td>' +
-                    '<button type="button" class="admin-inline-name-btn" data-action="edit" data-row-index="' + index + '" title="Editar nombre del cliente">' +
+                    '<button type="button" class="admin-inline-name-btn" data-action="edit" data-row-index="' + index + '" title="Editar nombre">' +
                         '<span>' + escapeHtmlSafe(client.contact) + '</span>' +
                         '<span class="admin-inline-edit-hint">' + ICON_EDIT + '</span>' +
                     '</button>' +
                 '</td>' +
+                '<td><span class="cx-kind-badge ' + (isExpress ? 'express' : 'portal') + '">' +
+                    (isExpress ? 'Express' : 'Portal') +
+                '</span></td>' +
                 '<td>' + escapeHtmlSafe(client.email) + '</td>' +
                 '<td><span class="admin-badge ' + status.className + '">' + status.label + '</span></td>' +
-                '<td>' + client.activeProjects + '</td>' +
+                '<td>' + (client.activeProjects ?? 0) + '</td>' +
                 '<td>' + formatDate(client.createdAt) + '</td>' +
                 '<td>' +
                     '<div class="admin-table-actions">' +
                         '<button type="button" class="admin-action-btn" data-action="view" data-row-index="' + index + '" title="Ver cliente">' + ICON_EYE + '</button>' +
                         '<button type="button" class="admin-action-btn" data-action="edit" data-row-index="' + index + '" title="Editar cliente">' + ICON_EDIT + '</button>' +
-                        '<button type="button" class="admin-action-btn" data-action="reset-password" data-row-index="' + index + '" title="Regenerar contraseña temporal">' + ICON_KEY + '</button>' +
+                        (isExpress ? '' : (
+                            '<button type="button" class="admin-action-btn" data-action="reset-password" data-row-index="' + index + '" title="Regenerar contraseña temporal">' + ICON_KEY + '</button>'
+                        )) +
                         '<button type="button" class="admin-action-btn admin-action-btn--danger" data-action="delete" data-row-index="' + index + '" title="Eliminar cliente">' + ICON_TRASH + '</button>' +
                     '</div>' +
                 '</td>' +

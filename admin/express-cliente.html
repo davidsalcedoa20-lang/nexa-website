@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>Clientes | NEXA Hub</title>
+    <title>Cliente Express | NEXA Hub</title>
 
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/admin.css">
@@ -197,220 +197,17 @@
 
             <!-- MAIN -->
             <main class="admin-main">
-
-                <div class="admin-greeting">
-                    <h1>Clientes</h1>
-                    <p>Gestiona los clientes y espacios de trabajo de NEXA Hub.</p>
-                </div>
-
-                <section class="admin-section">
-
-                    <div class="admin-section-header">
-                        <h2>Todos los clientes</h2>
-                        <button type="button" class="admin-btn-primary" id="newClientBtn">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>
-                            </svg>
-                            Nuevo Cliente
-                        </button>
-                    </div>
-
-                    <!-- Estado: cargando -->
-                    <div class="admin-state" id="clientsLoadingState" style="display:flex;">
-                        <div class="admin-spinner"></div>
-                        <span>Cargando clientes...</span>
-                    </div>
-
-                    <!-- Estado: sin clientes -->
-                    <div class="admin-state" id="clientsEmptyState">
-                        <div class="admin-state-icon">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <circle cx="9" cy="8" r="3.2" stroke="currentColor" stroke-width="1.7"/>
-                                <path d="M3 20c0-3.4 2.7-6 6-6s6 2.6 6 6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
-                            </svg>
-                        </div>
-                        <span>Todavía no hay clientes registrados.<br>Usa "+ Nuevo Cliente" para crear el primero.</span>
-                    </div>
-
-                    <!-- Estado: error -->
-                    <div class="admin-state" id="clientsErrorState">
-                        <div class="admin-state-icon">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <path d="M12 9v4m0 4h.01M10.3 4.3 2.6 18a1.6 1.6 0 0 0 1.4 2.4h16a1.6 1.6 0 0 0 1.4-2.4L13.7 4.3a1.6 1.6 0 0 0-2.8 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                            </svg>
-                        </div>
-                        <span>No se pudieron cargar los clientes.<br>Verifica tu conexión con Supabase e intenta de nuevo.</span>
-                    </div>
-
-                    <!-- Tabla -->
-                    <div class="admin-table-wrapper" id="clientsTableWrapper" style="display:none;">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Empresa</th>
-                                    <th>Contacto</th>
-                                    <th>Tipo</th>
-                                    <th>Correo</th>
-                                    <th>Estado</th>
-                                    <th>Proyectos activos</th>
-                                    <th>Fecha de creación</th>
-                                    <th>Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody id="clientsTableBody">
-                                <!-- Filas generadas por js/admin/pages/clientsPage.js (datos reales de Supabase) -->
-                            </tbody>
-                        </table>
-                    </div>
-
-                </section>
-
+                <div id="expressRoot"><p class="fin-loading">Cargando…</p></div>
             </main>
 
         </div>
 
     </div>
 
-    <!-- ================= MODAL: NUEVO / EDITAR / VER CLIENTE ================= -->
-    <div class="admin-modal-overlay" id="clientModalOverlay">
-        <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
-
-            <div class="admin-modal-header">
-                <h3 id="clientModalTitle">Nuevo Cliente</h3>
-                <button type="button" class="admin-modal-close" id="clientModalClose" aria-label="Cerrar">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                </button>
-            </div>
-
-            <form id="clientForm" class="admin-form" novalidate>
-
-                <div class="admin-field">
-                    <label for="clientCompany">Empresa / Workspace</label>
-                    <input type="text" id="clientCompany" name="company" placeholder="Ej. Distribuidora Andina">
-                </div>
-
-                <div class="admin-field">
-                    <label for="clientContact">Nombre del contacto</label>
-                    <input type="text" id="clientContact" name="contact" placeholder="Ej. Laura Gómez">
-                </div>
-
-                <div class="admin-field">
-                    <label for="clientEmail">Correo electrónico</label>
-                    <input type="email" id="clientEmail" name="email" placeholder="correo@empresa.com" autocomplete="off">
-                    <span class="admin-field-hint">Correo de acceso al Portal NEXA Hub. Puedes corregirlo después de crear el cliente; el inicio de sesión usará el correo actualizado.</span>
-                </div>
-
-                <div class="admin-field" id="clientPasswordField">
-                    <label for="clientPassword">Contraseña temporal</label>
-                    <div style="display:flex; gap:8px;">
-                        <input type="password" id="clientPassword" name="password" placeholder="Mínimo 8 caracteres" autocomplete="new-password" style="flex:1;">
-                        <button type="button" class="admin-btn-secondary" id="clientPasswordGenerateBtn">Generar</button>
-                    </div>
-                    <span class="admin-field-hint">El cliente deberá cambiarla obligatoriamente en su primer inicio de sesión. Cópiala después de guardar para enviársela por tu canal habitual (WhatsApp, correo, etc.).</span>
-                </div>
-
-                <div class="admin-field">
-                    <label for="clientPhone">Teléfono</label>
-                    <input type="tel" id="clientPhone" name="phone" placeholder="Ej. +57 300 000 0000">
-                </div>
-
-                <div class="admin-field">
-                    <label for="clientCity">Ciudad</label>
-                    <input type="text" id="clientCity" name="city" placeholder="Ej. Medellín">
-                </div>
-
-                <div class="admin-field">
-                    <label for="clientNotes">Observaciones</label>
-                    <textarea id="clientNotes" name="notes" rows="3" placeholder="Notas internas sobre este cliente (opcional)"></textarea>
-                </div>
-
-                <span class="admin-form-error" id="clientFormError"></span>
-
-                <div class="admin-modal-actions">
-                    <button type="button" class="admin-btn-secondary" id="clientModalCancel">Cancelar</button>
-                    <button type="submit" class="admin-btn-primary" id="clientModalSubmit">Guardar Cliente</button>
-                </div>
-
-            </form>
-
-        </div>
-    </div>
-
-    <!-- ================= MODAL: REGENERAR CONTRASEÑA TEMPORAL ================= -->
-    <div class="admin-modal-overlay" id="resetPasswordModalOverlay">
-        <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="resetPasswordModalTitle">
-
-            <div class="admin-modal-header">
-                <h3 id="resetPasswordModalTitle">Regenerar contraseña temporal</h3>
-                <button type="button" class="admin-modal-close" id="resetPasswordModalClose" aria-label="Cerrar">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                </button>
-            </div>
-
-            <form id="resetPasswordForm" class="admin-form" novalidate>
-
-                <p id="resetPasswordClientLabel" style="color:#c9c9c9; font-size:13px; line-height:1.6; margin:-6px 0 4px;"></p>
-
-                <div class="admin-field">
-                    <label for="resetPasswordValue">Nueva contraseña temporal</label>
-                    <div style="display:flex; gap:8px;">
-                        <input type="text" id="resetPasswordValue" placeholder="Mínimo 8 caracteres" autocomplete="new-password" style="flex:1;">
-                        <button type="button" class="admin-btn-secondary" id="resetPasswordGenerateBtn">Generar</button>
-                    </div>
-                    <span class="admin-field-hint">El cliente deberá cambiarla obligatoriamente en su próximo inicio de sesión.</span>
-                </div>
-
-                <span class="admin-form-error" id="resetPasswordFormError"></span>
-
-                <div class="admin-modal-actions">
-                    <button type="button" class="admin-btn-secondary" id="resetPasswordCancel">Cancelar</button>
-                    <button type="submit" class="admin-btn-primary" id="resetPasswordSubmit">Establecer contraseña</button>
-                </div>
-
-            </form>
-
-        </div>
-    </div>
-
-    <!-- ================= MODAL: MOSTRAR CONTRASEÑA TEMPORAL (una sola vez) ================= -->
-    <div class="admin-modal-overlay" id="passwordRevealModalOverlay">
-        <div class="admin-modal" role="dialog" aria-modal="true" aria-labelledby="passwordRevealModalTitle">
-
-            <div class="admin-modal-header">
-                <h3 id="passwordRevealModalTitle">Contraseña temporal</h3>
-                <button type="button" class="admin-modal-close" id="passwordRevealClose" aria-label="Cerrar">
-                    <svg viewBox="0 0 24 24" fill="none">
-                        <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-                    </svg>
-                </button>
-            </div>
-
-            <p id="passwordRevealMessage" style="color:#dedede; font-size:13.5px; line-height:1.7; margin:0 0 18px;"></p>
-
-            <div class="admin-field" style="margin-bottom:22px;">
-                <label for="passwordRevealValue">Contraseña</label>
-                <div style="display:flex; gap:8px;">
-                    <input type="text" id="passwordRevealValue" readonly style="flex:1;">
-                    <button type="button" class="admin-btn-secondary" id="passwordRevealCopyBtn">Copiar</button>
-                </div>
-                <span class="admin-field-hint">Por seguridad, no podrás volver a ver esta contraseña después de cerrar esta ventana.</span>
-            </div>
-
-            <div class="admin-modal-actions">
-                <button type="button" class="admin-btn-primary" id="passwordRevealDoneBtn">Entendido</button>
-            </div>
-
-        </div>
-    </div>
-
     <script src="../js/vendor/supabase-js.min.js"></script>
     <script src="../js/portal.js"></script>
     <script src="../js/admin.js"></script>
-    <script type="module" src="../js/admin/pages/clientsPage.js"></script>
+    <script type="module" src="../js/admin/pages/expressClientePage.js"></script>
 
 </body>
 </html>

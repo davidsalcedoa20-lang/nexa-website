@@ -1,16 +1,21 @@
 /* ==========================================================
    NEXA HUB — Página: Clientes (admin/clientes.html)
    ==========================================================
-   Orquesta el módulo: pide los datos al servicio, se los pasa
-   al componente de tabla, y conecta el modal de creación/edición.
-   No contiene consultas a Supabase (eso vive en clientService.js)
-   ni genera HTML de tarjetas/modal a mano (eso vive en los
-   componentes).
+   Orquesta Portal + Express. El flujo Portal no cambia.
    ========================================================== */
 
 import { listClients, createClient, updateClient, deleteClient, resetClientPassword, getActiveProjectsCount } from '../services/clientService.js';
+import {
+    listExpressClients,
+    createExpressClient,
+    updateExpressClient,
+    deleteExpressClient,
+    countExpressProjects
+} from '../services/expressClientService.js';
 import { renderClientTable } from '../components/clientTable.js';
 import { openClientModal } from '../components/clientModal.js';
+import { openClientTypeChooser } from '../components/clientTypeChooser.js';
+import { openExpressClientModal } from '../components/expressClientModal.js';
 import { openResetPasswordModal } from '../components/resetPasswordModal.js';
 import { openPasswordRevealModal } from '../components/passwordRevealModal.js';
 
@@ -31,30 +36,62 @@ function setView(view) {
 async function loadClients() {
     setView('loading');
 
-    let clients;
+    let portalClients = [];
+    let expressClients = [];
     try {
-        clients = await listClients();
+        [portalClients, expressClients] = await Promise.all([
+            listClients(),
+            listExpressClients().catch((err) => {
+                // Si la migración aún no está aplicada, no romper Portal
+                console.warn('[Clientes] Express no disponible:', err.message);
+                return [];
+            })
+        ]);
     } catch (error) {
         console.error('[NEXA HUB] Error cargando clientes:', error.message);
         setView('error');
         return;
     }
 
-    if (!clients.length) {
+    const portalMapped = portalClients.map((c) => Object.assign({}, c, { kind: 'portal' }));
+    const all = portalMapped.concat(expressClients);
+
+    if (!all.length) {
         setView('empty');
         return;
     }
 
-    const withCounts = await Promise.all(clients.map(async function (client) {
+    const withCounts = await Promise.all(all.map(async function (client) {
+        if (client.kind === 'express') {
+            const activeProjects = await countExpressProjects(client.id);
+            return Object.assign({}, client, { activeProjects });
+        }
         const activeProjects = await getActiveProjectsCount(client.workspaceId);
-        return Object.assign({}, client, { activeProjects: activeProjects });
+        return Object.assign({}, client, { activeProjects });
     }));
+
+    withCounts.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     renderClientTable(tbody, withCounts, {
         onView: function (client) {
+            if (client.kind === 'express') {
+                window.location.href = 'express-cliente.html?id=' + encodeURIComponent(client.id);
+                return;
+            }
             openClientModal({ mode: 'view', client: client });
         },
         onEdit: function (client) {
+            if (client.kind === 'express') {
+                openExpressClientModal({
+                    mode: 'edit',
+                    client,
+                    onSubmit: async (payload) => {
+                        await updateExpressClient(client.id, payload);
+                        await loadClients();
+                    }
+                });
+                return;
+            }
             openClientModal({
                 mode: 'edit',
                 client: client,
@@ -64,6 +101,7 @@ async function loadClients() {
             });
         },
         onResetPassword: function (client) {
+            if (client.kind === 'express') return;
             handleResetPassword(client);
         },
         onDelete: function (client) {
@@ -116,6 +154,21 @@ async function handleUpdate(client, payload) {
 }
 
 async function handleDelete(client) {
+    if (client.kind === 'express') {
+        const confirmed = window.confirm(
+            '¿Eliminar el Cliente Express "' + client.contact + '"?\n\n' +
+            'También se ocultarán sus proyectos Express. Esta acción no se puede deshacer fácilmente.'
+        );
+        if (!confirmed) return;
+        try {
+            await deleteExpressClient(client.id);
+            await loadClients();
+        } catch (error) {
+            window.alert('No se pudo eliminar el cliente: ' + error.message);
+        }
+        return;
+    }
+
     const confirmed = window.confirm(
         '¿Eliminar el espacio de trabajo de "' + client.company + '"?\n\n' +
         'Esta acción no se puede deshacer. La cuenta del cliente no se elimina, solo su workspace.'
@@ -133,7 +186,23 @@ async function handleDelete(client) {
 
 if (newClientBtn) {
     newClientBtn.addEventListener('click', function () {
-        openClientModal({ mode: 'create', onSubmit: handleCreate });
+        openClientTypeChooser({
+            onPortal: function () {
+                openClientModal({ mode: 'create', onSubmit: handleCreate });
+            },
+            onExpress: function () {
+                openExpressClientModal({
+                    mode: 'create',
+                    onSubmit: async (payload) => {
+                        const created = await createExpressClient(payload);
+                        await loadClients();
+                        if (created?.id && window.confirm('Cliente Express creado. ¿Quieres agregar un proyecto ahora?')) {
+                            window.location.href = 'express-cliente.html?id=' + encodeURIComponent(created.id);
+                        }
+                    }
+                });
+            }
+        });
     });
 }
 
