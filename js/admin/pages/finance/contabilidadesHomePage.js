@@ -5,15 +5,21 @@ import {
     listFinanceBooks,
     getBooksCardStats,
     createFinanceBook,
-    deleteFinanceBook
+    deleteFinanceBook,
+    listBookShares,
+    setBookShares,
+    listShareableAdmins
 } from '../../../services/financeService.js';
 import { BOOK_COLORS } from '../../../components/finance/financeCatalog.js';
 import { formatMoney } from '../../../components/finance/financeFormat.js';
 import { escapeHtml } from '../../../components/projectUi.js';
+import { supabase } from '../../../services/supabaseClient.js';
 
 const root = document.getElementById('finRoot');
 let books = [];
 let selectedColor = BOOK_COLORS[0];
+let currentUserId = null;
+let currentRole = null;
 
 function relativeTime(iso) {
     if (!iso) return '—';
@@ -32,6 +38,16 @@ async function init() {
     if (!root) return;
     root.innerHTML = '<p class="fin-loading">Cargando tus finanzas…</p>';
     try {
+        const { data: auth } = await supabase.auth.getUser();
+        currentUserId = auth?.user?.id || null;
+        if (currentUserId) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('role')
+                .eq('id', currentUserId)
+                .maybeSingle();
+            currentRole = profile?.role || null;
+        }
         const list = await listFinanceBooks();
         books = await getBooksCardStats(list);
         render();
@@ -41,13 +57,17 @@ async function init() {
     }
 }
 
+function isBookOwner(book) {
+    return currentRole === 'owner' || book.admin_id === currentUserId;
+}
+
 function render() {
     root.innerHTML = `
         <div class="fin-page-header">
             <div class="fin-page-heading">
                 <span class="fin-kicker">Finanzas</span>
                 <h1>Mis Finanzas</h1>
-                <p>Administra tus finanzas de forma simple y clara. Cada contabilidad es un espacio independiente.</p>
+                <p>Tu contabilidad privada. Compártela solo si lo necesitas. El Administrador Principal siempre tiene acceso.</p>
             </div>
             <button type="button" class="admin-btn-primary" id="finNewBookBtn">+ Nueva Contabilidad</button>
         </div>
@@ -110,6 +130,24 @@ function render() {
                 </form>
             </div>
         </div>
+
+        <div class="admin-modal-overlay" id="finShareModal">
+            <div class="admin-modal fin-entry-modal">
+                <div class="admin-modal-header">
+                    <h3>Compartir con</h3>
+                    <button type="button" class="admin-modal-close" id="finShareClose" aria-label="Cerrar">✕</button>
+                </div>
+                <p style="color:rgba(255,255,255,.55);font-size:13px;line-height:1.6;margin:0 0 14px">
+                    Selecciona administradores que podrán ver esta contabilidad.
+                    Si no compartes, solo tú y el Administrador Principal la verán.
+                </p>
+                <div id="finShareList" class="perm-project-checks"></div>
+                <div class="admin-modal-actions">
+                    <button type="button" class="admin-btn-secondary" id="finShareCancel">Cancelar</button>
+                    <button type="button" class="admin-btn-primary" id="finShareSave">Guardar</button>
+                </div>
+            </div>
+        </div>
     `;
 
     wireHome();
@@ -118,12 +156,20 @@ function render() {
 function renderBookCard(book) {
     const color = book.color_hex || '#8C52FF';
     const currency = book.currency || 'COP';
+    const owned = isBookOwner(book);
+    const sharedBadge = !owned
+        ? '<span class="perm-role-badge" style="margin-bottom:8px">Compartida contigo</span>'
+        : '';
     return `
         <article class="fin-book-card" style="--book-color:${escapeHtml(color)}">
             <div class="fin-book-card-top">
                 <span class="fin-book-dot" aria-hidden="true"></span>
-                <button type="button" class="fin-icon-mini" data-delete-book="${book.id}" title="Eliminar">✕</button>
+                <div style="display:flex;gap:6px">
+                    ${owned ? `<button type="button" class="fin-icon-mini" data-share-book="${book.id}" title="Compartir">⇪</button>` : ''}
+                    ${owned ? `<button type="button" class="fin-icon-mini" data-delete-book="${book.id}" title="Eliminar">✕</button>` : ''}
+                </div>
             </div>
+            ${sharedBadge}
             <h2>${escapeHtml(book.name)}</h2>
             <p class="fin-book-desc">${escapeHtml(book.description || 'Sin descripción')}</p>
             <div class="fin-book-meta">
@@ -158,6 +204,39 @@ function closeModal() {
     document.getElementById('finBookForm')?.reset();
 }
 
+let shareBookId = null;
+
+async function openShareModal(bookId) {
+    shareBookId = bookId;
+    const listEl = document.getElementById('finShareList');
+    const modal = document.getElementById('finShareModal');
+    if (!listEl || !modal) return;
+    listEl.innerHTML = '<p class="perm-empty">Cargando…</p>';
+    modal.classList.add('active');
+    try {
+        const [admins, shares] = await Promise.all([
+            listShareableAdmins(),
+            listBookShares(bookId)
+        ]);
+        const selected = new Set(shares.map((s) => s.user_id));
+        listEl.innerHTML = admins.length
+            ? admins.map((a) => `
+                <label class="perm-check">
+                    <input type="checkbox" name="shareUser" value="${escapeHtml(a.id)}" ${selected.has(a.id) ? 'checked' : ''}>
+                    <span>${escapeHtml(a.full_name || a.email || 'Admin')}</span>
+                </label>
+            `).join('')
+            : '<p class="perm-empty">No hay otros administradores para compartir.</p>';
+    } catch (error) {
+        listEl.innerHTML = `<p class="fin-error">${escapeHtml(error.message)}</p>`;
+    }
+}
+
+function closeShareModal() {
+    shareBookId = null;
+    document.getElementById('finShareModal')?.classList.remove('active');
+}
+
 function wireHome() {
     document.getElementById('finNewBookBtn')?.addEventListener('click', openModal);
     document.getElementById('finNewBookEmpty')?.addEventListener('click', openModal);
@@ -165,6 +244,22 @@ function wireHome() {
     document.getElementById('finBookCancel')?.addEventListener('click', closeModal);
     document.getElementById('finBookModal')?.addEventListener('click', (e) => {
         if (e.target.id === 'finBookModal') closeModal();
+    });
+
+    document.getElementById('finShareClose')?.addEventListener('click', closeShareModal);
+    document.getElementById('finShareCancel')?.addEventListener('click', closeShareModal);
+    document.getElementById('finShareModal')?.addEventListener('click', (e) => {
+        if (e.target.id === 'finShareModal') closeShareModal();
+    });
+    document.getElementById('finShareSave')?.addEventListener('click', async () => {
+        if (!shareBookId) return;
+        const ids = [...document.querySelectorAll('input[name="shareUser"]:checked')].map((el) => el.value);
+        try {
+            await setBookShares(shareBookId, ids);
+            closeShareModal();
+        } catch (error) {
+            alert(error.message || 'No se pudo guardar el compartir.');
+        }
     });
 
     document.getElementById('finColorPicker')?.addEventListener('click', (e) => {
@@ -210,6 +305,10 @@ function wireHome() {
                 alert(error.message || 'No se pudo eliminar.');
             }
         });
+    });
+
+    document.querySelectorAll('[data-share-book]').forEach((btn) => {
+        btn.addEventListener('click', () => openShareModal(btn.getAttribute('data-share-book')));
     });
 }
 

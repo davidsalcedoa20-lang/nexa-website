@@ -12,17 +12,32 @@ async function requireAdminId() {
     return uid;
 }
 
-async function assertBookOwned(bookId) {
-    const adminId = await requireAdminId();
+async function getStaffRole() {
+    const uid = await requireAdminId();
+    const { data } = await supabase.from('profiles').select('role').eq('id', uid).maybeSingle();
+    return data?.role || null;
+}
+
+/** Acceso: dueño, compartido o Administrador Principal. */
+async function assertBookAccessible(bookId) {
     const { data, error } = await supabase
         .from('finance_books')
         .select('*')
         .eq('id', bookId)
-        .eq('admin_id', adminId)
         .maybeSingle();
     if (error) throw error;
     if (!data) throw new Error('Contabilidad no encontrada.');
     return data;
+}
+
+async function assertBookOwned(bookId) {
+    const adminId = await requireAdminId();
+    const role = await getStaffRole();
+    const book = await assertBookAccessible(bookId);
+    if (role !== 'owner' && book.admin_id !== adminId) {
+        throw new Error('Solo el propietario de la contabilidad puede realizar esta acción.');
+    }
+    return book;
 }
 
 /* ---------------- Libros ---------------- */
@@ -43,7 +58,7 @@ export async function listFinanceBooks() {
 }
 
 export async function getFinanceBook(bookId) {
-    return assertBookOwned(bookId);
+    return assertBookAccessible(bookId);
 }
 
 export async function createFinanceBook(payload) {
@@ -86,6 +101,51 @@ export async function deleteFinanceBook(bookId) {
     await assertBookOwned(bookId);
     const { error } = await supabase.from('finance_books').delete().eq('id', bookId);
     if (error) throw error;
+}
+
+export async function listBookShares(bookId) {
+    await assertBookOwned(bookId);
+    const { data, error } = await supabase
+        .from('finance_book_shares')
+        .select('user_id, created_at, profiles:user_id ( id, full_name, email )')
+        .eq('book_id', bookId);
+    if (error) throw error;
+    return data || [];
+}
+
+export async function setBookShares(bookId, userIds = []) {
+    const book = await assertBookOwned(bookId);
+    const adminId = await requireAdminId();
+    const unique = [...new Set(userIds.map(String).filter((id) => id && id !== book.admin_id && id !== adminId))];
+
+    const { error: delError } = await supabase
+        .from('finance_book_shares')
+        .delete()
+        .eq('book_id', bookId);
+    if (delError) throw delError;
+
+    if (!unique.length) return [];
+
+    const rows = unique.map((user_id) => ({
+        book_id: bookId,
+        user_id,
+        created_by: adminId
+    }));
+    const { data, error } = await supabase.from('finance_book_shares').insert(rows).select('*');
+    if (error) throw error;
+    return data || [];
+}
+
+export async function listShareableAdmins() {
+    const adminId = await requireAdminId();
+    const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, email, role')
+        .in('role', ['admin', 'owner'])
+        .neq('id', adminId)
+        .order('full_name', { ascending: true });
+    if (error) throw error;
+    return (data || []).filter((p) => p.role !== 'owner');
 }
 
 export async function saveBookDashboardLayout(bookId, layout) {

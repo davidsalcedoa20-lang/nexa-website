@@ -36,10 +36,9 @@ function adminDb() {
     });
 }
 
-async function assertStaffPermission(
+async function assertOwner(
     db: ReturnType<typeof adminDb>,
-    userId: string,
-    permissionKey: string
+    userId: string
 ) {
     const { data: profile } = await db
         .from('profiles')
@@ -47,27 +46,21 @@ async function assertStaffPermission(
         .eq('id', userId)
         .maybeSingle();
 
-    if (!profile || !['admin', 'owner'].includes(profile.role)) {
-        return { error: 'Solo personal NEXA puede gestionar administradores.', status: 403 as const };
-    }
-    if (profile.role === 'owner') return { profile };
-
-    const { data: perm } = await db
-        .from('user_permissions')
-        .select('permission_key')
-        .eq('user_id', userId)
-        .eq('permission_key', permissionKey)
-        .maybeSingle();
-
-    if (!perm) {
-        return { error: `No tienes permiso (${permissionKey}).`, status: 403 as const };
+    if (!profile || profile.role !== 'owner') {
+        return { error: 'Solo el Administrador Principal puede gestionar administradores.', status: 403 as const };
     }
     return { profile };
 }
 
 function normalizePermissionKeys(keys: unknown): string[] {
     if (!Array.isArray(keys)) return [];
-    return [...new Set(keys.map((k) => String(k).trim()).filter(Boolean))];
+    const allowed = new Set([
+        'projects.view_all',
+        'projects.view_assigned',
+        'projects.view_own',
+        'employees.manage'
+    ]);
+    return [...new Set(keys.map((k) => String(k).trim()).filter((k) => allowed.has(k)))];
 }
 
 async function replacePermissions(
@@ -76,12 +69,18 @@ async function replacePermissions(
     permissionKeys: string[],
     grantedBy: string | null
 ) {
-    const { data: catalog } = await db.from('permissions').select('key');
-    const allowed = new Set((catalog || []).map((r: { key: string }) => r.key));
-    let keys = permissionKeys.filter((k) => allowed.has(k));
+    let keys = normalizePermissionKeys(permissionKeys);
 
-    if (keys.includes('projects.view_all')) {
-        keys = keys.filter((k) => k !== 'projects.view_assigned');
+    // Exactamente una key de proyectos
+    const projectKeys = keys.filter((k) => k.startsWith('projects.'));
+    if (projectKeys.includes('projects.view_all')) {
+        keys = keys.filter((k) => !k.startsWith('projects.')).concat(['projects.view_all']);
+    } else if (projectKeys.includes('projects.view_assigned')) {
+        keys = keys.filter((k) => !k.startsWith('projects.')).concat(['projects.view_assigned']);
+    } else if (projectKeys.includes('projects.view_own')) {
+        keys = keys.filter((k) => !k.startsWith('projects.')).concat(['projects.view_own']);
+    } else {
+        keys = keys.filter((k) => !k.startsWith('projects.')).concat(['projects.view_own']);
     }
 
     await db.from('user_permissions').delete().eq('user_id', userId);
@@ -104,7 +103,7 @@ async function replaceProjectAccess(
     mode: string,
     projectIds: unknown
 ) {
-    const accessMode = mode === 'selected' ? 'selected' : 'all';
+    const accessMode = mode === 'selected' ? 'selected' : (mode === 'own' ? 'own' : 'all');
     const { error: modeError } = await db
         .from('profiles')
         .update({ project_access_mode: accessMode })
@@ -157,7 +156,7 @@ Deno.serve(async (req) => {
         const action = String(body.action || '');
 
         if (action === 'create') {
-            const gate = await assertStaffPermission(db, caller.id, 'users.create');
+            const gate = await assertOwner(db, caller.id);
             if ('error' in gate && gate.error) return json({ error: gate.error }, gate.status);
 
             const fullName = String(body.full_name || '').trim();
@@ -165,14 +164,21 @@ Deno.serve(async (req) => {
             const password = String(body.password || '').trim();
             const jobTitle = String(body.job_title || '').trim() || null;
             const avatarUrl = body.avatar_url ? String(body.avatar_url) : null;
-            const permissionKeys = normalizePermissionKeys(body.permission_keys);
-            const projectAccessMode = body.project_access_mode === 'selected' ? 'selected' : 'all';
+            let permissionKeys = normalizePermissionKeys(body.permission_keys);
+            const rawMode = String(body.project_access_mode || 'own');
+            const projectAccessMode = rawMode === 'selected' ? 'selected' : (rawMode === 'own' ? 'own' : 'all');
             const projectIds = body.project_ids || [];
 
             if (!fullName || !email) return json({ error: 'Nombre y correo son obligatorios.' }, 400);
             if (!password || password.length < MIN_PASSWORD_LENGTH) {
                 return json({ error: `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.` }, 400);
             }
+
+            // Alinear key de proyectos con el modo
+            permissionKeys = permissionKeys.filter((k) => !k.startsWith('projects.'));
+            if (projectAccessMode === 'all') permissionKeys.push('projects.view_all');
+            else if (projectAccessMode === 'selected') permissionKeys.push('projects.view_assigned');
+            else permissionKeys.push('projects.view_own');
 
             const existing = await findAuthUserByEmail(db, email);
             if (existing) {
@@ -197,8 +203,6 @@ Deno.serve(async (req) => {
 
             const userId = created.user.id;
 
-            // El trigger on_auth_user_created suele crear el perfil;
-            // insert/update (como create-client) evita sorpresas del upsert.
             const { data: existingProfile } = await db
                 .from('profiles')
                 .select('id')
@@ -238,17 +242,8 @@ Deno.serve(async (req) => {
                 }
             }
 
-            let finalKeys = permissionKeys;
-            if (projectAccessMode === 'all' && !finalKeys.includes('projects.view_all')) {
-                finalKeys = [...finalKeys.filter((k) => k !== 'projects.view_assigned'), 'projects.view_all'];
-            }
-            if (projectAccessMode === 'selected') {
-                finalKeys = [...finalKeys.filter((k) => k !== 'projects.view_all'), 'projects.view_assigned'];
-                if (!finalKeys.includes('projects.view_assigned')) finalKeys.push('projects.view_assigned');
-            }
-
             try {
-                await replacePermissions(db, userId, finalKeys, caller.id);
+                await replacePermissions(db, userId, permissionKeys, caller.id);
                 await replaceProjectAccess(db, userId, projectAccessMode, projectIds);
             } catch (permError) {
                 const msg = permError instanceof Error ? permError.message : String(permError);
@@ -268,7 +263,7 @@ Deno.serve(async (req) => {
         }
 
         if (action === 'update') {
-            const gate = await assertStaffPermission(db, caller.id, 'users.edit');
+            const gate = await assertOwner(db, caller.id);
             if ('error' in gate && gate.error) return json({ error: gate.error }, gate.status);
 
             const userId = String(body.user_id || '').trim();
@@ -320,13 +315,12 @@ Deno.serve(async (req) => {
 
             if (Array.isArray(body.permission_keys)) {
                 let keys = normalizePermissionKeys(body.permission_keys);
-                const mode = body.project_access_mode === 'selected' ? 'selected' : 'all';
-                if (mode === 'all' && !keys.includes('projects.view_all')) {
-                    keys = [...keys.filter((k) => k !== 'projects.view_assigned'), 'projects.view_all'];
-                }
-                if (mode === 'selected') {
-                    keys = [...keys.filter((k) => k !== 'projects.view_all'), 'projects.view_assigned'];
-                }
+                const rawMode = String(body.project_access_mode || 'own');
+                const mode = rawMode === 'selected' ? 'selected' : (rawMode === 'own' ? 'own' : 'all');
+                keys = keys.filter((k) => !k.startsWith('projects.'));
+                if (mode === 'all') keys.push('projects.view_all');
+                else if (mode === 'selected') keys.push('projects.view_assigned');
+                else keys.push('projects.view_own');
                 await replacePermissions(db, userId, keys, caller.id);
                 await replaceProjectAccess(db, userId, mode, body.project_ids || []);
             } else if (body.project_access_mode) {
@@ -337,7 +331,7 @@ Deno.serve(async (req) => {
         }
 
         if (action === 'resetPassword') {
-            const gate = await assertStaffPermission(db, caller.id, 'users.edit');
+            const gate = await assertOwner(db, caller.id);
             if ('error' in gate && gate.error) return json({ error: gate.error }, gate.status);
 
             const userId = String(body.user_id || '').trim();
@@ -362,7 +356,7 @@ Deno.serve(async (req) => {
         }
 
         if (action === 'setActive') {
-            const gate = await assertStaffPermission(db, caller.id, 'users.edit');
+            const gate = await assertOwner(db, caller.id);
             if ('error' in gate && gate.error) return json({ error: gate.error }, gate.status);
 
             const userId = String(body.user_id || '').trim();
@@ -380,7 +374,7 @@ Deno.serve(async (req) => {
         }
 
         if (action === 'delete') {
-            const gate = await assertStaffPermission(db, caller.id, 'users.delete');
+            const gate = await assertOwner(db, caller.id);
             if ('error' in gate && gate.error) return json({ error: gate.error }, gate.status);
 
             const userId = String(body.user_id || '').trim();

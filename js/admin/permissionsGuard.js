@@ -1,10 +1,5 @@
 /* ==========================================================
    NEXA HUB — Guard de permisos (páginas admin)
-   ==========================================================
-   Uso:
-     import { requirePagePermission, applyPermissionUI } from '...';
-     await requirePagePermission(['projects.view_all', 'projects.view_assigned']);
-     await applyPermissionUI();
    ========================================================== */
 import {
     hasAnyPermission, hasPermission, isOwner, getCurrentStaffProfile, loadMyPermissionKeys
@@ -18,7 +13,7 @@ function pageName() {
 
 /**
  * Bloquea la página si el usuario no tiene ninguno de los permisos.
- * Owner siempre pasa. Si deniedRedirect, redirige; si no, muestra pantalla denegada.
+ * Owner siempre pasa. `__owner_only__` exige Administrador Principal.
  */
 export async function requirePagePermission(keys = null, { redirectTo = 'index.html' } = {}) {
     const profile = await getCurrentStaffProfile();
@@ -36,6 +31,15 @@ export async function requirePagePermission(keys = null, { redirectTo = 'index.h
     if (!required || !required.length) {
         await applyPermissionUI();
         return true;
+    }
+
+    if (required.includes('__owner_only__')) {
+        if (redirectTo) {
+            window.location.replace(redirectTo + '?denied=1');
+            return false;
+        }
+        renderDenied('Solo el Administrador Principal puede acceder a esta sección.');
+        return false;
     }
 
     const ok = await hasAnyPermission(required);
@@ -74,36 +78,43 @@ export async function applyPermissionUI() {
     });
 
     const navRules = [
-        { match: 'clientes.html', any: ['clients.create', 'clients.edit', 'clients.delete'] },
-        { match: 'proyectos.html', any: ['projects.view_all', 'projects.view_assigned', 'projects.create'] },
-        { match: 'tareas.html', any: ['tasks.create', 'tasks.edit', 'tasks.delete', 'projects.view_all', 'projects.view_assigned'] },
-        { match: 'calendario.html', any: ['calendar.view', 'calendar.create'] },
-        { match: 'configuracion.html', any: ['settings.access', 'settings.integrations', 'settings.system'] },
-        { match: 'usuarios-permisos.html', any: ['users.create', 'users.edit', 'users.delete'] },
-        { match: 'empleados.html', any: ['employees.view', 'employees.create', 'employees.edit'] }
+        {
+            match: 'usuarios-permisos.html',
+            test: () => owner
+        },
+        {
+            match: 'empleados.html',
+            test: () => owner || keys.includes('employees.manage')
+        },
+        {
+            match: 'proyectos.html',
+            test: () => owner || keys.some((k) => k.startsWith('projects.'))
+        }
     ];
 
     document.querySelectorAll('.admin-nav-item').forEach((link) => {
         const href = link.getAttribute('href') || '';
         const rule = navRules.find((r) => href.includes(r.match));
-        if (!rule) return;
-        if (owner) {
+        if (!rule) {
             link.hidden = false;
             return;
         }
-        const allowed = rule.any.some((k) => keys.includes(k));
-        link.hidden = !allowed;
+        link.hidden = !rule.test();
     });
 
-    // Grupo Empleados: visible para todo staff (owner/admin).
+    // Grupo Empleados en sidebar
     document.querySelectorAll('.emp-nav-group').forEach((group) => {
-        group.hidden = false;
+        group.hidden = !(owner || keys.includes('employees.manage'));
     });
 
     document.querySelectorAll('[data-requires-permission]').forEach((el) => {
         const needed = (el.getAttribute('data-requires-permission') || '').split(',').map((s) => s.trim()).filter(Boolean);
         if (!needed.length || owner) {
             el.hidden = false;
+            return;
+        }
+        if (needed.includes('__owner_only__')) {
+            el.hidden = true;
             return;
         }
         el.hidden = !needed.some((k) => keys.includes(k));

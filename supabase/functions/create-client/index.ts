@@ -128,18 +128,6 @@ Deno.serve(async (req) => {
             return json({ error: 'Solo un administrador puede crear clientes.' }, 403);
         }
 
-        if (callerProfile.role !== 'owner') {
-            const { data: perm } = await adminClient
-                .from('user_permissions')
-                .select('permission_key')
-                .eq('user_id', caller.id)
-                .eq('permission_key', 'clients.create')
-                .maybeSingle();
-            if (!perm) {
-                return json({ error: 'No tienes permiso para crear clientes.' }, 403);
-            }
-        }
-
         const body = await req.json().catch(() => ({}));
         const company = (body.company || '').trim();
         const contact = (body.contact || '').trim();

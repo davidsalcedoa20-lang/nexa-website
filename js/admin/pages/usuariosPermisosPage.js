@@ -1,15 +1,20 @@
 /* ==========================================================
-   NEXA HUB — Usuarios y Permisos (crear / editar admins)
+   NEXA HUB — Usuarios y Permisos (modelo simplificado)
+   Solo el Administrador Principal gestiona esta sección.
    ========================================================== */
 import { listProjects } from '../../services/projectService.js';
 import {
     listStaffUsers,
     getUserPermissionKeys,
     getUserProjectAccess,
-    hasPermission,
-    isOwner as amIOwner
+    isOwner as amIOwner,
+    buildSimplePermissionKeys
 } from '../../services/permissionService.js';
-import { PERMISSION_MODULES, ROLE_LABELS, ALL_PERMISSION_KEYS } from '../../components/permissions/permissionCatalog.js';
+import {
+    ROLE_LABELS,
+    PROJECT_ACCESS_OPTIONS,
+    resolveProjectAccessMode
+} from '../../components/permissions/permissionCatalog.js';
 import { requirePagePermission } from '../permissionsGuard.js';
 import { getInitials, escapeHtml } from '../../components/projectUi.js';
 import { generateTemporaryPassword } from '../../utils/passwordGenerator.js';
@@ -30,22 +35,19 @@ const loadingEl = document.getElementById('permLoading');
 const newAdminBtn = document.getElementById('newAdminBtn');
 
 let projects = [];
-let canCreate = false;
-let canEdit = false;
-let canDelete = false;
 let pendingAvatarFile = null;
 
 async function init() {
-    // Acceso a la sección: crear, editar o eliminar admins (owner siempre pasa).
-    const ok = await requirePagePermission(['users.create', 'users.edit', 'users.delete'], { redirectTo: 'index.html' });
+    const ok = await requirePagePermission(['__owner_only__'], { redirectTo: 'index.html' });
     if (!ok) return;
 
-    canCreate = (await amIOwner()) || (await hasPermission('users.create'));
-    canEdit = (await amIOwner()) || (await hasPermission('users.edit'));
-    canDelete = (await amIOwner()) || (await hasPermission('users.delete'));
+    if (!(await amIOwner())) {
+        if (loadingEl) loadingEl.textContent = 'Solo el Administrador Principal puede gestionar usuarios.';
+        return;
+    }
 
     if (newAdminBtn) {
-        newAdminBtn.hidden = !canCreate;
+        newAdminBtn.hidden = false;
         newAdminBtn.addEventListener('click', () => openAdminModal('create'));
     }
 
@@ -60,95 +62,126 @@ async function init() {
     listViewEl.style.display = 'block';
 }
 
-function renderPermissionSwitches(selectedKeys = [], { disabled = false, name = 'perm' } = {}) {
-    const set = new Set(selectedKeys);
-    return PERMISSION_MODULES.map((mod) => `
-        <section class="perm-module">
-            <h3>${escapeHtml(mod.label)}</h3>
-            <div class="perm-switch-list">
-                ${mod.permissions.map((perm) => `
-                    <label class="perm-switch${disabled ? ' is-locked' : ''}">
-                        <input type="checkbox" name="${name}" value="${escapeHtml(perm.key)}"
-                            ${set.has(perm.key) ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
-                        <span class="perm-switch-ui"></span>
-                        <span class="perm-switch-label">${escapeHtml(perm.label)}</span>
-                    </label>
-                `).join('')}
-            </div>
-        </section>
+function renderSimplePermissionCards({
+    projectMode = 'all',
+    projectIds = [],
+    employeesManage = false,
+    disabled = false,
+    namePrefix = 'perm'
+} = {}) {
+    const radios = PROJECT_ACCESS_OPTIONS.map((opt) => `
+        <label class="perm-simple-option${disabled ? ' is-locked' : ''}">
+            <input type="radio" name="${namePrefix}ProjectMode" value="${opt.id}"
+                ${projectMode === opt.id ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+            <span class="perm-simple-radio"></span>
+            <span class="perm-simple-option-text">
+                <strong>${escapeHtml(opt.label)}</strong>
+                <small>${escapeHtml(opt.hint)}</small>
+            </span>
+        </label>
     `).join('');
-}
 
-function renderProjectAccess(mode = 'all', selectedIds = [], { disabled = false } = {}) {
-    const selected = new Set(selectedIds);
     return `
-        <section class="perm-module">
-            <h3>Acceso a proyectos</h3>
-            <div class="perm-access-modes">
-                <label class="perm-radio${disabled ? ' is-locked' : ''}">
-                    <input type="radio" name="projectAccessMode" value="all"
-                        ${mode !== 'selected' ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
-                    <span>Todos los proyectos</span>
+        <div class="perm-blocks">
+            <article class="perm-block-card">
+                <header class="perm-block-head">
+                    <span class="perm-block-icon" aria-hidden="true">📁</span>
+                    <div>
+                        <h3>Proyectos</h3>
+                        <p>Define qué proyectos puede ver este administrador.</p>
+                    </div>
+                </header>
+                <div class="perm-simple-options" data-project-mode-root>
+                    ${radios}
+                </div>
+                <div class="perm-project-assign" data-project-checks ${projectMode === 'selected' && !disabled ? '' : 'hidden'}>
+                    <h4>Asignar proyectos</h4>
+                    <div class="perm-project-checks">
+                        ${(projects || []).map((p) => `
+                            <label class="perm-check">
+                                <input type="checkbox" name="${namePrefix}ProjectId" value="${escapeHtml(p.id)}"
+                                    ${projectIds.includes(p.id) ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+                                <span>${escapeHtml(p.name)}</span>
+                            </label>
+                        `).join('') || '<p class="perm-empty">No hay proyectos todavía.</p>'}
+                    </div>
+                </div>
+            </article>
+
+            <article class="perm-block-card">
+                <header class="perm-block-head">
+                    <span class="perm-block-icon" aria-hidden="true">💰</span>
+                    <div>
+                        <h3>Contabilidad</h3>
+                        <p>Cada administrador tiene su propia contabilidad.</p>
+                    </div>
+                </header>
+                <ul class="perm-block-notes">
+                    <li>Solo él y el Administrador Principal la ven por defecto.</li>
+                    <li>Puede compartirla con otros desde <strong>Finanzas → Compartir con</strong>.</li>
+                    <li>El Administrador Principal siempre ve todas las contabilidades.</li>
+                </ul>
+            </article>
+
+            <article class="perm-block-card">
+                <header class="perm-block-head">
+                    <span class="perm-block-icon" aria-hidden="true">🛡️</span>
+                    <div>
+                        <h3>Administradores</h3>
+                        <p>Gestión de cuentas del equipo NEXA.</p>
+                    </div>
+                </header>
+                <ul class="perm-block-notes">
+                    <li>Solo el Administrador Principal puede crear, editar o eliminar administradores.</li>
+                    <li>Ningún otro administrador puede modificar permisos ni roles.</li>
+                    <li>El Administrador Principal nunca pierde sus privilegios.</li>
+                </ul>
+            </article>
+
+            <article class="perm-block-card">
+                <header class="perm-block-head">
+                    <span class="perm-block-icon" aria-hidden="true">👥</span>
+                    <div>
+                        <h3>Empleados</h3>
+                        <p>Módulo de editores y trabajos asignados.</p>
+                    </div>
+                </header>
+                <label class="perm-switch${disabled ? ' is-locked' : ''}">
+                    <input type="checkbox" name="${namePrefix}Employees" value="1"
+                        ${employeesManage ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
+                    <span class="perm-switch-ui"></span>
+                    <span class="perm-switch-label">
+                        <strong>Puede administrar empleados</strong>
+                        <small style="display:block;color:rgba(255,255,255,.45);font-weight:400;margin-top:4px">
+                            Crear, editar, asignar trabajos y eliminar. Si está desactivado, no verá el módulo.
+                        </small>
+                    </span>
                 </label>
-                <label class="perm-radio${disabled ? ' is-locked' : ''}">
-                    <input type="radio" name="projectAccessMode" value="selected"
-                        ${mode === 'selected' ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
-                    <span>Solo proyectos seleccionados</span>
-                </label>
-            </div>
-            <div class="perm-project-checks" data-project-checks ${mode === 'selected' && !disabled ? '' : 'hidden'}>
-                ${(projects || []).map((p) => `
-                    <label class="perm-check">
-                        <input type="checkbox" name="projectId" value="${escapeHtml(p.id)}"
-                            ${selected.has(p.id) ? 'checked' : ''} ${disabled ? 'disabled' : ''}>
-                        <span>${escapeHtml(p.name)}</span>
-                    </label>
-                `).join('') || '<p class="perm-empty">No hay proyectos todavía.</p>'}
-            </div>
-        </section>
+            </article>
+        </div>
     `;
 }
 
-function wireAccessModeSync(root) {
+function wireProjectMode(root) {
     const checksWrap = root.querySelector('[data-project-checks]');
-    root.querySelectorAll('input[name="projectAccessMode"]').forEach((radio) => {
+    root.querySelectorAll('input[name$="ProjectMode"]').forEach((radio) => {
         radio.addEventListener('change', () => {
-            const selected = root.querySelector('input[name="projectAccessMode"]:checked')?.value;
+            const selected = root.querySelector('input[name$="ProjectMode"]:checked')?.value;
             if (checksWrap) checksWrap.hidden = selected !== 'selected';
-            const viewAll = root.querySelector('input[value="projects.view_all"]');
-            const viewAssigned = root.querySelector('input[value="projects.view_assigned"]');
-            if (selected === 'all') {
-                if (viewAll) viewAll.checked = true;
-                if (viewAssigned) viewAssigned.checked = false;
-            } else {
-                if (viewAll) viewAll.checked = false;
-                if (viewAssigned) viewAssigned.checked = true;
-            }
         });
-    });
-    root.querySelector('input[value="projects.view_all"]')?.addEventListener('change', (e) => {
-        if (!e.target.checked) return;
-        const assigned = root.querySelector('input[value="projects.view_assigned"]');
-        if (assigned) assigned.checked = false;
-        const allRadio = root.querySelector('input[name="projectAccessMode"][value="all"]');
-        if (allRadio) allRadio.checked = true;
-        if (checksWrap) checksWrap.hidden = true;
-    });
-    root.querySelector('input[value="projects.view_assigned"]')?.addEventListener('change', (e) => {
-        if (!e.target.checked) return;
-        const all = root.querySelector('input[value="projects.view_all"]');
-        if (all) all.checked = false;
-        const selRadio = root.querySelector('input[name="projectAccessMode"][value="selected"]');
-        if (selRadio) selRadio.checked = true;
-        if (checksWrap) checksWrap.hidden = false;
     });
 }
 
-function collectAccessPayload(root) {
-    const permissionKeys = [...root.querySelectorAll('input[name="perm"]:checked')].map((el) => el.value);
-    const projectAccessMode = root.querySelector('input[name="projectAccessMode"]:checked')?.value || 'all';
-    const projectIds = [...root.querySelectorAll('input[name="projectId"]:checked')].map((el) => el.value);
-    return { permissionKeys, projectAccessMode, projectIds };
+function collectSimplePayload(root) {
+    const projectMode = root.querySelector('input[name$="ProjectMode"]:checked')?.value || 'all';
+    const projectIds = [...root.querySelectorAll('input[name$="ProjectId"]:checked')].map((el) => el.value);
+    const employeesManage = !!root.querySelector('input[name$="Employees"]')?.checked;
+    return {
+        projectMode,
+        projectIds,
+        employeesManage,
+        permissionKeys: buildSimplePermissionKeys({ projectMode, employeesManage })
+    };
 }
 
 async function renderList() {
@@ -166,6 +199,8 @@ async function renderList() {
             : `<span class="perm-card-avatar-fallback">${escapeHtml(initials)}</span>`;
         const isOwnerUser = user.role === 'owner';
         const inactive = user.is_active === false;
+        const modeLabel = PROJECT_ACCESS_OPTIONS.find((o) => o.id === user.project_mode)?.label
+            || 'Proyectos';
         return `
             <article class="perm-card${isOwnerUser ? ' perm-card--owner' : ''}${inactive ? ' is-inactive' : ''}">
                 <div class="perm-card-avatar">${avatar}</div>
@@ -175,11 +210,11 @@ async function renderList() {
                     <div class="perm-card-meta">
                         <span class="perm-role-badge${isOwnerUser ? ' is-owner' : ''}">${escapeHtml(role)}</span>
                         ${inactive ? '<span class="perm-role-badge is-inactive">Inactivo</span>' : ''}
-                        <span class="perm-count">${user.permission_count} permiso${user.permission_count === 1 ? '' : 's'}</span>
+                        ${!isOwnerUser ? `<span class="perm-count">${escapeHtml(modeLabel.split('.')[0])}</span>` : ''}
                     </div>
                 </div>
                 <button type="button" class="admin-btn-secondary" data-edit-user="${user.id}">
-                    ${isOwnerUser ? 'Ver' : (canEdit ? 'Editar' : 'Ver')}
+                    ${isOwnerUser ? 'Ver' : 'Editar'}
                 </button>
             </article>
         `;
@@ -200,9 +235,9 @@ function openAdminModal(mode, user = null) {
     const isCreate = mode === 'create';
     titleEl.textContent = isCreate ? 'Nuevo administrador' : 'Editar administrador';
 
-    const keys = isCreate ? [] : (user?.permissionKeys || []);
-    const accessMode = isCreate ? 'all' : (user?.accessMode || 'all');
+    const projectMode = isCreate ? 'own' : (user?.accessMode || 'all');
     const projectIds = isCreate ? [] : (user?.projectIds || []);
+    const employeesManage = isCreate ? false : !!user?.employeesManage;
     const isOwnerUser = user?.role === 'owner';
 
     bodyEl.innerHTML = `
@@ -236,7 +271,6 @@ function openAdminModal(mode, user = null) {
                             <input type="text" id="adminPassword" required value="${escapeHtml(generateTemporaryPassword())}">
                             <button type="button" class="admin-btn-secondary" id="adminPasswordRegen">Generar</button>
                         </div>
-                        <span class="admin-field-hint">El administrador deberá cambiarla en el primer acceso si el flujo lo requiere.</span>
                     </div>
                 ` : ''}
                 <div class="admin-field">
@@ -245,16 +279,9 @@ function openAdminModal(mode, user = null) {
                 </div>
             </section>
 
-            <section class="perm-module">
-                <h3>Rol</h3>
-                <div class="perm-role-readonly">
-                    <span class="perm-role-badge">Administrador</span>
-                    <span class="admin-field-hint">Fijo · no editable</span>
-                </div>
-            </section>
-
-            ${renderPermissionSwitches(keys, { disabled: isOwnerUser })}
-            ${renderProjectAccess(accessMode, projectIds, { disabled: isOwnerUser })}
+            ${isOwnerUser
+                ? '<div class="perm-owner-banner">El Administrador Principal tiene acceso completo y no se puede modificar.</div>'
+                : renderSimplePermissionCards({ projectMode, projectIds, employeesManage, disabled: false })}
 
             <span class="admin-form-error" id="adminUserFormError"></span>
             <div class="admin-modal-actions">
@@ -265,7 +292,7 @@ function openAdminModal(mode, user = null) {
     `;
 
     overlay.classList.add('active');
-    wireAccessModeSync(bodyEl);
+    wireProjectMode(bodyEl);
 
     bodyEl.querySelector('#adminAvatarPickBtn')?.addEventListener('click', () => {
         bodyEl.querySelector('#adminAvatarInput')?.click();
@@ -275,8 +302,7 @@ function openAdminModal(mode, user = null) {
         pendingAvatarFile = file;
         const preview = bodyEl.querySelector('#adminAvatarPreview');
         if (file && preview) {
-            const url = URL.createObjectURL(file);
-            preview.innerHTML = `<img src="${url}" alt="">`;
+            preview.innerHTML = `<img src="${URL.createObjectURL(file)}" alt="">`;
         }
     });
     bodyEl.querySelector('#adminPasswordRegen')?.addEventListener('click', () => {
@@ -298,7 +324,7 @@ function openAdminModal(mode, user = null) {
         const email = bodyEl.querySelector('#adminEmail')?.value.trim().toLowerCase() || '';
         const job_title = bodyEl.querySelector('#adminJobTitle')?.value.trim() || '';
         const password = bodyEl.querySelector('#adminPassword')?.value.trim() || '';
-        const access = collectAccessPayload(bodyEl);
+        const access = collectSimplePayload(bodyEl);
 
         if (!full_name || !email) {
             errorEl.textContent = 'Nombre y correo son obligatorios.';
@@ -311,11 +337,7 @@ function openAdminModal(mode, user = null) {
 
         try {
             if (isCreate) {
-                if (!canCreate) throw new Error('No tienes permiso para crear administradores.');
                 if (!password || password.length < 8) throw new Error('La contraseña debe tener al menos 8 caracteres.');
-
-                let avatar_url = null;
-                // Primero crear usuario; luego avatar si hay archivo.
                 const result = await createAdmin({
                     full_name,
                     email,
@@ -323,13 +345,13 @@ function openAdminModal(mode, user = null) {
                     job_title: job_title || null,
                     avatar_url: null,
                     permission_keys: access.permissionKeys,
-                    project_access_mode: access.projectAccessMode,
+                    project_access_mode: access.projectMode === 'selected' ? 'selected' : access.projectMode,
                     project_ids: access.projectIds
                 });
 
                 if (pendingAvatarFile && result.userId) {
                     try {
-                        avatar_url = await uploadAdminAvatar(result.userId, pendingAvatarFile);
+                        const avatar_url = await uploadAdminAvatar(result.userId, pendingAvatarFile);
                         await updateAdmin({ user_id: result.userId, avatar_url });
                     } catch (avatarError) {
                         console.warn('Avatar no subido:', avatarError.message);
@@ -343,7 +365,6 @@ function openAdminModal(mode, user = null) {
                 });
                 await renderList();
             } else {
-                if (!canEdit) throw new Error('No tienes permiso para editar administradores.');
                 let avatar_url = user.avatar_url || null;
                 if (pendingAvatarFile) {
                     avatar_url = await uploadAdminAvatar(user.id, pendingAvatarFile);
@@ -355,7 +376,7 @@ function openAdminModal(mode, user = null) {
                     job_title: job_title || null,
                     avatar_url,
                     permission_keys: access.permissionKeys,
-                    project_access_mode: access.projectAccessMode,
+                    project_access_mode: access.projectMode === 'selected' ? 'selected' : access.projectMode,
                     project_ids: access.projectIds,
                     is_active: user.is_active !== false
                 });
@@ -379,7 +400,7 @@ function closeAdminModal() {
 async function openEditor(userId) {
     listViewEl.style.display = 'none';
     editorEl.style.display = 'block';
-    editorEl.innerHTML = '<div class="admin-loading-inline">Cargando permisos…</div>';
+    editorEl.innerHTML = '<div class="admin-loading-inline">Cargando…</div>';
 
     const users = await listStaffUsers();
     const user = users.find((u) => u.id === userId);
@@ -389,10 +410,12 @@ async function openEditor(userId) {
     }
 
     const isOwnerUser = user.role === 'owner';
-    const keys = isOwnerUser ? [...ALL_PERMISSION_KEYS] : await getUserPermissionKeys(userId);
+    const keys = isOwnerUser ? [] : await getUserPermissionKeys(userId);
     const access = isOwnerUser
         ? { mode: 'all', projectIds: [] }
         : await getUserProjectAccess(userId);
+    const employeesManage = keys.includes('employees.manage');
+    const projectMode = resolveProjectAccessMode(keys, access.mode);
 
     editorEl.innerHTML = `
         <div class="perm-editor-header">
@@ -406,9 +429,7 @@ async function openEditor(userId) {
                 <div>
                     <h2>
                         ${escapeHtml(user.full_name || 'Usuario')}
-                        ${isOwnerUser
-                            ? '<span class="perm-role-badge is-owner">👑 Propietario</span>'
-                            : '<span class="perm-role-badge">Administrador</span>'}
+                        <span class="perm-role-badge${isOwnerUser ? ' is-owner' : ''}">${escapeHtml(ROLE_LABELS[user.role] || user.role)}</span>
                     </h2>
                     <p>${escapeHtml(user.email || '')}
                         ${user.is_active === false ? ' · <strong>Inactivo</strong>' : ''}</p>
@@ -417,18 +438,23 @@ async function openEditor(userId) {
         </div>
         ${isOwnerUser ? `
             <div class="perm-owner-banner">
-                Este usuario es el <strong>Propietario</strong>. Tiene acceso absoluto. No se puede eliminar, desactivar ni cambiar su rol.
+                Este usuario es el <strong>Administrador Principal</strong>. Tiene acceso absoluto.
+                No se puede eliminar, desactivar ni modificar sus permisos.
             </div>
         ` : ''}
         <div class="perm-editor-toolbar">
-            ${!isOwnerUser && canEdit ? `<button type="button" class="admin-btn-secondary" id="permOpenEditModal">Editar información y permisos</button>` : ''}
-            ${!isOwnerUser && canEdit ? `<button type="button" class="admin-btn-secondary" id="permResetPassword">Restablecer contraseña</button>` : ''}
-            ${!isOwnerUser && canEdit ? `<button type="button" class="admin-btn-secondary" id="permToggleActive">${user.is_active === false ? 'Reactivar cuenta' : 'Desactivar cuenta'}</button>` : ''}
-            ${!isOwnerUser && canDelete ? `<button type="button" class="admin-btn-secondary perm-danger-btn" id="permDeleteUser">Eliminar cuenta</button>` : ''}
+            ${!isOwnerUser ? `<button type="button" class="admin-btn-secondary" id="permOpenEditModal">Editar información y permisos</button>` : ''}
+            ${!isOwnerUser ? `<button type="button" class="admin-btn-secondary" id="permResetPassword">Restablecer contraseña</button>` : ''}
+            ${!isOwnerUser ? `<button type="button" class="admin-btn-secondary" id="permToggleActive">${user.is_active === false ? 'Reactivar cuenta' : 'Desactivar cuenta'}</button>` : ''}
+            ${!isOwnerUser ? `<button type="button" class="admin-btn-secondary perm-danger-btn" id="permDeleteUser">Eliminar cuenta</button>` : ''}
         </div>
         <div class="perm-readonly-block">
-            ${renderPermissionSwitches(keys, { disabled: true })}
-            ${renderProjectAccess(access.mode, access.projectIds, { disabled: true })}
+            ${renderSimplePermissionCards({
+                projectMode: isOwnerUser ? 'all' : projectMode,
+                projectIds: access.projectIds,
+                employeesManage: isOwnerUser ? true : employeesManage,
+                disabled: true
+            })}
         </div>
     `;
 
@@ -437,8 +463,8 @@ async function openEditor(userId) {
     editorEl.querySelector('#permOpenEditModal')?.addEventListener('click', () => {
         openAdminModal('edit', {
             ...user,
-            permissionKeys: keys,
-            accessMode: access.mode,
+            employeesManage,
+            accessMode: projectMode,
             projectIds: access.projectIds
         });
     });
@@ -459,8 +485,7 @@ async function openEditor(userId) {
 
     editorEl.querySelector('#permToggleActive')?.addEventListener('click', async () => {
         const next = user.is_active === false;
-        const label = next ? 'reactivar' : 'desactivar';
-        if (!window.confirm(`¿Seguro que quieres ${label} esta cuenta?`)) return;
+        if (!window.confirm(`¿Seguro que quieres ${next ? 'reactivar' : 'desactivar'} esta cuenta?`)) return;
         try {
             await setAdminActive(userId, next);
             await openEditor(userId);

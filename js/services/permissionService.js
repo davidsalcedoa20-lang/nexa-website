@@ -1,8 +1,12 @@
 /* ==========================================================
-   NEXA HUB — Servicio de permisos
+   NEXA HUB — Servicio de permisos (modelo simplificado)
    ========================================================== */
 import { supabase } from './supabaseClient.js';
-import { ALL_PERMISSION_KEYS } from '../components/permissions/permissionCatalog.js';
+import {
+    ALL_PERMISSION_KEYS,
+    projectKeyForMode,
+    resolveProjectAccessMode
+} from '../components/permissions/permissionCatalog.js';
 
 let cachedProfile = null;
 let cachedKeys = null;
@@ -71,7 +75,7 @@ export async function isOwner() {
     return profile?.role === 'owner';
 }
 
-/** Lista staff (admin + owner) con conteo de permisos. */
+/** Lista staff (admin + owner). */
 export async function listStaffUsers() {
     const { data: profiles, error } = await supabase
         .from('profiles')
@@ -89,15 +93,22 @@ export async function listStaffUsers() {
         .in('user_id', ids);
     if (permError) throw permError;
 
-    const countByUser = new Map();
+    const keysByUser = new Map();
     (perms || []).forEach((row) => {
-        countByUser.set(row.user_id, (countByUser.get(row.user_id) || 0) + 1);
+        const list = keysByUser.get(row.user_id) || [];
+        list.push(row.permission_key);
+        keysByUser.set(row.user_id, list);
     });
 
-    return (profiles || []).map((p) => ({
-        ...p,
-        permission_count: p.role === 'owner' ? ALL_PERMISSION_KEYS.length : (countByUser.get(p.id) || 0)
-    }));
+    return (profiles || []).map((p) => {
+        const keys = p.role === 'owner' ? [...ALL_PERMISSION_KEYS] : (keysByUser.get(p.id) || []);
+        return {
+            ...p,
+            permission_keys: keys,
+            permission_count: keys.length,
+            project_mode: resolveProjectAccessMode(keys, p.project_access_mode)
+        };
+    });
 }
 
 export async function getUserPermissionKeys(userId) {
@@ -124,6 +135,7 @@ export async function getUserProjectAccess(userId) {
         .single();
     if (error) throw error;
 
+    const keys = await getUserPermissionKeys(userId);
     const { data: access, error: accessError } = await supabase
         .from('admin_project_access')
         .select('project_id')
@@ -131,88 +143,16 @@ export async function getUserProjectAccess(userId) {
     if (accessError) throw accessError;
 
     return {
-        mode: profile.project_access_mode || 'all',
+        mode: resolveProjectAccessMode(keys, profile.project_access_mode || 'all'),
         projectIds: (access || []).map((r) => r.project_id)
     };
 }
 
 /**
- * Reemplaza permisos + modo de acceso a proyectos de un admin.
- * El propietario no se edita (bloqueado en UI y trigger).
+ * Construye keys finales a partir del modo de proyectos + empleados.
  */
-export async function saveUserAccess({
-    userId,
-    permissionKeys = [],
-    projectAccessMode = 'all',
-    projectIds = []
-} = {}) {
-    const { data: auth } = await supabase.auth.getUser();
-    const actorId = auth?.user?.id || null;
-
-    const { data: target, error: targetError } = await supabase
-        .from('profiles')
-        .select('id, role')
-        .eq('id', userId)
-        .single();
-    if (targetError) throw targetError;
-    if (target.role === 'owner') {
-        throw new Error('Los permisos del propietario no se pueden modificar.');
-    }
-
-    const uniqueKeys = [...new Set(permissionKeys.filter((k) => ALL_PERMISSION_KEYS.includes(k)))];
-
-    // Mutua exclusión view_all / view_assigned (prioridad a view_all)
-    let keys = uniqueKeys;
-    if (keys.includes('projects.view_all')) {
-        keys = keys.filter((k) => k !== 'projects.view_assigned');
-    }
-
-    const mode = projectAccessMode === 'selected' ? 'selected' : 'all';
-    if (mode === 'all' && !keys.includes('projects.view_all') && !keys.includes('projects.view_assigned')) {
-        keys.push('projects.view_all');
-    }
-    if (mode === 'selected') {
-        keys = keys.filter((k) => k !== 'projects.view_all');
-        if (!keys.includes('projects.view_assigned')) keys.push('projects.view_assigned');
-    }
-
-    const { error: modeError } = await supabase
-        .from('profiles')
-        .update({ project_access_mode: mode })
-        .eq('id', userId);
-    if (modeError) throw modeError;
-
-    const { error: delPermError } = await supabase
-        .from('user_permissions')
-        .delete()
-        .eq('user_id', userId);
-    if (delPermError) throw delPermError;
-
-    if (keys.length) {
-        const rows = keys.map((permission_key) => ({
-            user_id: userId,
-            permission_key,
-            granted_by: actorId
-        }));
-        const { error: insError } = await supabase.from('user_permissions').insert(rows);
-        if (insError) throw insError;
-    }
-
-    const { error: delAccessError } = await supabase
-        .from('admin_project_access')
-        .delete()
-        .eq('user_id', userId);
-    if (delAccessError) throw delAccessError;
-
-    if (mode === 'selected' && projectIds.length) {
-        const rows = [...new Set(projectIds)].map((project_id) => ({
-            user_id: userId,
-            project_id
-        }));
-        const { error: accessInsError } = await supabase.from('admin_project_access').insert(rows);
-        if (accessInsError) throw accessInsError;
-    }
-
-    if (cacheUserId === userId) clearPermissionCache();
-    return { permissionKeys: keys, projectAccessMode: mode, projectIds: mode === 'selected' ? projectIds : [] };
+export function buildSimplePermissionKeys({ projectMode = 'all', employeesManage = false } = {}) {
+    const keys = [projectKeyForMode(projectMode)];
+    if (employeesManage) keys.push('employees.manage');
+    return keys;
 }

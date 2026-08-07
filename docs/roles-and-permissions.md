@@ -1,49 +1,43 @@
-# Roles y Permisos — NEXA Hub
+# Roles y Permisos — NEXA Hub (simplificado)
 
 ## Conceptos
 
 | Rol DB | Etiqueta UI | Comportamiento |
 |--------|-------------|----------------|
-| `owner` | Propietario | Acceso absoluto. Un solo owner. No se degrada ni elimina. |
-| `admin` | Administrador | Permisos individuales en `user_permissions`. |
-| `client` | Cliente | Portal del cliente (sin cambios). |
+| `owner` | Administrador Principal | Acceso absoluto. Un solo owner. No se degrada ni elimina. |
+| `admin` | Administrador | Acceso según 4 bloques simples. |
+| `client` | Cliente | Portal del cliente. |
+| `employee` | Empleado | Portal editor. |
+
+## Bloques
+
+### 1. Proyectos
+Exactamente una opción:
+- `projects.view_all` — todos los proyectos
+- `projects.view_assigned` — solo asignados (`admin_project_access`) + siempre los que cree
+- `projects.view_own` — solo los que cree
+
+`can_access_project` siempre incluye `created_by = auth.uid()`.
+
+### 2. Contabilidad
+Sin permission keys. Cada `finance_books.admin_id` es dueño.
+Compartir: `finance_book_shares`. Owner role ve todas.
+
+### 3. Administradores
+Solo el Administrador Principal (`role = owner`) puede crear/editar/eliminar admins y permisos.
+Edge Function `manage-admin` exige owner.
+
+### 4. Empleados
+- `employees.manage` — ver módulo y CRUD empleados
 
 ## Tablas
 
-- `permissions` — catálogo
-- `user_permissions` — grants por usuario
-- `admin_project_access` — proyectos visibles en modo `selected`
-- `profiles.project_access_mode` — `all` | `selected`
+- `permissions` — catálogo (solo 4 keys)
+- `user_permissions` — grants por admin
+- `admin_project_access` — proyectos en modo assigned
+- `finance_book_shares` — compartir contabilidades
+- `profiles.project_access_mode` — `all` \| `selected` \| `own`
 
-## Helpers SQL
+## UI
 
-- `is_owner()`, `is_admin()` (incluye owner), `has_permission(key)`, `can_access_project(id)`, `get_my_permissions()`
-
-## Frontend
-
-- Catálogo: `js/components/permissions/permissionCatalog.js`
-- Servicio: `js/services/permissionService.js`
-- Guard: `js/admin/permissionsGuard.js`
-- UI: `admin/usuarios-permisos.html`
-
-## Activar owner Jaime David
-
-Tras `npm run db:push`, si el perfil existe con ese nombre queda como owner.
-Si no:
-
-```sql
-update public.profiles
-set role = 'owner', project_access_mode = 'all'
-where email = 'CORREO_DE_JAIME';
-```
-
-## Crear / editar administradores
-
-Edge Function: `manage-admin`
-
-```bash
-npx supabase functions deploy manage-admin
-npm run db:push
-```
-
-UI: `admin/usuarios-permisos.html` → botón **Nuevo administrador**.
+`admin/usuarios-permisos.html` — solo owner.
