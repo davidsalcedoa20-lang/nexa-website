@@ -4,22 +4,24 @@
    ========================================================== */
 
 export const EXPRESS_PROJECT_TYPES = [
-    { key: 'produccion_audiovisual', label: 'Producción Audiovisual' },
-    { key: 'edicion_video', label: 'Edición de Video' },
+    { key: 'edicion_video', label: 'Edición de video' },
+    { key: 'produccion_audiovisual', label: 'Producción audiovisual' },
+    { key: 'toma_video', label: 'Toma de video' },
+    { key: 'toma_aerea_drone', label: 'Toma aérea / Drone' },
     { key: 'fotografia', label: 'Fotografía' },
-    { key: 'toma_drone', label: 'Toma con Drone' },
-    { key: 'pagina_web', label: 'Página Web' },
-    { key: 'marketing_digital', label: 'Marketing Digital' },
-    { key: 'diseno_grafico', label: 'Diseño Gráfico' },
+    { key: 'diseno_grafico', label: 'Diseño gráfico' },
+    { key: 'desarrollo_web', label: 'Desarrollo web' },
+    { key: 'marketing_digital', label: 'Marketing digital' },
     { key: 'otro', label: 'Otro' }
 ];
 
+/** Estados alineados al vocabulario del Hub (keys = constraint DB). */
 export const EXPRESS_PROJECT_STATUS = [
-    { key: 'not_started', label: 'Sin iniciar' },
-    { key: 'in_progress', label: 'En progreso' },
-    { key: 'paused', label: 'Pausado' },
+    { key: 'not_started', label: 'Pendiente' },
+    { key: 'in_progress', label: 'En proceso' },
     { key: 'in_review', label: 'En revisión' },
-    { key: 'completed', label: 'Completado' },
+    { key: 'completed', label: 'Finalizado' },
+    { key: 'paused', label: 'Pausado' },
     { key: 'cancelled', label: 'Cancelado' }
 ];
 

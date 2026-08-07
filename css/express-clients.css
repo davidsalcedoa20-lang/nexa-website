@@ -39,6 +39,30 @@
 .cx-type-badge.portal{ color:#C9A8FF; background:rgba(140,82,255,.16); }
 .cx-type-badge.express{ color:#67E8F9; background:rgba(34,211,238,.14); }
 
+.cx-chooser-modal{ width:min(560px, 94vw); }
+.cx-chooser-list{
+    display:flex; flex-direction:column; gap:8px;
+    max-height:min(420px, 52vh); overflow:auto; padding-right:4px; margin-bottom:8px;
+}
+.cx-chooser-item{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    width:100%; text-align:left; cursor:pointer;
+    padding:14px 14px; border-radius:14px;
+    background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.1);
+    color:#fff; transition:transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.cx-chooser-item:hover{
+    transform:translateY(-1px);
+    border-color:rgba(140,82,255,.4);
+    background:rgba(140,82,255,.08);
+}
+.cx-chooser-main{ display:flex; flex-direction:column; gap:4px; min-width:0; }
+.cx-chooser-main strong{ font-size:15px; font-weight:650; }
+.cx-chooser-sub{ color:#9a9a9a; font-size:12.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.cx-chooser-empty{ margin:12px 0; color:#8a8a8a; font-size:14px; text-align:center; }
+.cx-drive-fields{ margin-top:12px; display:flex; flex-direction:column; gap:10px; }
+.cx-status.status-not_started{ color:#A3A3A3; background:rgba(163,163,163,.12); }
+
 .cx-page{ display:flex; flex-direction:column; gap:18px; }
 .cx-back{
     color:#8C52FF; text-decoration:none; font-size:13px; font-weight:600;

@@ -26,30 +26,30 @@ export function openExpressClientModal({ mode = 'create', client = null, onSubmi
             </div>
             <form id="expressClientForm" class="admin-form" novalidate>
                 <div class="admin-field">
-                    <label>Nombre del cliente *</label>
+                    <label>Nombre *</label>
                     <input name="full_name" required value="${escapeHtml(client?.full_name || '')}" placeholder="Ej. Juan Pérez">
                 </div>
                 <div class="admin-field">
-                    <label>Teléfono *</label>
-                    <input name="phone" required value="${escapeHtml(client?.phone || '')}" placeholder="Ej. +57 300 000 0000">
+                    <label>Teléfono</label>
+                    <input name="phone" value="${escapeHtml(client?.phone || '')}" placeholder="Ej. +57 300 000 0000">
                 </div>
                 <div class="admin-field">
-                    <label>Observaciones *</label>
-                    <textarea name="notes" rows="3" required placeholder="Indicaciones, contexto, notas internas…">${escapeHtml(client?.notes || '')}</textarea>
-                </div>
-                <div class="admin-field">
-                    <label>Empresa (opcional)</label>
+                    <label>Empresa</label>
                     <input name="company" value="${escapeHtml(client?.company || '')}" placeholder="Ej. Estudio Norte">
                 </div>
                 <div class="admin-field">
-                    <label>Ciudad (opcional)</label>
+                    <label>WhatsApp</label>
+                    <input name="whatsapp" value="${escapeHtml(client?.whatsapp || '')}" placeholder="Ej. +57 300 000 0000">
+                </div>
+                <div class="admin-field">
+                    <label>Ciudad</label>
                     <input name="city" value="${escapeHtml(client?.city || '')}" placeholder="Ej. Medellín">
                 </div>
                 <div class="admin-field">
-                    <label>WhatsApp (opcional)</label>
-                    <input name="whatsapp" value="${escapeHtml(client?.whatsapp || '')}" placeholder="Ej. +57 300 000 0000">
+                    <label>Observaciones</label>
+                    <textarea name="notes" rows="3" placeholder="Indicaciones, contexto, notas internas…">${escapeHtml(client?.notes || '')}</textarea>
                 </div>
-                <p class="admin-field-hint" style="margin-top:-4px">Este cliente no tendrá usuario ni acceso al portal.</p>
+                <p class="admin-field-hint" style="margin-top:-4px">Solo el nombre es obligatorio. Este cliente no tendrá usuario ni acceso al portal.</p>
                 <span class="admin-form-error" id="expressClientFormError"></span>
                 <div class="admin-modal-actions">
                     <button type="button" class="admin-btn-secondary" data-close>Cancelar</button>

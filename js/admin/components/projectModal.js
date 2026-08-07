@@ -1,5 +1,5 @@
 /* ==========================================================
-   NEXA HUB — Componente: modal "Nuevo Proyecto"
+   NEXA HUB — Componente: modal "Nuevo Proyecto" (Portal)
    ==========================================================
    Controla el modal ya presente en admin/proyectos.html. No
    habla con Supabase directamente: delega en "onSubmit" que le
@@ -33,6 +33,25 @@ function setSubmitting(isSubmitting) {
     submitBtn.textContent = isSubmitting ? 'Creando...' : 'Crear Proyecto';
 }
 
+function setClientSelectLocked(locked, workspaceId = null) {
+    const clientSelect = document.getElementById('projectClient');
+    if (!clientSelect) return;
+    if (workspaceId) clientSelect.value = workspaceId;
+    clientSelect.disabled = !!locked;
+    const field = clientSelect.closest('.admin-field');
+    let hint = field?.querySelector('.cx-portal-client-lock');
+    if (locked) {
+        if (field && !hint) {
+            hint = document.createElement('span');
+            hint.className = 'admin-field-hint cx-portal-client-lock';
+            hint.textContent = 'Cliente ya seleccionado (Portal).';
+            field.appendChild(hint);
+        }
+    } else if (hint) {
+        hint.remove();
+    }
+}
+
 export function populateProjectModalOptions({ clients = [], types = [], admins = [] }) {
     const clientSelect = document.getElementById('projectClient');
     const typeSelect = document.getElementById('projectType');
@@ -54,13 +73,19 @@ export function populateProjectModalOptions({ clients = [], types = [], admins =
     }
 }
 
-export function openProjectModal({ onSubmit }) {
+/**
+ * @param {object} opts
+ * @param {(payload: object) => Promise<void>} opts.onSubmit
+ * @param {string|null} [opts.workspaceId] — si viene, el cliente queda preseleccionado y bloqueado
+ */
+export function openProjectModal({ onSubmit, workspaceId = null } = {}) {
     if (!overlay || !form) return;
     submitHandler = onSubmit || null;
     clearError();
     form.reset();
     document.getElementById('projectColor').value = '#2D8CFF';
     document.getElementById('projectColor2').value = '#FF8A3D';
+    setClientSelectLocked(!!workspaceId, workspaceId || null);
     overlay.classList.add('active');
 }
 
@@ -70,6 +95,7 @@ export function closeProjectModal() {
     form.reset();
     clearError();
     submitHandler = null;
+    setClientSelectLocked(false, null);
 }
 
 if (closeBtn) closeBtn.addEventListener('click', closeProjectModal);
@@ -94,8 +120,9 @@ if (form) {
 
         clearError();
 
+        const clientSelect = document.getElementById('projectClient');
         const payload = {
-            workspace_id: document.getElementById('projectClient').value,
+            workspace_id: clientSelect?.value,
             name: document.getElementById('projectName').value.trim(),
             project_type_id: document.getElementById('projectType').value || null,
             responsible_id: document.getElementById('projectResponsible').value || null,

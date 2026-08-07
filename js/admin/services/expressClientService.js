@@ -56,18 +56,14 @@ export async function getExpressClient(id) {
 export async function createExpressClient(payload) {
     const adminId = await requireAdminId();
     const full_name = String(payload.full_name || '').trim();
-    const phone = String(payload.phone || '').trim();
-    const notes = String(payload.notes || '').trim();
     if (!full_name) throw new Error('El nombre del cliente es obligatorio.');
-    if (!phone) throw new Error('El teléfono es obligatorio.');
-    if (!notes) throw new Error('Las observaciones son obligatorias.');
 
     const { data, error } = await supabase
         .from('express_clients')
         .insert({
             full_name,
-            phone,
-            notes,
+            phone: String(payload.phone || '').trim(),
+            notes: String(payload.notes || '').trim(),
             company: payload.company?.trim() || null,
             city: payload.city?.trim() || null,
             whatsapp: payload.whatsapp?.trim() || null,
@@ -82,18 +78,14 @@ export async function createExpressClient(payload) {
 
 export async function updateExpressClient(id, payload) {
     const full_name = String(payload.full_name || '').trim();
-    const phone = String(payload.phone || '').trim();
-    const notes = String(payload.notes || '').trim();
     if (!full_name) throw new Error('El nombre del cliente es obligatorio.');
-    if (!phone) throw new Error('El teléfono es obligatorio.');
-    if (!notes) throw new Error('Las observaciones son obligatorias.');
 
     const { data, error } = await supabase
         .from('express_clients')
         .update({
             full_name,
-            phone,
-            notes,
+            phone: String(payload.phone || '').trim(),
+            notes: String(payload.notes || '').trim(),
             company: payload.company?.trim() || null,
             city: payload.city?.trim() || null,
             whatsapp: payload.whatsapp?.trim() || null,
@@ -144,6 +136,10 @@ export async function createExpressProject(expressClientId, payload) {
     const name = String(payload.name || '').trim();
     if (!name) throw new Error('El nombre del proyecto es obligatorio.');
 
+    const driveId = payload.drive_folder_id || null;
+    const driveUrl = payload.drive_folder_url || null;
+    const driveName = payload.drive_folder_name || null;
+
     const { data, error } = await supabase
         .from('express_projects')
         .insert({
@@ -155,6 +151,10 @@ export async function createExpressProject(expressClientId, payload) {
             status: payload.status || 'not_started',
             responsible_name: payload.responsible_name?.trim() || null,
             observations: payload.observations?.trim() || null,
+            drive_folder_id: driveId,
+            drive_folder_name: driveName,
+            drive_folder_url: driveUrl,
+            drive_connected: !!(driveId || driveUrl),
             created_by: adminId
         })
         .select()

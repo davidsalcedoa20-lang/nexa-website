@@ -1,5 +1,8 @@
 /* ==========================================================
    NEXA HUB — Página: Proyectos (admin/proyectos.html)
+   ==========================================================
+   Flujo: Nuevo proyecto → Seleccionar cliente →
+   Portal: modal actual | Express: modal Express
    ========================================================== */
 import { supabase } from '../../services/supabaseClient.js';
 import {
@@ -7,8 +10,12 @@ import {
 } from '../../services/projectService.js';
 import { listProjectTypes } from '../../services/projectTypeService.js';
 import { listAdmins, listClientWorkspaces } from '../../services/profileService.js';
+import { listEmployees } from '../../services/employeeService.js';
+import { listExpressClients, createExpressProject } from '../services/expressClientService.js';
 import { renderProjectsGrid } from '../components/projectCard.js';
 import { openProjectModal, populateProjectModalOptions } from '../components/projectModal.js';
+import { openProjectClientChooser } from '../components/projectClientChooser.js';
+import { openExpressProjectModal } from '../components/expressProjectModal.js';
 
 const grid = document.getElementById('projectsGrid');
 const loadingState = document.getElementById('projectsLoadingState');
@@ -20,6 +27,9 @@ const statusFilter = document.getElementById('projectStatusFilter');
 const typeFilter = document.getElementById('projectTypeFilter');
 
 let allProjects = [];
+let portalWorkspaces = [];
+let expressClientsCache = [];
+let employeesCache = [];
 
 function setView(view) {
     [loadingState, emptyState, errorState].forEach((el) => { if (el) el.style.display = 'none'; });
@@ -109,12 +119,76 @@ async function handleArchive(projectId) {
     }
 }
 
-async function handleCreate(payload) {
+async function handleCreatePortal(payload) {
     const { data: authUser } = await supabase.auth.getUser();
     const newProject = await createProject({ ...payload, created_by: authUser?.user?.id });
-    // El proyecto nunca se crea vacío: create_project_with_template() ya generó
-    // su línea de tiempo inicial, así que llevamos al admin directo a editarla.
     window.location.href = `proyecto-detalle.html?id=${newProject.id}`;
+}
+
+function buildChooserClients() {
+    const portal = (portalWorkspaces || []).map((w) => ({
+        kind: 'portal',
+        id: w.id,
+        label: w.profiles?.full_name || w.name || 'Cliente Portal',
+        sublabel: w.name && w.profiles?.full_name && w.name !== w.profiles.full_name ? w.name : (w.profiles?.email || '')
+    }));
+    const express = (expressClientsCache || []).map((c) => ({
+        kind: 'express',
+        id: c.id,
+        label: c.full_name || c.contact || 'Cliente Express',
+        sublabel: c.company || c.phone || ''
+    }));
+    return portal.concat(express);
+}
+
+function mapEmployeesForSelect(employees) {
+    return (employees || [])
+        .filter((e) => e && e.is_active !== false)
+        .map((e) => ({
+            id: e.id,
+            full_name: e.full_name || e.profiles?.full_name || 'Empleado',
+            role_label: e.employee_roles?.label || e.role_key || ''
+        }));
+}
+
+async function startNewProjectFlow() {
+    try {
+        const [workspaces, expressList, employees] = await Promise.all([
+            listClientWorkspaces(),
+            listExpressClients().catch((err) => {
+                console.warn('[proyectosPage] Express no disponible:', err.message);
+                return [];
+            }),
+            listEmployees().catch(() => [])
+        ]);
+        portalWorkspaces = workspaces || [];
+        expressClientsCache = expressList || [];
+        employeesCache = mapEmployeesForSelect(employees);
+
+        openProjectClientChooser({
+            clients: buildChooserClients(),
+            onSelect: (client) => {
+                if (client.kind === 'express') {
+                    openExpressProjectModal({
+                        mode: 'create',
+                        clientLabel: client.label,
+                        employees: employeesCache,
+                        onSubmit: async (payload) => {
+                            const created = await createExpressProject(client.id, payload);
+                            window.location.href = `express-cliente.html?id=${encodeURIComponent(client.id)}&project=${encodeURIComponent(created.id)}`;
+                        }
+                    });
+                    return;
+                }
+                openProjectModal({
+                    workspaceId: client.id,
+                    onSubmit: handleCreatePortal
+                });
+            }
+        });
+    } catch (error) {
+        alert(`No se pudo abrir el selector de clientes: ${error.message}`);
+    }
 }
 
 async function setupModalOptions() {
@@ -124,6 +198,7 @@ async function setupModalOptions() {
             listProjectTypes(),
             listAdmins()
         ]);
+        portalWorkspaces = clients || [];
         populateProjectModalOptions({ clients, types, admins });
 
         if (typeFilter) {
@@ -136,7 +211,7 @@ async function setupModalOptions() {
 }
 
 newProjectBtn?.addEventListener('click', () => {
-    openProjectModal({ onSubmit: handleCreate });
+    startNewProjectFlow();
 });
 
 searchInput?.addEventListener('input', applyFilters);

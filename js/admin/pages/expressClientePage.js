@@ -11,9 +11,9 @@ import {
     parseDriveFolderFromUrl
 } from '../services/expressClientService.js';
 import { openExpressClientModal } from '../components/expressClientModal.js';
+import { openExpressProjectModal } from '../components/expressProjectModal.js';
+import { listEmployees } from '../../services/employeeService.js';
 import {
-    EXPRESS_PROJECT_TYPES,
-    EXPRESS_PROJECT_STATUS,
     expressProjectTypeLabel,
     expressProjectStatusLabel
 } from '../expressProjectCatalog.js';
@@ -24,6 +24,7 @@ const clientId = new URLSearchParams(window.location.search).get('id');
 
 let client = null;
 let projects = [];
+let employeesCache = [];
 
 async function init() {
     if (!root) return;
@@ -33,6 +34,13 @@ async function init() {
     }
     root.innerHTML = '<p class="fin-loading">Cargando cliente Express…</p>';
     try {
+        employeesCache = await listEmployees()
+            .then((list) => (list || []).map((e) => ({
+                id: e.id,
+                full_name: e.full_name || e.profiles?.full_name || 'Empleado',
+                role_label: e.employee_roles?.label || e.role_key || ''
+            })))
+            .catch(() => []);
         await reload();
         render();
     } catch (error) {
@@ -67,7 +75,7 @@ function render() {
                     <div>
                         <span class="cx-kicker">Cliente Express</span>
                         <h1>${escapeHtml(client.full_name)}</h1>
-                        <p>${escapeHtml(client.company || 'Sin empresa')} · ${escapeHtml(client.phone)}${client.whatsapp ? ` · WA ${escapeHtml(client.whatsapp)}` : ''}</p>
+                        <p>${escapeHtml(client.company || 'Sin empresa')}${client.phone ? ` · ${escapeHtml(client.phone)}` : ''}${client.whatsapp ? ` · WA ${escapeHtml(client.whatsapp)}` : ''}</p>
                     </div>
                     <div class="cx-hero-actions">
                         <button type="button" class="admin-btn-secondary" id="cxEditClient">Editar cliente</button>
@@ -131,7 +139,7 @@ function renderProjectCard(p) {
             </div>
 
             <div class="cx-obs-block">
-                <strong>Observaciones</strong>
+                <strong>Observaciones del proyecto</strong>
                 <p>${escapeHtml(p.observations || 'Sin observaciones todavía.')}</p>
             </div>
 
@@ -141,6 +149,21 @@ function renderProjectCard(p) {
             </div>
         </article>
     `;
+}
+
+function openProjectEditor(row) {
+    openExpressProjectModal({
+        mode: row ? 'edit' : 'create',
+        project: row || null,
+        clientLabel: client?.full_name || '',
+        employees: employeesCache,
+        onSubmit: async (payload) => {
+            if (row) await updateExpressProject(row.id, payload);
+            else await createExpressProject(clientId, payload);
+            await reload();
+            render();
+        }
+    });
 }
 
 function wire() {
@@ -156,14 +179,14 @@ function wire() {
         });
     });
 
-    const openNew = () => openProjectModal(null);
+    const openNew = () => openProjectEditor(null);
     document.getElementById('cxNewProject')?.addEventListener('click', openNew);
     document.getElementById('cxNewProjectEmpty')?.addEventListener('click', openNew);
 
     document.querySelectorAll('[data-edit-project]').forEach((btn) => {
         btn.addEventListener('click', () => {
             const p = projects.find((x) => x.id === btn.getAttribute('data-edit-project'));
-            openProjectModal(p || null);
+            openProjectEditor(p || null);
         });
     });
 
@@ -181,90 +204,6 @@ function wire() {
             const p = projects.find((x) => x.id === btn.getAttribute('data-drive'));
             openDriveModal(p);
         });
-    });
-}
-
-function openProjectModal(row) {
-    const host = document.getElementById('cxModalHost');
-    if (!host) return;
-    const today = new Date().toISOString().slice(0, 10);
-    host.innerHTML = `
-        <div class="admin-modal-overlay active">
-            <div class="admin-modal cx-project-modal" role="dialog">
-                <div class="admin-modal-header">
-                    <h3>${row ? 'Editar' : 'Nuevo'} proyecto</h3>
-                    <button type="button" class="admin-modal-close" data-close>✕</button>
-                </div>
-                <form id="cxProjectForm" class="admin-form">
-                    <div class="cx-form-grid">
-                        <div class="admin-field cx-span-2">
-                            <label>Nombre del proyecto *</label>
-                            <input name="name" required value="${escapeHtml(row?.name || '')}">
-                        </div>
-                        <div class="admin-field">
-                            <label>Tipo de proyecto</label>
-                            <select name="project_type" class="admin-select">
-                                ${EXPRESS_PROJECT_TYPES.map((t) => `
-                                    <option value="${escapeHtml(t.label)}" ${expressProjectTypeLabel(row?.project_type) === t.label ? 'selected' : ''}>${escapeHtml(t.label)}</option>
-                                `).join('')}
-                            </select>
-                        </div>
-                        <div class="admin-field">
-                            <label>Estado</label>
-                            <select name="status" class="admin-select">
-                                ${EXPRESS_PROJECT_STATUS.map((s) => `
-                                    <option value="${s.key}" ${row?.status === s.key ? 'selected' : ''}>${escapeHtml(s.label)}</option>
-                                `).join('')}
-                            </select>
-                        </div>
-                        <div class="admin-field">
-                            <label>Fecha de inicio</label>
-                            <input type="date" name="start_date" value="${escapeHtml(row?.start_date || today)}">
-                        </div>
-                        <div class="admin-field">
-                            <label>Fecha de entrega</label>
-                            <input type="date" name="due_date" value="${escapeHtml(row?.due_date || '')}">
-                        </div>
-                        <div class="admin-field cx-span-2">
-                            <label>Responsable interno</label>
-                            <input name="responsible_name" value="${escapeHtml(row?.responsible_name || '')}" placeholder="Ej. Director de Edición">
-                        </div>
-                        <div class="admin-field cx-span-2">
-                            <label>Observaciones</label>
-                            <textarea name="observations" rows="5" placeholder="Indicaciones, cambios, correcciones, notas para el editor…">${escapeHtml(row?.observations || '')}</textarea>
-                        </div>
-                    </div>
-                    <div class="admin-modal-actions">
-                        <button type="button" class="admin-btn-secondary" data-close>Cancelar</button>
-                        <button type="submit" class="admin-btn-primary">Guardar</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    `;
-    const close = () => { host.innerHTML = ''; };
-    host.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', close));
-    host.querySelector('#cxProjectForm')?.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.currentTarget);
-        const payload = {
-            name: fd.get('name'),
-            project_type: fd.get('project_type'),
-            status: fd.get('status'),
-            start_date: fd.get('start_date') || null,
-            due_date: fd.get('due_date') || null,
-            responsible_name: fd.get('responsible_name'),
-            observations: fd.get('observations')
-        };
-        try {
-            if (row) await updateExpressProject(row.id, payload);
-            else await createExpressProject(clientId, payload);
-            close();
-            await reload();
-            render();
-        } catch (err) {
-            alert(err.message);
-        }
     });
 }
 
