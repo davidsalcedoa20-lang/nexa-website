@@ -282,7 +282,7 @@ function openAdminModal(mode, user = null) {
             </section>
 
             ${isOwnerUser
-                ? '<div class="perm-owner-banner">El Administrador Principal tiene acceso completo y no se puede modificar.</div>'
+                ? '<div class="perm-owner-banner">Los CEO tienen acceso completo y no se pueden modificar desde aquí.</div>'
                 : renderSimplePermissionCards({ projectMode, projectIds, employeesManage, disabled: false })}
 
             <span class="admin-form-error" id="adminUserFormError"></span>
@@ -440,7 +440,7 @@ async function openEditor(userId) {
         </div>
         ${isOwnerUser ? `
             <div class="perm-owner-banner">
-                Este usuario es el <strong>Administrador Principal</strong>. Tiene acceso absoluto.
+                Este usuario es <strong>CEO</strong>. Tiene acceso absoluto.
                 No se puede eliminar, desactivar ni modificar sus permisos.
             </div>
         ` : ''}

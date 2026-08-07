@@ -4,10 +4,15 @@
 
 | Rol DB | Etiqueta UI | Comportamiento |
 |--------|-------------|----------------|
-| `owner` | Administrador Principal | Acceso absoluto. Un solo owner. No se degrada ni elimina. |
+| `owner` | CEO | Acceso absoluto. Puede haber varios CEO con el mismo nivel. No se degradan ni eliminan. |
 | `admin` | Administrador | Acceso según 4 bloques simples. |
 | `client` | Cliente | Portal del cliente. |
 | `employee` | Empleado | Portal editor. |
+
+## CEO actuales
+
+- David Salcedo (`davidsalcedoa2.0@gmail.com`) — cargo CEO
+- Diego Andrés (`salcedoagudelodiegoandres@gmail.com`) — cargo CEO
 
 ## Bloques
 

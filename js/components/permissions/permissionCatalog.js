@@ -45,7 +45,7 @@ export const PERMISSION_MODULES = [
 export const ALL_PERMISSION_KEYS = PERMISSION_MODULES.flatMap((m) => m.permissions.map((p) => p.key));
 
 export const ROLE_LABELS = {
-    owner: 'Administrador Principal',
+    owner: 'CEO',
     admin: 'Administrador',
     client: 'Cliente',
     employee: 'Empleado'
