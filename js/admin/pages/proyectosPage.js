@@ -180,10 +180,15 @@ async function startNewProjectFlow() {
                     });
                     return;
                 }
-                openProjectModal({
-                    workspaceId: client.id,
-                    onSubmit: handleCreatePortal
-                });
+                try {
+                    await ensurePortalModalOptions();
+                    openProjectModal({
+                        workspaceId: client.id,
+                        onSubmit: handleCreatePortal
+                    });
+                } catch (err) {
+                    alert(err.message || 'No se pudo abrir el formulario de proyecto.');
+                }
             }
         });
     } catch (error) {
@@ -191,22 +196,65 @@ async function startNewProjectFlow() {
     }
 }
 
+/**
+ * Carga opciones del modal Portal.
+ * IMPORTANTE: tipos, clientes y responsables se cargan por separado.
+ * Si clientes/admins fallan (permisos, RLS, red), los tipos de proyecto
+ * deben seguir apareciendo — antes un Promise.all los dejaba vacíos.
+ */
 async function setupModalOptions() {
+    // Esperar sesión antes de consultar (admins nuevos / primer login).
     try {
-        const [clients, types, admins] = await Promise.all([
-            listClientWorkspaces(),
-            listProjectTypes(),
-            listAdmins()
-        ]);
-        portalWorkspaces = clients || [];
-        populateProjectModalOptions({ clients, types, admins });
+        await supabase.auth.getSession();
+    } catch (_) { /* ignore */ }
 
-        if (typeFilter) {
-            typeFilter.innerHTML = '<option value="">Todos los tipos</option>' +
-                types.map((t) => `<option value="${t.id}">${t.name}</option>`).join('');
-        }
+    let clients = [];
+    let types = [];
+    let admins = [];
+
+    try {
+        types = await listProjectTypes();
     } catch (error) {
-        console.error('[proyectosPage] Error cargando opciones del modal:', error.message);
+        console.error('[proyectosPage] No se pudieron cargar tipos de proyecto:', error.message);
+        types = [];
+    }
+
+    try {
+        clients = await listClientWorkspaces();
+    } catch (error) {
+        console.error('[proyectosPage] No se pudieron cargar clientes Portal:', error.message);
+        clients = [];
+    }
+
+    try {
+        admins = await listAdmins();
+    } catch (error) {
+        console.error('[proyectosPage] No se pudieron cargar responsables:', error.message);
+        admins = [];
+    }
+
+    portalWorkspaces = clients || [];
+    populateProjectModalOptions({
+        clients: clients || [],
+        types: types || [],
+        admins: admins || []
+    });
+
+    if (typeFilter) {
+        typeFilter.innerHTML = '<option value="">Todos los tipos</option>' +
+            (types || []).map((t) => `<option value="${t.id}">${t.name}</option>`).join('');
+    }
+
+    return { clients, types, admins };
+}
+
+/** Recarga opciones del modal Portal justo antes de abrirlo. */
+async function ensurePortalModalOptions() {
+    const result = await setupModalOptions();
+    if (!(result?.types || []).length) {
+        throw new Error(
+            'No se pudieron cargar los tipos de proyecto. Recarga la página o verifica tu sesión de administrador.'
+        );
     }
 }
 

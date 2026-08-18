@@ -52,25 +52,46 @@ function setClientSelectLocked(locked, workspaceId = null) {
     }
 }
 
-export function populateProjectModalOptions({ clients = [], types = [], admins = [] }) {
+function escapeOptionText(value) {
+    return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+export function populateProjectModalOptions({ clients = [], types = [], admins = [] } = {}) {
     const clientSelect = document.getElementById('projectClient');
     const typeSelect = document.getElementById('projectType');
     const responsibleSelect = document.getElementById('projectResponsible');
 
-    if (clientSelect) {
+    if (clientSelect && Array.isArray(clients)) {
         clientSelect.innerHTML = '<option value="">Selecciona un cliente...</option>' +
-            clients.map((c) => `<option value="${c.id}">${c.profiles?.full_name || c.name}</option>`).join('');
+            clients.map((c) => {
+                const label = c.profiles?.full_name || c.name || 'Cliente';
+                return `<option value="${escapeOptionText(c.id)}">${escapeOptionText(label)}</option>`;
+            }).join('');
     }
 
-    if (typeSelect) {
+    if (typeSelect && Array.isArray(types)) {
         typeSelect.innerHTML = '<option value="">Selecciona un tipo...</option>' +
-            types.map((t) => `<option value="${t.id}">${t.name}</option>`).join('');
+            types.map((t) => `<option value="${escapeOptionText(t.id)}">${escapeOptionText(t.name)}</option>`).join('');
     }
 
-    if (responsibleSelect) {
+    if (responsibleSelect && Array.isArray(admins)) {
         responsibleSelect.innerHTML = '<option value="">Sin asignar</option>' +
-            admins.map((a) => `<option value="${a.id}">${a.full_name || a.email}</option>`).join('');
+            admins.map((a) => {
+                const label = a.full_name || a.email || 'Admin';
+                return `<option value="${escapeOptionText(a.id)}">${escapeOptionText(label)}</option>`;
+            }).join('');
     }
+}
+
+/** ¿El select de tipos ya tiene opciones reales (más allá del placeholder)? */
+export function hasProjectTypeOptions() {
+    const typeSelect = document.getElementById('projectType');
+    if (!typeSelect) return false;
+    return Array.from(typeSelect.options).some((o) => o.value);
 }
 
 /**
