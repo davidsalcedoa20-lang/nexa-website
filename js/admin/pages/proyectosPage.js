@@ -25,6 +25,7 @@ const newProjectBtn = document.getElementById('newProjectBtn');
 const searchInput = document.getElementById('projectSearchInput');
 const statusFilter = document.getElementById('projectStatusFilter');
 const typeFilter = document.getElementById('projectTypeFilter');
+const retryBtn = document.getElementById('projectsRetryBtn');
 
 let allProjects = [];
 let portalWorkspaces = [];
@@ -47,10 +48,13 @@ function applyFilters() {
     const typeId = typeFilter?.value || '';
 
     const filtered = allProjects.filter((p) => {
+        const name = String(p?.name || '').toLowerCase();
+        const clientName = String(p.workspaces?.profiles?.full_name || '').toLowerCase();
+        const workspaceName = String(p.workspaces?.name || '').toLowerCase();
         const matchesSearch = !search ||
-            p.name.toLowerCase().includes(search) ||
-            (p.workspaces?.profiles?.full_name || '').toLowerCase().includes(search) ||
-            (p.workspaces?.name || '').toLowerCase().includes(search);
+            name.includes(search) ||
+            clientName.includes(search) ||
+            workspaceName.includes(search);
         const matchesStatus = !status || p.status === status;
         const matchesType = !typeId || p.project_type_id === typeId;
         return matchesSearch && matchesStatus && matchesType;
@@ -77,12 +81,31 @@ function applyFilters() {
 async function loadProjects() {
     setView('loading');
     try {
+        if (!supabase) {
+            throw new Error('No hay conexión con Supabase. Recarga la página.');
+        }
+        // Esperar sesión (máx 8s) para no consultar sin JWT / evitar lock eterno.
+        try {
+            await Promise.race([
+                supabase.auth.getSession(),
+                new Promise((_, reject) => setTimeout(() => reject(new Error('Sesión lenta')), 8000))
+            ]);
+        } catch (sessionErr) {
+            console.warn('[proyectosPage] Sesión:', sessionErr.message);
+        }
+
         allProjects = await listProjects();
         setView(allProjects.length ? 'grid' : 'empty');
         applyFilters();
     } catch (error) {
         console.error('[proyectosPage] Error cargando proyectos:', error.message);
         setView('error');
+        if (errorState) {
+            const span = errorState.querySelector('span');
+            if (span) {
+                span.innerHTML = `No se pudieron cargar los proyectos.<br>${error.message || 'Error desconocido'}<br>Prueba recargar (Ctrl+F5) o cerrar sesión y volver a entrar.`;
+            }
+        }
     }
 }
 
@@ -260,6 +283,10 @@ async function ensurePortalModalOptions() {
 
 newProjectBtn?.addEventListener('click', () => {
     startNewProjectFlow();
+});
+
+retryBtn?.addEventListener('click', () => {
+    loadProjects();
 });
 
 searchInput?.addEventListener('input', applyFilters);

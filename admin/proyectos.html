@@ -252,13 +252,14 @@
                     </div>
 
                     <!-- Estado: error -->
-                    <div class="admin-state" id="projectsErrorState">
+                    <div class="admin-state" id="projectsErrorState" style="display:none; flex-direction:column; gap:14px;">
                         <div class="admin-state-icon">
                             <svg viewBox="0 0 24 24" fill="none">
                                 <path d="M12 9v4m0 4h.01M10.3 4.3 2.6 18a1.6 1.6 0 0 0 1.4 2.4h16a1.6 1.6 0 0 0 1.4-2.4L13.7 4.3a1.6 1.6 0 0 0-2.8 0Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
                             </svg>
                         </div>
                         <span>No se pudieron cargar los proyectos.<br>Verifica tu conexión con Supabase e intenta de nuevo.</span>
+                        <button type="button" class="admin-btn-secondary" id="projectsRetryBtn">Reintentar</button>
                     </div>
 
                     <!-- Grid -->

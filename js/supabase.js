@@ -50,8 +50,13 @@
    ========================================================== */
 
 async function fetchPublicConfig() {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timer = controller ? setTimeout(() => controller.abort(), 10000) : null;
     try {
-        const response = await fetch('/api/config', { cache: 'no-store' });
+        const response = await fetch('/api/config', {
+            cache: 'no-store',
+            signal: controller?.signal
+        });
         const body = await response.json().catch(() => null);
 
         if (!response.ok || !body || !body.SUPABASE_URL || !body.SUPABASE_ANON_KEY) {
@@ -68,10 +73,12 @@ async function fetchPublicConfig() {
     } catch (error) {
         console.error(
             '[Supabase] Error consultando "/api/config":',
-            error.message,
+            error.name === 'AbortError' ? 'timeout (10s)' : error.message,
             '— ¿estás sirviendo el proyecto con "vercel dev"?'
         );
         return null;
+    } finally {
+        if (timer) clearTimeout(timer);
     }
 }
 

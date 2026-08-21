@@ -15,20 +15,67 @@ const LIST_SELECT = `
     responsible:responsible_id ( id, full_name )
 `;
 
+/** Select liviano si el embed completo falla o se cuelga. */
+const LIST_SELECT_LIGHT = `
+    id, name, description, status, start_date, end_date, modality,
+    progress_percent, color_hex, secondary_color_hex, archived_at, created_at,
+    workspace_id, project_type_id, responsible_id, logo_url, cover_subtitle,
+    client_display_name, services,
+    project_types ( id, name, slug, color_hex ),
+    workspaces ( id, name, client_id )
+`;
+
 const LOGO_BUCKET = 'project-logos';
 const MAX_LOGO_BYTES = 2 * 1024 * 1024;
 const ALLOWED_LOGO_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/svg+xml'];
+const DEFAULT_QUERY_TIMEOUT_MS = 20000;
+
+function requireClient() {
+    if (!supabase) {
+        throw new Error('Supabase no está disponible. Recarga la página o verifica /api/config.');
+    }
+    return supabase;
+}
+
+function withTimeout(promise, ms, label) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+            reject(new Error(`${label || 'La consulta'} tardó demasiado. Revisa tu conexión e intenta de nuevo.`));
+        }, ms);
+    });
+    return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
+async function runProjectsQuery(selectClause, { includeArchived = false } = {}) {
+    const client = requireClient();
+    let query = client.from('projects').select(selectClause).order('created_at', { ascending: false });
+    if (!includeArchived) query = query.is('archived_at', null);
+    const { data, error } = await query;
+    if (error) throw error;
+    return data || [];
+}
 
 /**
  * Lista proyectos. En el admin trae todos (según RLS); en el
  * portal del cliente, RLS ya filtra solo los suyos.
  */
-export async function listProjects({ includeArchived = false } = {}) {
-    let query = supabase.from('projects').select(LIST_SELECT).order('created_at', { ascending: false });
-    if (!includeArchived) query = query.is('archived_at', null);
-    const { data, error } = await query;
-    if (error) throw error;
-    return data;
+export async function listProjects({ includeArchived = false, timeoutMs = DEFAULT_QUERY_TIMEOUT_MS } = {}) {
+    try {
+        return await withTimeout(
+            runProjectsQuery(LIST_SELECT, { includeArchived }),
+            timeoutMs,
+            'Cargar proyectos'
+        );
+    } catch (fullError) {
+        // Si el select con embeds se cuelga/falla, reintentar liviano una vez.
+        console.warn('[projectService] listProjects full falló, reintento liviano:', fullError.message);
+        return withTimeout(
+            runProjectsQuery(LIST_SELECT_LIGHT, { includeArchived }),
+            Math.min(timeoutMs, 12000),
+            'Cargar proyectos'
+        );
+    }
 }
 
 export async function listProjectsByWorkspace(workspaceId) {
