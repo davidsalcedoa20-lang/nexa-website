@@ -190,7 +190,7 @@ async function startNewProjectFlow() {
 
         openProjectClientChooser({
             clients: buildChooserClients(),
-            onSelect: (client) => {
+            onSelect: async (client) => {
                 if (client.kind === 'express') {
                     openExpressProjectModal({
                         mode: 'create',
