@@ -3719,7 +3719,7 @@ body.admin-page{
 /* ==========================================================
    GOOGLE DRIVE — Documentos del proyecto
    ========================================================== */
-.pd-drive-root{ margin-top:18px; animation:pdCoverIn .45s ease .04s both; }
+.pd-drive-root{ position:relative; z-index:2; margin-top:18px; animation:pdCoverIn .45s ease .04s both; }
 .pd-drive-card{
     padding:20px;
     border-radius:18px;
