@@ -1,7 +1,7 @@
 /* ==========================================================
    NEXA HUB — Service Worker (solo estáticos)
    ========================================================== */
-const CACHE_VERSION = 'nexa-hub-static-v2';
+const CACHE_VERSION = 'nexa-hub-static-v3';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
@@ -112,7 +112,7 @@ self.addEventListener('fetch', (event) => {
   }
 
   // CSS/JS/imagenes/fuentes: stale-while-revalidate
-  event.respondWith(staleWhileRevalidate(request));
+  event.respondWith(staleWhileRevalidate(event, request));
 });
 
 async function networkFirst(request) {
@@ -134,7 +134,7 @@ async function networkFirst(request) {
   }
 }
 
-async function staleWhileRevalidate(request) {
+async function staleWhileRevalidate(event, request) {
   const cache = await caches.open(CACHE_VERSION);
   const cached = await cache.match(request);
   const networkPromise = fetch(request)
@@ -146,8 +146,12 @@ async function staleWhileRevalidate(request) {
     })
     .catch(() => null);
 
+  // Evita que el navegador mate el fetch de revalidación en cuanto
+  // respondemos con la copia en caché: así la caché sí queda al día
+  // para la próxima visita en vez de quedarse "congelada" en la versión vieja.
+  event.waitUntil(networkPromise);
+
   if (cached) {
-    networkPromise.catch(() => null);
     return cached;
   }
 
