@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Vincular Claude | NEXA Hub</title>
+
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        .mcp-link-card{
+            max-width:480px;
+            margin-top:24px;
+            padding:28px;
+            border-radius:18px;
+            background:linear-gradient(160deg, rgba(255,255,255,.045), rgba(255,255,255,.02));
+            border:1px solid rgba(255,255,255,.08);
+        }
+        .mcp-link-code{
+            font-family:'Poppins', sans-serif;
+            font-size:44px;
+            font-weight:700;
+            letter-spacing:.14em;
+            text-align:center;
+            padding:22px 0;
+            margin:18px 0;
+            border-radius:14px;
+            background:rgba(255,255,255,.04);
+            border:1px solid rgba(255,255,255,.08);
+            color:#fff;
+        }
+        .mcp-link-meta{ font-size:13px; color:rgba(255,255,255,.5); text-align:center; margin:0 0 18px; }
+        .mcp-link-actions{ display:flex; gap:10px; }
+        .mcp-link-actions button{ flex:1; }
+        .mcp-link-hint{ font-size:13px; color:rgba(255,255,255,.45); line-height:1.6; margin-top:18px; }
+    </style>
+</head>
+
+<body class="admin-page" data-auth-guard="admin">
+
+    <div class="admin-shell">
+
+        <!-- ================= SIDEBAR ================= -->
+        <aside class="admin-sidebar" id="adminSidebar">
+
+            <a href="index.html" class="admin-logo">
+                <img src="../assets/logo/nexa-logo.png" alt="Nexa Logo">
+                <span class="admin-logo-tag">HUB · ADMIN</span>
+            </a>
+            <nav class="admin-nav">
+                <a href="index.html" class="admin-nav-item">Dashboard</a>
+                <a href="clientes.html" class="admin-nav-item">Clientes</a>
+                <a href="proyectos.html" class="admin-nav-item">Proyectos</a>
+                <a href="tareas.html" class="admin-nav-item">Tareas</a>
+                <a href="mi-agenda.html" class="admin-nav-item">Workspace</a>
+                <a href="contabilidad.html" class="admin-nav-item">Finanzas</a>
+                <a href="calendario.html" class="admin-nav-item">Calendario</a>
+                <a href="usuarios-permisos.html" class="admin-nav-item">Usuarios y Permisos</a>
+                <a href="empleados.html" class="admin-nav-item">Empleados</a>
+                <a href="configuracion.html" class="admin-nav-item">Configuración</a>
+            </nav>
+
+            <button type="button" class="admin-logout" data-logout>Cerrar sesión</button>
+
+        </aside>
+
+        <div class="admin-overlay" id="adminOverlay"></div>
+
+        <!-- ================= CONTENIDO ================= -->
+        <div class="admin-content">
+
+            <header class="admin-topbar">
+                <div class="admin-topbar-left">
+                    <button class="admin-menu-toggle" id="adminMenuToggle" aria-label="Abrir menú">
+                        <svg viewBox="0 0 24 24" fill="none">
+                            <path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                        </svg>
+                    </button>
+                    <a href="../index.html" class="admin-topbar-logo">
+                        <img src="../assets/logo/nexa-logo.png" alt="Nexa Logo">
+                        <span>NEXA HUB</span>
+                    </a>
+                </div>
+                <div class="admin-topbar-right">
+                    <div class="admin-user" id="adminUserToggle">
+                        <div class="admin-avatar" data-user-initials>--</div>
+                        <div class="admin-user-info">
+                            <span class="admin-user-name" data-user-name>Cargando...</span>
+                            <span class="admin-user-role" data-user-role-label>Administrador</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <main class="admin-main">
+
+                <div class="admin-greeting">
+                    <h1>Vincular Claude</h1>
+                    <p>Genera un código de un solo uso para conectar NEXA MCP con tu sesión de administrador. El código expira en 10 minutos y solo sirve una vez.</p>
+                </div>
+
+                <section class="admin-section">
+                    <div class="mcp-link-card">
+
+                        <div class="admin-state" id="mcpLinkIdle" style="display:flex;">
+                            <button type="button" class="admin-btn-primary" id="mcpLinkGenerate">Generar código</button>
+                        </div>
+
+                        <div id="mcpLinkResult" style="display:none;">
+                            <div class="mcp-link-code" id="mcpLinkCode">------</div>
+                            <p class="mcp-link-meta" id="mcpLinkCountdown">Válido por 10:00</p>
+                            <div class="mcp-link-actions">
+                                <button type="button" class="admin-btn-secondary" id="mcpLinkRegenerate">Generar otro código</button>
+                            </div>
+                        </div>
+
+                        <span class="admin-form-error" id="mcpLinkError"></span>
+
+                        <p class="mcp-link-hint">
+                            Pega este código en Claude cuando te lo pida al conectar NEXA MCP. Es de un solo uso: en cuanto Claude lo canjea, deja de servir — no necesitas hacer nada más aquí. Si no lo usas dentro de los 10 minutos, simplemente genera uno nuevo.
+                        </p>
+                    </div>
+                </section>
+
+            </main>
+        </div>
+    </div>
+
+    <script src="../js/vendor/supabase-js.min.js"></script>
+    <script src="../js/portal.js"></script>
+    <script src="../js/admin.js"></script>
+    <script type="module" src="../js/admin/pages/vincularClaudePage.js"></script>
+
+</body>
+</html>
