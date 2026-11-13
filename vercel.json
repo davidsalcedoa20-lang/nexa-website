@@ -1,0 +1,7 @@
+{
+  "redirects": [
+    { "source": "/pages/nosotros.html", "destination": "/#planes", "permanent": true },
+    { "source": "/pages/nuestro-trabajo.html", "destination": "/#planes", "permanent": true },
+    { "source": "/pages/metodologia.html", "destination": "/#planes", "permanent": true }
+  ]
+}
