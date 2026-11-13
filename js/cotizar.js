@@ -170,7 +170,7 @@
             'Quiero recibir información sobre sus servicios.',
             'Me gustaría conversar con un asesor.'
         ].join('\n');
-        btn.href = `https://wa.me/573208079956?text=${encodeURIComponent(message)}`;
+        btn.href = `https://wa.me/573132932194?text=${encodeURIComponent(message)}`;
     }
 
     /* ---------- Particles canvas (60fps-friendly) ---------- */
