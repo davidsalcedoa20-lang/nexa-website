@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three-r187/three.module.min.js';
 import { CSS3DObject, CSS3DRenderer } from './vendor/three-r187/CSS3DRenderer.js';
+import { createDevelopmentDistrict } from './development-district.js?v=20261124-2';
 
 const CYAN = 0x24dfff;
 const PINK = 0xea51d8;
@@ -183,42 +184,7 @@ export function createDevelopmentScene(root, screenElements, onSelect) {
     new THREE.MeshBasicMaterial({ color: PINK, toneMapped: false })
   ];
 
-  const core = new THREE.Group();
-  assembly.add(core);
-  const internal = new THREE.Mesh(new THREE.SphereGeometry(1.28, 40, 24), new THREE.MeshPhysicalMaterial({ color: 0x052d3a, metalness: .8, roughness: .27, emissive: 0x003744, emissiveIntensity: .35 }));
-  core.add(internal);
-  const shell = new THREE.Group();
-  for (let index = 0; index < 12; index++) {
-    const patch = new THREE.Mesh(new THREE.SphereGeometry(1.34, 10, 26, index * Math.PI / 6 + .012, Math.PI / 6 - .027, .07, Math.PI - .14), metal);
-    shell.add(patch);
-  }
-  core.add(shell);
-  const rings = new THREE.Group();
-  rings.rotation.set(1.18, .14, -.3);
-  for (let index = 0; index < 2; index++) {
-    const half = new THREE.Mesh(new THREE.TorusGeometry(1.64, .019, 10, 90, Math.PI), accents[index]);
-    half.rotation.z = index * Math.PI;
-    rings.add(half);
-    const halo = new THREE.Mesh(new THREE.TorusGeometry(1.64, .06, 7, 70, Math.PI), new THREE.MeshBasicMaterial({ color: index ? PINK : CYAN, transparent: true, opacity: .09, depthWrite: false }));
-    halo.rotation.z = index * Math.PI;
-    rings.add(halo);
-  }
-  core.add(rings);
-  const ring2 = new THREE.Mesh(new THREE.TorusGeometry(1.42, .008, 6, 96), new THREE.MeshBasicMaterial({ color: 0x788eb2, transparent: true, opacity: .4 }));
-  ring2.rotation.set(.3, .7, -.4);
-  core.add(ring2);
   const glowMap = glowTexture();
-  for (const [color, x] of [[CYAN, -1.1], [PINK, 1.1]]) {
-    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowMap, color, transparent: true, opacity: .24, depthWrite: false, blending: THREE.AdditiveBlending }));
-    sprite.position.set(x, 0, .1);
-    sprite.scale.set(3.7, 3.7, 1);
-    core.add(sprite);
-  }
-  const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 24), new THREE.ShadowMaterial({ opacity: .12 }));
-  floor.rotation.x = -Math.PI / 2;
-  floor.position.y = -2.65;
-  floor.receiveShadow = true;
-  scene.add(floor);
 
   const devices = {};
   const configs = {
@@ -277,19 +243,14 @@ export function createDevelopmentScene(root, screenElements, onSelect) {
     devices[name] = { group, config, ui, preview, element };
   }
 
-  const connections = new THREE.Group();
-  const particles = [];
-  for (const [index, config] of Object.values(configs).entries()) {
-    const end = new THREE.Vector3(...config.overview);
-    const curve = new THREE.CatmullRomCurve3([new THREE.Vector3(0, 0, -.25), new THREE.Vector3(end.x * .45, end.y + .45, -.4), end]);
-    connections.add(new THREE.Mesh(new THREE.TubeGeometry(curve, 32, .008, 5, false), accents[index % 2]));
-    for (let point = 0; point < 3; point++) {
-      const dot = new THREE.Mesh(new THREE.SphereGeometry(.027, 8, 6), accents[index % 2]);
-      connections.add(dot);
-      particles.push({ dot, curve, offset: point / 3 + index * .13 });
-    }
-  }
-  assembly.add(connections);
+  const district = createDevelopmentDistrict({ metal, dark, rim, accents, glowMap, volume, previewTexture });
+  assembly.add(district.group);
+  for (const device of Object.values(devices)) device.group.visible = false;
+  const cameraPosition = new THREE.Vector3();
+  const cameraFocus = new THREE.Vector3();
+  const cameraMatrix = new THREE.Matrix4();
+  const cameraRotation = new THREE.Quaternion();
+  const cameraUp = new THREE.Vector3(0, 1, 0);
 
   let active = null;
   let paused = reducedMotion.matches;
@@ -331,7 +292,7 @@ export function createDevelopmentScene(root, screenElements, onSelect) {
       const scaleY = compact && active !== 'apps' ? 1.19 : 1;
       cameraTarget = Math.max(config.height * scaleY * 1.12 / (2 * tangent), config.width * scaleX * 1.14 / (2 * tangent * camera.aspect)) + .7;
     } else {
-      cameraTarget = compact ? Math.max(8.2, 2.8 / (tangent * camera.aspect)) : Math.max(9, 4.65 / (tangent * camera.aspect));
+      cameraTarget = Math.max(16.5, 7.65 / (tangent * camera.aspect));
     }
     requestFrame();
   }
@@ -340,11 +301,12 @@ export function createDevelopmentScene(root, screenElements, onSelect) {
     if (category !== active) selectionStarted = performance.now();
     active = category;
     for (const [name, device] of Object.entries(devices)) {
+      device.group.visible = name === active;
       device.ui.visible = name === active;
       device.preview.visible = name !== active;
       device.element.inert = name !== active;
     }
-    connections.visible = !active;
+    district.group.visible = !active;
     measure();
   }
 
@@ -355,16 +317,15 @@ export function createDevelopmentScene(root, screenElements, onSelect) {
     lastTime = now;
     if (!paused) elapsed += delta;
     const easing = reducedMotion.matches ? 1 : 1 - Math.exp(-delta * 6);
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, cameraTarget, easing);
+    cameraPosition.set(active ? 0 : cameraTarget * .29, active ? .1 : cameraTarget * .48 + 1, cameraTarget);
+    cameraFocus.set(0, active ? .1 : 1, 0);
+    camera.position.lerp(cameraPosition, easing);
+    cameraMatrix.lookAt(camera.position, cameraFocus, cameraUp);
+    cameraRotation.setFromRotationMatrix(cameraMatrix);
+    camera.quaternion.slerp(cameraRotation, easing);
     assembly.rotation.y = THREE.MathUtils.lerp(assembly.rotation.y, active ? 0 : orbitRotation + aim.x * .07, easing);
     assembly.rotation.x = THREE.MathUtils.lerp(assembly.rotation.x, active ? 0 : aim.y * .035, easing);
-    const corePosition = active ? [-1.5, -.1, -2.7] : [0, 0, -.25];
-    core.position.lerp(new THREE.Vector3(...corePosition), easing);
-    const coreScale = active ? .67 : 1;
-    core.scale.lerp(new THREE.Vector3(coreScale, coreScale, coreScale), easing);
-    shell.rotation.y = elapsed * .12;
-    rings.rotation.z = -.3 + Math.sin(elapsed * .22) * .14;
-    ring2.rotation.y = .7 + elapsed * .055;
+    district.update(elapsed);
     for (const [index, [name, device]] of Object.entries(devices).entries()) {
       const { config, group } = device;
       let position;
@@ -393,27 +354,27 @@ export function createDevelopmentScene(root, screenElements, onSelect) {
       group.rotation.y = THREE.MathUtils.lerp(group.rotation.y, rotation[1], easing);
       group.rotation.z = THREE.MathUtils.lerp(group.rotation.z, rotation[2], easing);
     }
-    particles.forEach(({ dot, curve, offset }) => dot.position.copy(curve.getPointAt((elapsed * .12 + offset) % 1)));
+
     renderer.render(scene, camera);
     cssRenderer.render(scene, camera);
     if (!active) {
       const width = art.clientWidth;
       const height = art.clientHeight;
       for (const pin of pins) {
-        const device = devices[pin.dataset.devPin];
-        projected.set(0, device.config.height / 2 + .32, .3);
-        device.group.localToWorld(projected);
+        projected.copy(district.anchors[pin.dataset.devPin]);
+        district.group.localToWorld(projected);
         projected.project(camera);
         const halfWidth = pin.offsetWidth / 2 + 4;
         const x = Math.max(halfWidth, Math.min(width - halfWidth, (projected.x * .5 + .5) * width));
-        const y = Math.max(28, Math.min(height - 28, (-projected.y * .5 + .5) * height));
+        const offsetY = compact ? ({ business: -24, web: 10, apps: 20 }[pin.dataset.devPin]) : 0;
+        const y = Math.max(28, Math.min(height - 28, (-projected.y * .5 + .5) * height + offsetY));
         pin.style.left = x + 'px';
         pin.style.top = y + 'px';
       }
     }
     root.dataset.sceneFrame = String(Math.floor(elapsed * 10));
     root.dataset.sceneState = active || 'overview';
-    const settling = Math.abs(camera.position.z - cameraTarget) > .004;
+    const settling = camera.position.distanceTo(cameraPosition) > .004 || (active && now - selectionStarted < 1600);
     if (!paused || settling) requestFrame();
   }
 
@@ -438,7 +399,7 @@ export function createDevelopmentScene(root, screenElements, onSelect) {
     }
     pointer.set(aim.x, -aim.y);
     raycaster.setFromCamera(pointer, camera);
-    const hit = raycaster.intersectObjects(Object.values(devices).map(device => device.group), true).find(intersection => intersection.object.userData.category);
+    const hit = raycaster.intersectObject(district.group, true).find(intersection => intersection.object.userData.category);
     canvas.style.cursor = hit && !active ? 'pointer' : 'grab';
     requestFrame();
   });
@@ -447,7 +408,7 @@ export function createDevelopmentScene(root, screenElements, onSelect) {
       const bounds = canvas.getBoundingClientRect();
       pointer.set((event.clientX - bounds.left) / bounds.width * 2 - 1, -((event.clientY - bounds.top) / bounds.height) * 2 + 1);
       raycaster.setFromCamera(pointer, camera);
-      const hit = raycaster.intersectObjects(Object.values(devices).map(device => device.group), true).find(intersection => intersection.object.userData.category);
+      const hit = raycaster.intersectObject(district.group, true).find(intersection => intersection.object.userData.category);
       if (hit) onSelect(hit.object.userData.category);
     }
     dragStart = null;

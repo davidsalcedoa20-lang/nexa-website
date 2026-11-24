@@ -287,3 +287,37 @@
 @media (prefers-reduced-motion: reduce) {
   .dev *, .dev *::before, .dev *::after { transition: none !important; }
 }
+
+/* Architectural overview: copy and the connected district share one canvas. */
+.dev:not([data-category]) .dev-layout { display: block; position: relative; min-height: 840px; }
+.dev:not([data-category]) .dev-copy { position: absolute; left: 0; top: 5px; width: 650px; max-width: 60%; padding: 0; z-index: 4; pointer-events: none; }
+.dev:not([data-category]) .dev-copy .cta { pointer-events: auto; }
+.dev:not([data-category]) .dev-copy h2 { font-size: clamp(42px, 3.75vw, 60px); line-height: 1.01; letter-spacing: -.055em; }
+.dev:not([data-category]) .dev-summary { font-size: clamp(19px, 1.65vw, 26px); line-height: 1.35; margin-top: 17px; max-width: 530px; }
+.dev:not([data-category]) .dev-contact { margin-top: 25px; font-size: 15px; padding: 12px 23px; }
+.dev:not([data-category]) .web-art.dev-art { height: 840px; }
+.dev:not([data-category]) .dev-pins button { font-size: 14px; font-weight: 650; padding: 10px 13px 10px 19px; border-color: #b1e7ffb3; background: #08101bd9; box-shadow: 0 0 16px #23ceff13, inset 0 0 12px #ffffff05; }
+.dev:not([data-category]) .dev-pins button span { display: inline-flex; justify-content: center; align-items: center; width: 24px; height: 24px; border-radius: 50%; border: 1px solid #9cdef59c; margin-left: 10px; font-size: 21px; line-height: 1; color: #e4f8ff; }
+.dev:not([data-category]) .dev-pins [data-dev-pin="business"] { border-color: #fa8be8; box-shadow: 0 0 18px #f243d335, inset 0 0 15px #ed46d41c; }
+.dev:not([data-category]) .dev-footer { justify-content: center; margin-top: -10px; position: relative; }
+.dev.is-fallback:not([data-category]) .dev-copy { position: relative; }
+.dev.is-fallback:not([data-category]) .web-art.dev-art { height: auto; }
+@media (min-width: 761px) and (max-width: 1100px) {
+  .dev:not([data-category]) .dev-copy { max-width: 470px; }
+  .dev:not([data-category]) .dev-copy h2 { font-size: 42px; }
+  .dev:not([data-category]) .dev-summary { font-size: 21px; }
+  .dev:not([data-category]) .dev-layout { min-height: 750px; }
+  .dev:not([data-category]) .web-art.dev-art { height: 750px; }
+  .dev:not([data-category]) .dev-pins button { font-size: 11px; padding: 8px 10px; }
+}
+@media (max-width: 760px) {
+  .dev:not([data-category]) .dev-layout { min-height: 0; }
+  .dev:not([data-category]) .dev-copy { position: relative; top: 0; width: 100%; max-width: 100%; padding: 10px 0 0; }
+  .dev:not([data-category]) .dev-copy h2 { font-size: clamp(31px, 8.5vw, 47px); }
+  .dev:not([data-category]) .dev-summary { font-size: 17px; line-height: 1.5; }
+  .dev:not([data-category]) .dev-contact { font-size: 12px; min-height: 44px; margin-top: 20px; padding: 10px 16px; }
+  .dev:not([data-category]) .web-art.dev-art { height: 350px; margin-top: 10px; }
+  .dev:not([data-category]) .dev-pins button { font-size: 10px; padding: 8px; min-height: 36px; }
+  .dev:not([data-category]) .dev-pins button span { width: 18px; height: 18px; font-size: 16px; margin-left: 4px; }
+  .dev:not([data-category]) .dev-footer { justify-content: space-between; gap: 12px; margin-top: 0; }
+}

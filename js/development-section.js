@@ -303,8 +303,8 @@ if (root) {
       renderScreen(category);
     } else {
       delete root.dataset.category;
-      root.querySelector('[data-dev-title]').innerHTML = 'Tu idea.<br> Todo un<br><span>sistema.</span>';
-      root.querySelector('[data-dev-summary]').textContent = 'Aplicaciones, plataformas web y software empresarial creados a tu medida.';
+      root.querySelector('[data-dev-title]').innerHTML = 'Explora lo que<br>podemos desarrollar.';
+      root.querySelector('[data-dev-summary]').innerHTML = 'Aplicaciones, plataformas web<br>y software a medida.';
       root.querySelector('[data-dev-contact]').innerHTML = 'Hablemos de tu proyecto <span aria-hidden="true">↗</span>';
       root.querySelector('[data-dev-contact]').href = 'https://wa.me/573132932194?text=Hola%2C%20NEXA.%20Quiero%20hablar%20sobre%20un%20proyecto%20de%20desarrollo.';
       root.querySelector('[data-dev-hint]').textContent = 'Mueve el cursor y elige una solución para explorar.';
@@ -369,7 +369,7 @@ if (root) {
     if (initialization) return initialization;
     initialization = (async () => {
       try {
-        const { createDevelopmentScene } = await import('./development-scene.js?v=20261124-1');
+        const { createDevelopmentScene } = await import('./development-scene.js?v=20261124-2');
         scene = createDevelopmentScene(root, screenElements, selectCategory);
         scene.select(state.category);
         updateMotion();
