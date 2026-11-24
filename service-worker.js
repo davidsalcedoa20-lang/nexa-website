@@ -1,7 +1,7 @@
 /* ==========================================================
    NEXA HUB — Service Worker (solo estáticos)
    ========================================================== */
-const CACHE_VERSION = 'nexa-hub-static-v3';
+const CACHE_VERSION = 'nexa-hub-static-20261117-inmersivo';
 const PRECACHE_URLS = [
   '/',
   '/index.html',
